@@ -37,7 +37,7 @@ namespace CellNameSpace
                         // Проверяем соседей
                         bool hasForestNeighbor = false;
                         bool hasShallowNeighbor = false;
-                        bool hasMountainOrDesertNeighbor = false;
+
                         
                         foreach (Vector2Int neighbor in neighbors)
                         {
@@ -47,8 +47,7 @@ namespace CellNameSpace
                                 hasForestNeighbor = true;
                             else if (neighborType == CellType.shallow)
                                 hasShallowNeighbor = true;
-                            else if (neighborType == CellType.mountain || neighborType == CellType.desert)
-                                hasMountainOrDesertNeighbor = true;
+
                         }
                         
                         // Если desert соседствует с forest, обязательно становится field

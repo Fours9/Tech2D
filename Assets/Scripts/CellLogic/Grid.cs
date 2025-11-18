@@ -117,6 +117,9 @@ namespace CellNameSpace
                 }
             }
             
+            // Инициализируем кэш соседей для оптимизации
+            HexagonalGridHelper.InitializeCache(gridWidth, gridHeight);
+            
             // Создаем массив типов для генерации
             CellType[,] grid = new CellType[gridWidth, gridHeight];
             for (int row = 0; row < gridHeight; row++)
@@ -182,6 +185,9 @@ namespace CellNameSpace
                 }
             }
             cells.Clear();
+            
+            // Очищаем кэш соседей при очистке сетки
+            HexagonalGridHelper.ClearCache();
         }
         
         // Метод для пересоздания сетки (можно вызвать из инспектора или кода)

@@ -65,11 +65,15 @@
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellularAutomata.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellTypeCompatibility.cs" />
     <Compile Include="Assets\Scripts\CellLogic\CellClick.cs" />
+    <Compile Include="Assets\Scripts\CellLogic\GridLogic\TerrainGenerator.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellColorManager.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellTypeDistribution.cs" />
+    <Compile Include="Assets\Scripts\CellLogic\GridLogic\WaterBodyGenerator.cs" />
+    <Compile Include="Assets\Scripts\CellLogic\GridLogic\TerrainCompatibility.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellType.cs" />
     <Compile Include="Assets\Scripts\CellLogic\Grid.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\HexagonalGridHelper.cs" />
+    <Compile Include="Assets\Scripts\CellLogic\CameraController.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\PerlinNoise.cs" />
   </ItemGroup>
   <ItemGroup>

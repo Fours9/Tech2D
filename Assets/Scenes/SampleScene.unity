@@ -153,17 +153,17 @@ MonoBehaviour:
   gridHeight: 100
   cellSize: 1
   pixelGap: 0.1
-  waterFrequency: 0.3
-  waterFragmentation: 0.046
+  waterFrequency: 0.385
+  waterFragmentation: 0.023
   waterSeed: 0
-  mountainFrequency: 0.15
-  mountainFragmentation: 0.5
+  mountainFrequency: 0.215
+  mountainFragmentation: 0.308
   mountainSeed: 0
-  forestFrequency: 0.2
-  forestFragmentation: 0.5
+  forestFrequency: 0.285
+  forestFragmentation: 0.731
   forestSeed: 0
-  desertFrequency: 0.15
-  desertFragmentation: 0.5
+  desertFrequency: 0.269
+  desertFragmentation: 0.269
   desertSeed: 0
 --- !u!4 &141372081
 Transform:
@@ -192,6 +192,7 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
+  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -317,6 +318,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d3ee3deaf62cd24cb115b65e487432c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CameraController
+  dragSpeed: 100
+  maxClickTime: 0.3
+  maxClickDistance: 5
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
