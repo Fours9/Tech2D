@@ -34,7 +34,7 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Применяет цвет к рендереру клетки
+        /// Применяет цвет к рендереру клетки, сохраняя альфу исходного цвета
         /// </summary>
         /// <param name="renderer">Рендерер клетки</param>
         /// <param name="cellType">Тип клетки</param>
@@ -43,13 +43,16 @@ namespace CellNameSpace
             if (renderer == null)
                 return;
             
-            Color color = GetColorForType(cellType);
+            Color newColor = GetColorForType(cellType);
             
             // Для SpriteRenderer
             SpriteRenderer spriteRenderer = renderer as SpriteRenderer;
             if (spriteRenderer != null)
             {
-                spriteRenderer.color = color;
+                // Сохраняем альфу из исходного цвета
+                Color originalColor = spriteRenderer.color;
+                newColor.a = originalColor.a;
+                spriteRenderer.color = newColor;
                 return;
             }
             
@@ -57,7 +60,10 @@ namespace CellNameSpace
             MeshRenderer meshRenderer = renderer as MeshRenderer;
             if (meshRenderer != null && meshRenderer.material != null)
             {
-                meshRenderer.material.color = color;
+                // Сохраняем альфу из исходного цвета материала
+                Color originalColor = meshRenderer.material.color;
+                newColor.a = originalColor.a;
+                meshRenderer.material.color = newColor;
             }
         }
     }

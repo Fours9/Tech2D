@@ -14,17 +14,25 @@ namespace CellNameSpace
         /// <param name="grid">Двумерный массив типов клеток</param>
         /// <param name="gridWidth">Ширина сетки</param>
         /// <param name="gridHeight">Высота сетки</param>
-        /// <param name="maxIterations">Максимальное количество итераций</param>
+        /// <param name="maxIterations">Максимальное количество итераций (0 или меньше = неограниченно, до стабилизации)</param>
         /// <returns>Количество выполненных итераций</returns>
         public static int ApplyCellularAutomata(CellType[,] grid, int gridWidth, int gridHeight, int maxIterations)
         {
             int iterations = 0;
             bool hasChanges = true;
+            bool unlimitedIterations = (maxIterations <= 0);
             
-            Debug.Log($"Начало применения Cellular Automata (максимум {maxIterations} итераций)");
+            if (unlimitedIterations)
+            {
+                Debug.Log("Начало применения Cellular Automata (неограниченные итерации до стабилизации)");
+            }
+            else
+            {
+                Debug.Log($"Начало применения Cellular Automata (максимум {maxIterations} итераций)");
+            }
             
             // Итеративный процесс: на каждой итерации проверяем и корректируем все клетки
-            while (iterations < maxIterations && hasChanges)
+            while ((unlimitedIterations || iterations < maxIterations) && hasChanges)
             {
                 hasChanges = false;
                 iterations++;

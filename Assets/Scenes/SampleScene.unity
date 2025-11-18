@@ -145,14 +145,26 @@ MonoBehaviour:
   m_GameObject: {fileID: 141372079}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a545bd50274a24187fe40f68deea16, type: 3}
+  m_Script: {fileID: 11500000, guid: 505ef5c062bffc54e81f70c7182d3945, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Grid
   cellPrefab: {fileID: 8894843892302018048, guid: 6c2e9b1d205d97348ac9ccc3dfc82e9b, type: 3}
-  gridWidth: 10
-  gridHeight: 10
-  cellSize: 0.5
+  gridWidth: 100
+  gridHeight: 100
+  cellSize: 1
   pixelGap: 0.1
+  waterFrequency: 0.3
+  waterFragmentation: 0.046
+  waterSeed: 0
+  mountainFrequency: 0.15
+  mountainFragmentation: 0.5
+  mountainSeed: 0
+  forestFrequency: 0.2
+  forestFragmentation: 0.5
+  forestSeed: 0
+  desertFrequency: 0.15
+  desertFragmentation: 0.5
+  desertSeed: 0
 --- !u!4 &141372081
 Transform:
   m_ObjectHideFlags: 0

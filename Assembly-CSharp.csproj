@@ -66,6 +66,7 @@
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellTypeCompatibility.cs" />
     <Compile Include="Assets\Scripts\CellLogic\CellClick.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellColorManager.cs" />
+    <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellTypeDistribution.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellType.cs" />
     <Compile Include="Assets\Scripts\CellLogic\Grid.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\HexagonalGridHelper.cs" />

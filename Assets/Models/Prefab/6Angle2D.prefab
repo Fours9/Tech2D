@@ -110,9 +110,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 8894843892302018048}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3678fe05083d1b49a49aab59105bba0, type: 3}
+  m_Script: {fileID: 11500000, guid: c699bdc897046bc458aea4a97e9a81a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RayCastClickCheck
+  cellType: 2
+  gridX: 0
+  gridY: 0
 --- !u!114 &-1575550810079050244
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -122,6 +125,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 8894843892302018048}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e784bd3563d13d94ab8c2a1f57449f8e, type: 3}
+  m_Script: {fileID: 11500000, guid: 3f8541028164da643a75d8ce3512cc0f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellInfo

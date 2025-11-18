@@ -11,7 +11,34 @@ namespace CellNameSpace
         [SerializeField] private int gridHeight = 10;
         [SerializeField] private float cellSize = 1f;
         [SerializeField] private float pixelGap = 0.1f; // Зазор между клетками в пикселях (1 пиксель = 0.01 единицы при стандартном PPU = 100)
-        [SerializeField] private int cellularAutomataIterations = 5; // Количество итераций Cellular Automata для корректировки типов
+        
+        [Header("Генерация водоемов")]
+        [Range(0f, 1f)]
+        [SerializeField] private float waterFrequency = 0.2f; // Частота появления водоемов
+        [Range(0f, 1f)]
+        [SerializeField] private float waterFragmentation = 0.5f; // Раздробленность водоемов (чем больше, тем более раздробленные)
+        [SerializeField] private int waterSeed = 0; // Сид для генерации водоемов (0 = случайный)
+        
+        [Header("Генерация гор")]
+        [Range(0f, 1f)]
+        [SerializeField] private float mountainFrequency = 0.15f; // Частота появления гор
+        [Range(0f, 1f)]
+        [SerializeField] private float mountainFragmentation = 0.5f; // Раздробленность гор
+        [SerializeField] private int mountainSeed = 0; // Сид для генерации гор (0 = случайный)
+        
+        [Header("Генерация лесов")]
+        [Range(0f, 1f)]
+        [SerializeField] private float forestFrequency = 0.2f; // Частота появления лесов
+        [Range(0f, 1f)]
+        [SerializeField] private float forestFragmentation = 0.5f; // Раздробленность лесов
+        [SerializeField] private int forestSeed = 0; // Сид для генерации лесов (0 = случайный)
+        
+        [Header("Генерация пустынь")]
+        [Range(0f, 1f)]
+        [SerializeField] private float desertFrequency = 0.15f; // Частота появления пустынь
+        [Range(0f, 1f)]
+        [SerializeField] private float desertFragmentation = 0.5f; // Раздробленность пустынь
+        [SerializeField] private int desertSeed = 0; // Сид для генерации пустынь (0 = случайный)
         
         private List<GameObject> cells = new List<GameObject>();
         
@@ -56,7 +83,7 @@ namespace CellNameSpace
             
             Debug.Log($"Генерация сетки: {gridWidth}x{gridHeight}, размер клетки: {actualCellSize}, расстояние: {hexWidth}x{hexHeight}");
             
-            // Сначала создаем все клетки с начальными типами
+            // Сначала создаем все клетки как field
             for (int row = 0; row < gridHeight; row++)
             {
                 for (int col = 0; col < gridWidth; col++)
@@ -75,12 +102,11 @@ namespace CellNameSpace
                     cell.transform.localScale = cell.transform.localScale * cellSize;
                     cell.name = $"Cell_{row}_{col}";
                     
-                    // Определяем тип клетки через шум Перлина и инициализируем CellInfo
-                    CellType cellType = PerlinNoise.GetCellType(col, row);
+                    // Все клетки сначала field
                     CellInfo cellInfo = cell.GetComponent<CellInfo>();
                     if (cellInfo != null)
                     {
-                        cellInfo.Initialize(col, row, cellType);
+                        cellInfo.Initialize(col, row, CellType.field);
                     }
                     else
                     {
@@ -91,8 +117,57 @@ namespace CellNameSpace
                 }
             }
             
-            // Применяем Cellular Automata для корректировки типов с учетом совместимости
-            ApplyCellularAutomata();
+            // Создаем массив типов для генерации
+            CellType[,] grid = new CellType[gridWidth, gridHeight];
+            for (int row = 0; row < gridHeight; row++)
+            {
+                for (int col = 0; col < gridWidth; col++)
+                {
+                    grid[col, row] = CellType.field;
+                }
+            }
+            
+            // Генерируем водоемы
+            int actualWaterSeed = waterSeed == 0 ? Random.Range(1, 1000000) : waterSeed;
+            WaterBodyGenerator.GenerateWaterBodies(grid, gridWidth, gridHeight, 
+                waterFrequency, waterFragmentation, actualWaterSeed);
+            Debug.Log("Водоемы сгенерированы");
+            
+            // Генерируем горы (не перекрывая водоемы)
+            int actualMountainSeed = mountainSeed == 0 ? Random.Range(1, 1000000) : mountainSeed;
+            TerrainGenerator.GenerateMountains(grid, gridWidth, gridHeight,
+                mountainFrequency, mountainFragmentation, actualMountainSeed);
+            Debug.Log("Горы сгенерированы");
+            
+            // Генерируем леса (не перекрывая водоемы)
+            int actualForestSeed = forestSeed == 0 ? Random.Range(1, 1000000) : forestSeed;
+            TerrainGenerator.GenerateForests(grid, gridWidth, gridHeight,
+                forestFrequency, forestFragmentation, actualForestSeed);
+            Debug.Log("Леса сгенерированы");
+            
+            // Генерируем пустыни (не перекрывая водоемы)
+            int actualDesertSeed = desertSeed == 0 ? Random.Range(1, 1000000) : desertSeed;
+            TerrainGenerator.GenerateDeserts(grid, gridWidth, gridHeight,
+                desertFrequency, desertFragmentation, actualDesertSeed);
+            Debug.Log("Пустыни сгенерированы");
+            
+            // Применяем логику совместимости
+            TerrainCompatibility.ApplyCompatibilityRules(grid, gridWidth, gridHeight);
+            Debug.Log("Логика совместимости применена");
+            
+            // Применяем результаты к GameObject'ам
+            for (int row = 0; row < gridHeight; row++)
+            {
+                for (int col = 0; col < gridWidth; col++)
+                {
+                    GameObject cell = cells[row * gridWidth + col];
+                    CellInfo cellInfo = cell.GetComponent<CellInfo>();
+                    if (cellInfo != null)
+                    {
+                        cellInfo.SetCellType(grid[col, row]);
+                    }
+                }
+            }
             
             Debug.Log($"Создано клеток: {cells.Count}");
         }
@@ -114,44 +189,6 @@ namespace CellNameSpace
         public void RegenerateGrid()
         {
             GenerateGrid();
-        }
-        
-        /// <summary>
-        /// Применяет Cellular Automata для корректировки типов клеток с учетом правил совместимости
-        /// </summary>
-        private void ApplyCellularAutomata()
-        {
-            // Создаем массив типов из GameObject'ов
-            CellType[,] grid = new CellType[gridWidth, gridHeight];
-            for (int row = 0; row < gridHeight; row++)
-            {
-                for (int col = 0; col < gridWidth; col++)
-                {
-                    GameObject cell = cells[row * gridWidth + col];
-                    CellInfo cellInfo = cell.GetComponent<CellInfo>();
-                    if (cellInfo != null)
-                    {
-                        grid[col, row] = cellInfo.GetCellType();
-                    }
-                }
-            }
-            
-            // Применяем Cellular Automata
-            CellularAutomata.ApplyCellularAutomata(grid, gridWidth, gridHeight, cellularAutomataIterations);
-            
-            // Применяем результаты обратно к GameObject'ам
-            for (int row = 0; row < gridHeight; row++)
-            {
-                for (int col = 0; col < gridWidth; col++)
-                {
-                    GameObject cell = cells[row * gridWidth + col];
-                    CellInfo cellInfo = cell.GetComponent<CellInfo>();
-                    if (cellInfo != null)
-                    {
-                        cellInfo.SetCellType(grid[col, row]);
-                    }
-                }
-            }
         }
     }
 }

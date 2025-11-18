@@ -9,6 +9,9 @@ namespace CellNameSpace
         private static float offsetX = 0f; // Смещение по X для вариативности
         private static float offsetY = 0f; // Смещение по Y для вариативности
         
+        // Флаг для отслеживания, была ли выполнена рандомизация
+        private static bool isRandomized = false;
+        
         /// <summary>
         /// Генерирует значение шума Перлина для заданной позиции
         /// </summary>
@@ -80,5 +83,45 @@ namespace CellNameSpace
             currentOffsetX = offsetX;
             currentOffsetY = offsetY;
         }
+        
+        /// <summary>
+        /// Рандомизирует параметры генерации для создания уникальной карты
+        /// </summary>
+        public static void Randomize()
+        {
+            // Генерируем случайные смещения в большом диапазоне для разнообразия
+            offsetX = Random.Range(-10000f, 10000f);
+            offsetY = Random.Range(-10000f, 10000f);
+            
+            // Опционально: можно также немного варьировать масштаб
+            // scale = Random.Range(0.08f, 0.12f);
+            
+            isRandomized = true;
+        }
+        
+        /// <summary>
+        /// Рандомизирует параметры генерации с заданным seed для воспроизводимости
+        /// </summary>
+        /// <param name="seed">Seed для генератора случайных чисел</param>
+        public static void Randomize(int seed)
+        {
+            Random.State oldState = Random.state;
+            Random.InitState(seed);
+            
+            offsetX = Random.Range(-10000f, 10000f);
+            offsetY = Random.Range(-10000f, 10000f);
+            
+            Random.state = oldState;
+            isRandomized = true;
+        }
+        
+        /// <summary>
+        /// Проверяет, была ли выполнена рандомизация
+        /// </summary>
+        public static bool IsRandomized()
+        {
+            return isRandomized;
+        }
     }
 }
+
