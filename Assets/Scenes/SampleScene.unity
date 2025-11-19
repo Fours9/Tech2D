@@ -154,8 +154,12 @@ MonoBehaviour:
   cellSize: 1
   pixelGap: 0.1
   waterFrequency: 0.385
-  waterFragmentation: 0.023
+  waterFragmentation: 0.008
   waterSeed: 0
+  convertShallowOnlyToDeep: 1
+  convertShallowNearDeepToDeep: 1
+  shallowToDeepChance: 0.2
+  waterProcessingIterations: 3
   mountainFrequency: 0.215
   mountainFragmentation: 0.308
   mountainSeed: 0
@@ -327,10 +331,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1d3ee3deaf62cd24cb115b65e487432c, type: 3}
+  m_Script: {fileID: 11500000, guid: e6ecd02963c157a47aaff66e499869e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CameraController
-  dragSpeed: 100
   zoomSpeed: 80
   minOrthoSize: 5
   maxOrthoSize: 100
