@@ -60,9 +60,8 @@ namespace CellNameSpace
         /// Обрабатывает водоемы, определяя какие должны быть shallow, а какие deep_water
         /// Логика:
         /// 1. Если контактирует с землей → обязательно shallow
-        /// 2. Если shallow имеет соседа shallow, который контактирует с землей → остается shallow
-        /// 3. Если shallow имеет соседа, который контактирует с землей → становится shallow
-        /// 4. Если у клетки нет соседей, которые контактируют с землей → становится deep_water
+        /// 2. Если shallow имеет соседа, который контактирует с землей → становится shallow
+        /// 3. Если у клетки нет соседей, которые контактируют с землей → становится deep_water
         /// </summary>
         private static void ProcessWaterBodies(CellType[,] grid, int gridWidth, int gridHeight)
         {
@@ -86,7 +85,7 @@ namespace CellNameSpace
                     CellType currentType = grid[col, row];
                     
                     // Обрабатываем только водоемы (shallow)
-                    if (currentType == CellType.shallow)
+                    if (currentType == CellType.shallow || currentType == CellType.deep_water)
                     {
                         List<Vector2Int> neighbors = HexagonalGridHelper.GetNeighbors(col, row, gridWidth, gridHeight);
                         
@@ -109,36 +108,8 @@ namespace CellNameSpace
                             continue;
                         }
                         
-                        // 2. Проверяем, есть ли сосед shallow, который контактирует с землей
-                        bool hasShallowNeighborContactingLand = false;
-                        foreach (Vector2Int neighbor in neighbors)
-                        {
-                            CellType neighborType = grid[neighbor.x, neighbor.y];
-                            if (neighborType == CellType.shallow)
-                            {
-                                // Проверяем, контактирует ли этот сосед shallow с землей
-                                List<Vector2Int> neighborNeighbors = HexagonalGridHelper.GetNeighbors(neighbor.x, neighbor.y, gridWidth, gridHeight);
-                                foreach (Vector2Int neighborNeighbor in neighborNeighbors)
-                                {
-                                    if (IsLandType(grid[neighborNeighbor.x, neighborNeighbor.y]))
-                                    {
-                                        hasShallowNeighborContactingLand = true;
-                                        break;
-                                    }
-                                }
-                                if (hasShallowNeighborContactingLand)
-                                    break;
-                            }
-                        }
                         
-                        // Если есть сосед shallow, контактирующий с землей, остается shallow
-                        if (hasShallowNeighborContactingLand)
-                        {
-                            newGrid[col, row] = CellType.shallow;
-                            continue;
-                        }
-                        
-                        // 3. Проверяем, есть ли любой сосед (не обязательно shallow), который контактирует с землей
+                        // 2. Проверяем, есть ли любой сосед (не обязательно shallow), который контактирует с землей
                         bool hasNeighborContactingLand = false;
                         foreach (Vector2Int neighbor in neighbors)
                         {
@@ -180,6 +151,66 @@ namespace CellNameSpace
                 for (int col = 0; col < gridWidth; col++)
                 {
                     grid[col, row] = newGrid[col, row];
+                }
+            }
+            
+            // 4. Последнее условие: Если клетка shallow имеет соседей ТОЛЬКО shallow, то она становится deep_water
+            for (int row = 0; row < gridHeight; row++)
+            {
+                for (int col = 0; col < gridWidth; col++)
+                {
+                    if (grid[col, row] == CellType.shallow)
+                    {
+                        List<Vector2Int> neighbors = HexagonalGridHelper.GetNeighbors(col, row, gridWidth, gridHeight);
+                        
+                        // Проверяем, что все соседи - только shallow
+                        bool allNeighborsAreShallow = true;
+                        foreach (Vector2Int neighbor in neighbors)
+                        {
+                            CellType neighborType = grid[neighbor.x, neighbor.y];
+                            if (neighborType != CellType.shallow)
+                            {
+                                allNeighborsAreShallow = false;
+                                break;
+                            }
+                        }
+                        
+                        // Если все соседи - только shallow, становится deep_water
+                        if (allNeighborsAreShallow && neighbors.Count > 0)
+                        {
+                            grid[col, row] = CellType.deep_water;
+                        }
+                    }
+                }
+            }
+            
+            // 5. Последнее условие: Если клетка shallow имеет соседа deep_water, то она имеет шанс 30% стать deep_water
+            // Шанс НЕ увеличивается с ростом количества соседей deep_water
+            for (int row = 0; row < gridHeight; row++)
+            {
+                for (int col = 0; col < gridWidth; col++)
+                {
+                    if (grid[col, row] == CellType.shallow)
+                    {
+                        List<Vector2Int> neighbors = HexagonalGridHelper.GetNeighbors(col, row, gridWidth, gridHeight);
+                        
+                        // Проверяем, есть ли хотя бы один сосед deep_water
+                        bool hasDeepWaterNeighbor = false;
+                        foreach (Vector2Int neighbor in neighbors)
+                        {
+                            if (grid[neighbor.x, neighbor.y] == CellType.deep_water)
+                            {
+                                hasDeepWaterNeighbor = true;
+                                break; // Достаточно одного соседа deep_water
+                            }
+                        }
+                        
+                        // Если есть сосед deep_water, с шансом 30% становится deep_water
+                        if (hasDeepWaterNeighbor && Random.Range(0f, 1f) < 0.3f)
+                        {
+                            grid[col, row] = CellType.deep_water;
+                        }
+                    }
                 }
             }
         }

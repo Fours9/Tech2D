@@ -47,7 +47,6 @@ namespace CellNameSpace
                                 hasForestNeighbor = true;
                             else if (neighborType == CellType.shallow)
                                 hasShallowNeighbor = true;
-
                         }
                         
                         // Если desert соседствует с forest, обязательно становится field
