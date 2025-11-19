@@ -331,6 +331,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CameraController
   dragSpeed: 100
+  zoomSpeed: 80
+  minOrthoSize: 5
+  maxOrthoSize: 100
   maxClickTime: 0.3
   maxClickDistance: 5
 --- !u!1 &619394800
