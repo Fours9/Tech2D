@@ -22,6 +22,7 @@ namespace CellNameSpace
         [SerializeField] private bool convertShallowNearDeepToDeep = true; // Если true, клетки shallow с соседом deep_water могут стать deep_water
         [Range(0f, 1f)]
         [SerializeField] private float shallowToDeepChance = 0.2f; // Шанс превращения shallow в deep_water при наличии соседа deep_water (0-1)
+        [SerializeField] [Min(1)] private int waterProcessingIterations = 3; // Количество итераций обработки воды (сколько раз прогонять все правила по кругу)
         
         [Header("Генерация гор")]
         [Range(0f, 1f)]
@@ -138,7 +139,7 @@ namespace CellNameSpace
             int actualWaterSeed = waterSeed == 0 ? Random.Range(1, 1000000) : waterSeed;
             WaterBodyGenerator.GenerateWaterBodies(grid, gridWidth, gridHeight, 
                 waterFrequency, waterFragmentation, actualWaterSeed,
-                convertShallowOnlyToDeep, convertShallowNearDeepToDeep, shallowToDeepChance);
+                convertShallowOnlyToDeep, convertShallowNearDeepToDeep, shallowToDeepChance, waterProcessingIterations);
             Debug.Log("Водоемы сгенерированы");
             
             // Генерируем горы (не перекрывая водоемы)

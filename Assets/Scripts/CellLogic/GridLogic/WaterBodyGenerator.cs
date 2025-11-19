@@ -20,9 +20,10 @@ namespace CellNameSpace
         /// <param name="convertShallowOnlyToDeep">Если true, клетки shallow с соседями только shallow становятся deep_water</param>
         /// <param name="convertShallowNearDeepToDeep">Если true, клетки shallow с соседом deep_water могут стать deep_water</param>
         /// <param name="shallowToDeepChance">Шанс превращения shallow в deep_water при наличии соседа deep_water (0-1)</param>
+        /// <param name="processingIterations">Количество итераций обработки воды (сколько раз прогонять все правила по кругу)</param>
         public static void GenerateWaterBodies(CellType[,] grid, int gridWidth, int gridHeight, 
             float waterFrequency, float waterFragmentation, int waterSeed,
-            bool convertShallowOnlyToDeep = true, bool convertShallowNearDeepToDeep = true, float shallowToDeepChance = 0.3f)
+            bool convertShallowOnlyToDeep = true, bool convertShallowNearDeepToDeep = true, float shallowToDeepChance = 0.2f, int processingIterations = 3)
         {
             // Сохраняем состояние Random
             Random.State oldState = Random.state;
@@ -57,12 +58,12 @@ namespace CellNameSpace
             }
             
             // Теперь применяем логику для определения deep_water и shallow
-            ProcessWaterBodies(grid, gridWidth, gridHeight, convertShallowOnlyToDeep, convertShallowNearDeepToDeep, shallowToDeepChance);
+            ProcessWaterBodies(grid, gridWidth, gridHeight, convertShallowOnlyToDeep, convertShallowNearDeepToDeep, shallowToDeepChance, processingIterations);
         }
         
         /// <summary>
         /// Обрабатывает водоемы, определяя какие должны быть shallow, а какие deep_water
-        /// Логика:
+        /// Логика выполняется несколько итераций по кругу:
         /// 1. Если контактирует с землей → обязательно shallow
         /// 2. Если shallow имеет соседа, который контактирует с землей → становится shallow
         /// 3. Если у клетки нет соседей, которые контактируют с землей → становится deep_water
@@ -70,18 +71,11 @@ namespace CellNameSpace
         /// 5. Если клетка shallow имеет соседа deep_water → шанс стать deep_water (опционально)
         /// </summary>
         private static void ProcessWaterBodies(CellType[,] grid, int gridWidth, int gridHeight,
-            bool convertShallowOnlyToDeep, bool convertShallowNearDeepToDeep, float shallowToDeepChance)
+            bool convertShallowOnlyToDeep, bool convertShallowNearDeepToDeep, float shallowToDeepChance, int processingIterations)
         {
-            const int maxIterations = 100; // Максимальное количество итераций для предотвращения бесконечного цикла
-            int iteration = 0;
-            bool hasChanges = true;
-            
-            // Повторяем все проходы до тех пор, пока происходят изменения
-            while (hasChanges && iteration < maxIterations)
+            // Выполняем все проходы несколько раз по кругу
+            for (int iteration = 0; iteration < processingIterations; iteration++)
             {
-                hasChanges = false;
-                iteration++;
-                
                 // Создаем временный массив для новых типов
                 CellType[,] newGrid = new CellType[gridWidth, gridHeight];
                 
@@ -121,11 +115,7 @@ namespace CellNameSpace
                             // Если контактирует с землей, обязательно shallow
                             if (contactsLand)
                             {
-                                if (newGrid[col, row] != CellType.shallow)
-                                {
-                                    newGrid[col, row] = CellType.shallow;
-                                    hasChanges = true;
-                                }
+                                newGrid[col, row] = CellType.shallow;
                                 continue;
                             }
                             
@@ -155,20 +145,12 @@ namespace CellNameSpace
                             // Если есть сосед, который контактирует с землей, становится shallow
                             if (hasNeighborContactingLand)
                             {
-                                if (newGrid[col, row] != CellType.shallow)
-                                {
-                                    newGrid[col, row] = CellType.shallow;
-                                    hasChanges = true;
-                                }
+                                newGrid[col, row] = CellType.shallow;
                             }
                             else
                             {
                                 // 3. Если нет соседей, которые контактируют с землей, становится deep_water
-                                if (newGrid[col, row] != CellType.deep_water)
-                                {
-                                    newGrid[col, row] = CellType.deep_water;
-                                    hasChanges = true;
-                                }
+                                newGrid[col, row] = CellType.deep_water;
                             }
                         }
                     }
@@ -209,11 +191,7 @@ namespace CellNameSpace
                                 // Если все соседи - только shallow, становится deep_water
                                 if (allNeighborsAreShallow && neighbors.Count > 0)
                                 {
-                                    if (grid[col, row] != CellType.deep_water)
-                                    {
-                                        grid[col, row] = CellType.deep_water;
-                                        hasChanges = true;
-                                    }
+                                    grid[col, row] = CellType.deep_water;
                                 }
                             }
                         }
@@ -246,21 +224,12 @@ namespace CellNameSpace
                                 // Если есть сосед deep_water, с заданным шансом становится deep_water
                                 if (hasDeepWaterNeighbor && Random.Range(0f, 1f) < shallowToDeepChance)
                                 {
-                                    if (grid[col, row] != CellType.deep_water)
-                                    {
-                                        grid[col, row] = CellType.deep_water;
-                                        hasChanges = true;
-                                    }
+                                    grid[col, row] = CellType.deep_water;
                                 }
                             }
                         }
                     }
                 }
-            }
-            
-            if (iteration >= maxIterations)
-            {
-                Debug.LogWarning($"ProcessWaterBodies достиг максимального количества итераций ({maxIterations})");
             }
         }
         
