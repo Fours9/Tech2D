@@ -56,30 +56,19 @@ namespace CellNameSpace
                 return;
             }
             
-            // Для MeshRenderer (через Material)
+            // Для MeshRenderer
             MeshRenderer meshRenderer = renderer as MeshRenderer;
             if (meshRenderer != null)
             {
-                // Если есть instance материала (от предыдущего типа), нужно его сбросить
-                // чтобы не оставалась текстура от старого материала
-                if (meshRenderer.material != null && meshRenderer.material.name.Contains("(Instance)"))
-                {
-                    // Возвращаемся к sharedMaterial (если есть) или создаем новый стандартный материал
-                    // Но проще просто применить цвет к текущему материалу - текстура останется, но цвет изменится
-                    // Для правильной работы нужно сбросить материал полностью
-                    // Используем sharedMaterial если он есть, иначе создаем новый материал
-                    if (meshRenderer.sharedMaterial != null)
-                    {
-                        // Возвращаемся к sharedMaterial и меняем его цвет
-                        meshRenderer.material = meshRenderer.sharedMaterial;
-                    }
-                }
-                
-                if (meshRenderer.material != null)
+                if (meshRenderer.sharedMaterial != null)
                 {
                     // Сохраняем альфу из исходного цвета материала
-                    Color originalColor = meshRenderer.material.color;
+                    Color originalColor = meshRenderer.sharedMaterial.color;
                     newColor.a = originalColor.a;
+                    
+                    // Для изменения цвета используем material.color (создаст instance)
+                    // Это необходимо для работы функциональности окрашивания
+                    // MaterialPropertyBlock может не работать для всех материалов и шейдеров
                     meshRenderer.material.color = newColor;
                 }
             }
@@ -125,14 +114,9 @@ namespace CellNameSpace
                 {
                     try
                     {
-                        // Используем material (создает instance), чтобы каждая клетка имела свой материал
-                        meshRenderer.material = material;
-                        
-                        // Отладочная информация
-                        if (cellType == CellType.field || cellType == CellType.desert)
-                        {
-                            Debug.Log($"[CellColorManager] Applied material '{material.name}' to cellType={cellType}");
-                        }
+                        // Используем sharedMaterial для оптимизации - не создаем instance для каждой клетки
+                        // Это значительно ускоряет создание больших сеток
+                        meshRenderer.sharedMaterial = material;
                         return;
                     }
                     catch (System.Exception)
@@ -146,7 +130,7 @@ namespace CellNameSpace
             // Отладочная информация
             if (cellType == CellType.field || cellType == CellType.desert)
             {
-                Debug.Log($"[CellColorManager] Material NOT found for cellType={cellType}, coloring without changing material");
+
             }
             
             ApplyColorToCell(renderer, cellType);

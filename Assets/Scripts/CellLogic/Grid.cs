@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 
@@ -45,7 +46,13 @@ namespace CellNameSpace
         [SerializeField] private float desertFragmentation = 0.5f; // Раздробленность пустынь
         [SerializeField] private int desertSeed = 0; // Сид для генерации пустынь (0 = случайный)
         
+        [Header("Оптимизация")]
+        [SerializeField] private int cellsPerFrame = 50; // Количество клеток для обработки за кадр (для корутин)
+        [SerializeField] private bool useCoroutines = true; // Использовать ли корутины для распределения работы
+        [SerializeField] private bool pauseGameDuringGeneration = true; // Ставить игру на паузу во время генерации карты
+        
         private List<GameObject> cells = new List<GameObject>();
+        private float savedTimeScale = 1f; // Сохраненное значение timeScale
         
         // Кэшированные значения для расчета ширины карты
         private float cachedHexWidth = 0f;
@@ -63,6 +70,14 @@ namespace CellNameSpace
             {
                 Debug.LogError("Cell Prefab не назначен!");
                 return;
+            }
+            
+            // Ставим игру на паузу во время генерации (если включено)
+            if (pauseGameDuringGeneration && Application.isPlaying)
+            {
+                savedTimeScale = Time.timeScale;
+                Time.timeScale = 0f;
+                Debug.Log("Игра поставлена на паузу для генерации карты");
             }
             
             // Очищаем существующие клетки
@@ -121,6 +136,8 @@ namespace CellNameSpace
                     CellInfo cellInfo = cell.GetComponent<CellInfo>();
                     if (cellInfo != null)
                     {
+                        // Пока не передаем менеджеры, они будут найдены позже при SetCellType
+                        // Это оптимизирует процесс, так как менеджеры могут еще не быть инициализированы
                         cellInfo.Initialize(col, row, CellType.field);
                     }
                     else
@@ -174,7 +191,30 @@ namespace CellNameSpace
             TerrainCompatibility.ApplyCompatibilityRules(grid, gridWidth, gridHeight);
             Debug.Log("Логика совместимости применена");
             
+            // Находим менеджеры один раз для оптимизации
+            CellMaterialManager materialManager = FindFirstObjectByType<CellMaterialManager>();
+            CellOverlayManager overlayManager = FindFirstObjectByType<CellOverlayManager>();
+            
             // Применяем результаты к GameObject'ам
+            if (useCoroutines && Application.isPlaying)
+            {
+                // Используем корутину для распределения работы по кадрам
+                StartCoroutine(ApplyCellTypesCoroutine(grid, materialManager, overlayManager));
+            }
+            else
+            {
+                // Синхронное применение (для Editor или если корутины отключены)
+                ApplyCellTypesSync(grid, materialManager, overlayManager);
+            }
+            
+            Debug.Log($"Создано клеток: {cells.Count}");
+        }
+        
+        /// <summary>
+        /// Синхронно применяет типы клеток к GameObject'ам
+        /// </summary>
+        private void ApplyCellTypesSync(CellType[,] grid, CellMaterialManager materialManager, CellOverlayManager overlayManager)
+        {
             for (int row = 0; row < gridHeight; row++)
             {
                 for (int col = 0; col < gridWidth; col++)
@@ -183,12 +223,120 @@ namespace CellNameSpace
                     CellInfo cellInfo = cell.GetComponent<CellInfo>();
                     if (cellInfo != null)
                     {
-                        cellInfo.SetCellType(grid[col, row]);
+                        // Устанавливаем менеджеры для оптимизации (если они найдены)
+                        cellInfo.SetManagers(materialManager, overlayManager);
+                        // Отключаем обновление оверлеев при массовом создании для оптимизации
+                        cellInfo.SetCellType(grid[col, row], updateOverlays: false);
                     }
                 }
             }
             
-            Debug.Log($"Создано клеток: {cells.Count}");
+            // Обновляем оверлеи батчами после применения всех типов
+            if (overlayManager != null && Application.isPlaying)
+            {
+                StartCoroutine(UpdateOverlaysBatchCoroutineWithResume());
+            }
+            else
+            {
+                // Если корутины не используются, сразу возобновляем игру
+                ResumeGame();
+            }
+        }
+        
+        /// <summary>
+        /// Корутина для применения типов клеток с распределением по кадрам
+        /// </summary>
+        private IEnumerator ApplyCellTypesCoroutine(CellType[,] grid, CellMaterialManager materialManager, CellOverlayManager overlayManager)
+        {
+            int processed = 0;
+            
+            for (int row = 0; row < gridHeight; row++)
+            {
+                for (int col = 0; col < gridWidth; col++)
+                {
+                    GameObject cell = cells[row * gridWidth + col];
+                    CellInfo cellInfo = cell.GetComponent<CellInfo>();
+                    if (cellInfo != null)
+                    {
+                        // Устанавливаем менеджеры для оптимизации (если они найдены)
+                        cellInfo.SetManagers(materialManager, overlayManager);
+                        // Отключаем обновление оверлеев при массовом создании для оптимизации
+                        cellInfo.SetCellType(grid[col, row], updateOverlays: false);
+                        processed++;
+                        
+                        // Каждые cellsPerFrame клеток делаем паузу на один кадр
+                        if (processed >= cellsPerFrame)
+                        {
+                            processed = 0;
+                            // Используем WaitForEndOfFrame для работы при timeScale = 0
+                            yield return new WaitForEndOfFrame();
+                        }
+                    }
+                }
+            }
+            
+            // Обновляем оверлеи батчами после применения всех типов
+            if (overlayManager != null)
+            {
+                yield return StartCoroutine(UpdateOverlaysBatchCoroutine());
+            }
+            
+            Debug.Log("Применение типов клеток завершено");
+            
+            // Возобновляем игру после завершения генерации
+            ResumeGame();
+        }
+        
+        /// <summary>
+        /// Корутина для батчевого обновления оверлеев
+        /// </summary>
+        private IEnumerator UpdateOverlaysBatchCoroutine()
+        {
+            int processed = 0;
+            
+            foreach (GameObject cell in cells)
+            {
+                if (cell == null)
+                    continue;
+                    
+                CellInfo cellInfo = cell.GetComponent<CellInfo>();
+                if (cellInfo != null)
+                {
+                    cellInfo.UpdateOverlays();
+                    processed++;
+                    
+                    // Каждые cellsPerFrame клеток делаем паузу на один кадр
+                    if (processed >= cellsPerFrame)
+                    {
+                        processed = 0;
+                        // Используем WaitForEndOfFrame для работы при timeScale = 0
+                        yield return new WaitForEndOfFrame();
+                    }
+                }
+            }
+            
+            Debug.Log("Обновление оверлеев завершено");
+        }
+        
+        /// <summary>
+        /// Корутина для батчевого обновления оверлеев с возобновлением игры
+        /// </summary>
+        private IEnumerator UpdateOverlaysBatchCoroutineWithResume()
+        {
+            yield return StartCoroutine(UpdateOverlaysBatchCoroutine());
+            ResumeGame();
+        }
+        
+        /// <summary>
+        /// Возобновляет игру после завершения генерации
+        /// </summary>
+        private void ResumeGame()
+        {
+            if (pauseGameDuringGeneration && Application.isPlaying)
+            {
+                Time.timeScale = savedTimeScale;
+                Debug.Log("Игра возобновлена после генерации карты");
+            }
         }
         
         private void ClearGrid()

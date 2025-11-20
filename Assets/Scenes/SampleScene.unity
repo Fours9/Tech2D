@@ -218,7 +218,7 @@ MonoBehaviour:
   overlayMappings:
   - cellType: 3
     layer: 0
-    sprite: {fileID: 21300000, guid: 6d121d340ed00964292f3d6c1cfe13f1, type: 3}
+    sprite: {fileID: 7591296699194663517, guid: ba095b85baecc5148a67abb6e17efe41, type: 3}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0

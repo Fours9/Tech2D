@@ -14,6 +14,7 @@ namespace CellNameSpace
         private Renderer cellRenderer;
         private CellMaterialManager cachedMaterialManager = null;
         private CellOverlayManager cachedOverlayManager = null;
+        private Vector2? cachedCellSize = null; // Кэшированный размер клетки
         
         void Awake()
         {
@@ -27,11 +28,19 @@ namespace CellNameSpace
         /// <param name="x">Позиция X в сетке</param>
         /// <param name="y">Позиция Y в сетке</param>
         /// <param name="type">Тип клетки</param>
-        public void Initialize(int x, int y, CellType type)
+        /// <param name="materialManager">Менеджер материалов (опционально, для оптимизации)</param>
+        /// <param name="overlayManager">Менеджер оверлеев (опционально, для оптимизации)</param>
+        public void Initialize(int x, int y, CellType type, CellMaterialManager materialManager = null, CellOverlayManager overlayManager = null)
         {
             gridX = x;
             gridY = y;
             cellType = type;
+            
+            // Кэшируем менеджеры для оптимизации
+            if (materialManager != null)
+                cachedMaterialManager = materialManager;
+            if (overlayManager != null)
+                cachedOverlayManager = overlayManager;
             
             // При первом создании клеток не меняем материал - оставляем материал префаба
             // Материал/цвет будет применен позже при SetCellType
@@ -62,13 +71,28 @@ namespace CellNameSpace
         }
         
         /// <summary>
+        /// Устанавливает менеджеры для оптимизации (избегает поиска через FindFirstObjectByType)
+        /// </summary>
+        /// <param name="materialManager">Менеджер материалов</param>
+        /// <param name="overlayManager">Менеджер оверлеев</param>
+        public void SetManagers(CellMaterialManager materialManager, CellOverlayManager overlayManager)
+        {
+            if (materialManager != null)
+                cachedMaterialManager = materialManager;
+            if (overlayManager != null)
+                cachedOverlayManager = overlayManager;
+        }
+        
+        /// <summary>
         /// Установить тип клетки
         /// </summary>
-        public void SetCellType(CellType type)
+        /// <param name="type">Новый тип клетки</param>
+        /// <param name="updateOverlays">Обновлять ли оверлеи (по умолчанию true, можно отключить для массового обновления)</param>
+        public void SetCellType(CellType type, bool updateOverlays = true)
         {
             cellType = type;
             // Обновляем цвет при изменении типа
-            UpdateCellColor();
+            UpdateCellColor(updateOverlays);
         }
         
         /// <summary>
@@ -76,7 +100,8 @@ namespace CellNameSpace
         /// Вызывается автоматически при Initialize и SetCellType,
         /// но также может быть вызван вручную при необходимости
         /// </summary>
-        public void UpdateCellColor()
+        /// <param name="updateOverlays">Обновлять ли оверлеи (по умолчанию true)</param>
+        public void UpdateCellColor(bool updateOverlays = true)
         {
             if (cellRenderer == null)
                 cellRenderer = GetComponent<Renderer>();
@@ -93,8 +118,11 @@ namespace CellNameSpace
             // Применяем материал или цвет (с защитой - если materialManager null, используется цвет)
             CellColorManager.ApplyMaterialToCell(cellRenderer, cellType, cachedMaterialManager);
             
-            // Обновляем оверлеи при изменении типа клетки
-            UpdateOverlays();
+            // Обновляем оверлеи при изменении типа клетки (если требуется)
+            if (updateOverlays)
+            {
+                UpdateOverlays();
+            }
         }
         
         /// <summary>
@@ -108,7 +136,7 @@ namespace CellNameSpace
                 cachedOverlayManager = FindOverlayManager();
             }
             
-            // Получаем размер клетки для масштабирования спрайтов
+            // Получаем размер клетки для масштабирования спрайтов (с кэшированием)
             Vector2 cellSize = GetCellSize();
             
             // Обновляем слой ресурсов
@@ -162,9 +190,14 @@ namespace CellNameSpace
         
         /// <summary>
         /// Получает размер клетки в локальных координатах (без учета масштаба родителя)
+        /// Использует кэширование для оптимизации
         /// </summary>
         private Vector2 GetCellSize()
         {
+            // Возвращаем кэшированное значение, если оно есть
+            if (cachedCellSize.HasValue)
+                return cachedCellSize.Value;
+            
             if (cellRenderer == null)
                 cellRenderer = GetComponent<Renderer>();
             
@@ -179,15 +212,27 @@ namespace CellNameSpace
                 Vector3 lossyScale = transform.lossyScale;
                 if (lossyScale.x > 0f && lossyScale.y > 0f)
                 {
-                    return new Vector2(worldSize.x / lossyScale.x, worldSize.y / lossyScale.y);
+                    Vector2 size = new Vector2(worldSize.x / lossyScale.x, worldSize.y / lossyScale.y);
+                    cachedCellSize = size;
+                    return size;
                 }
                 
                 // Если масштаб нулевой, возвращаем размер по умолчанию
+                cachedCellSize = worldSize;
                 return worldSize;
             }
             
             // Если рендерер не найден, возвращаем размер по умолчанию
+            cachedCellSize = Vector2.one;
             return Vector2.one;
+        }
+        
+        /// <summary>
+        /// Сбрасывает кэш размера клетки (вызывать при изменении масштаба)
+        /// </summary>
+        public void InvalidateCellSizeCache()
+        {
+            cachedCellSize = null;
         }
         
         /// <summary>
