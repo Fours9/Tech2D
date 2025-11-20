@@ -16,6 +16,9 @@ namespace CellNameSpace
         [SerializeField] private float maxClickTime = 0.3f; // Максимальное время для считания кликом (секунды)
         [SerializeField] private float maxClickDistance = 5f; // Максимальное расстояние перемещения для считания кликом (в пикселях)
         
+        [Header("Настройки цикличности карты")]
+        [SerializeField] private Grid grid; // Ссылка на Grid для получения ширины карты
+        
         private Camera mainCamera;
         private Vector3 targetCameraPosition;
         private float targetOrthoSize;
@@ -116,6 +119,30 @@ namespace CellNameSpace
         private void ApplyMovement()
         {
             if (mainCamera == null) return;
+            
+            // Применяем цикличность по горизонтали, если Grid доступен
+            if (grid != null)
+            {
+                float mapWidth = grid.GetMapWidth();
+                if (mapWidth > 0f)
+                {
+                    // Зацикливаем позицию камеры по горизонтали
+                    float x = targetCameraPosition.x;
+                    
+                    // Если камера вышла за правый край, телепортируем на левый
+                    if (x > mapWidth)
+                    {
+                        x = x - mapWidth;
+                    }
+                    // Если камера вышла за левый край, телепортируем на правый
+                    else if (x < 0f)
+                    {
+                        x = mapWidth + x;
+                    }
+                    
+                    targetCameraPosition.x = x;
+                }
+            }
             
             // Мгновенно применяем позицию камеры без сглаживания
             mainCamera.transform.position = targetCameraPosition;

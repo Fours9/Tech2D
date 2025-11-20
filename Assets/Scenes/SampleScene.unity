@@ -129,6 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 141372081}
   - component: {fileID: 141372080}
+  - component: {fileID: 141372082}
   m_Layer: 0
   m_Name: Grid Creator
   m_TagString: Untagged
@@ -184,6 +185,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &141372082
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141372079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02ccc3e9a22e0d24687ba09d3924380c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CellMaterialManager
+  materialMappings:
+  - cellType: 4
+    material: {fileID: 2100000, guid: 34bec83d0f6d5da4db18b2b1cbba59f6, type: 2}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -339,6 +355,7 @@ MonoBehaviour:
   maxOrthoSize: 100
   maxClickTime: 0.3
   maxClickDistance: 5
+  grid: {fileID: 0}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0

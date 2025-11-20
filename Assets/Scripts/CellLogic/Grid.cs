@@ -47,6 +47,11 @@ namespace CellNameSpace
         
         private List<GameObject> cells = new List<GameObject>();
         
+        // Кэшированные значения для расчета ширины карты
+        private float cachedHexWidth = 0f;
+        private float cachedHexOffset = 0f;
+        private float cachedActualCellSize = 0f;
+        
         void Start()
         {
             GenerateGrid();
@@ -85,6 +90,11 @@ namespace CellNameSpace
             float hexHeight = actualCellSize * 1.5f + pixelGap;
             // Смещение для нечетных строк: (cellSize * √3 + зазор) / 2
             float hexOffset = (actualCellSize * 1.732f + pixelGap) * 0.5f; // √3 / 2 ≈ 0.866
+            
+            // Кэшируем значения для расчета ширины карты
+            cachedHexWidth = hexWidth;
+            cachedHexOffset = hexOffset;
+            cachedActualCellSize = actualCellSize;
             
             Debug.Log($"Генерация сетки: {gridWidth}x{gridHeight}, размер клетки: {actualCellSize}, расстояние: {hexWidth}x{hexHeight}");
             
@@ -201,6 +211,34 @@ namespace CellNameSpace
         public void RegenerateGrid()
         {
             GenerateGrid();
+        }
+        
+        /// <summary>
+        /// Получает ширину карты в мировых координатах
+        /// </summary>
+        /// <returns>Ширина карты в мировых координатах</returns>
+        public float GetMapWidth()
+        {
+            // Если значения еще не кэшированы, вычисляем их
+            if (cachedHexWidth <= 0f)
+            {
+                Renderer prefabRenderer = cellPrefab != null ? cellPrefab.GetComponent<Renderer>() : null;
+                float actualCellSize = cellSize;
+                
+                if (prefabRenderer != null && cellSize <= 0.1f)
+                {
+                    actualCellSize = Mathf.Max(prefabRenderer.bounds.size.x, prefabRenderer.bounds.size.y) * cellSize;
+                }
+                
+                cachedHexWidth = actualCellSize * 1.732f + pixelGap;
+                cachedHexOffset = (actualCellSize * 1.732f + pixelGap) * 0.5f;
+                cachedActualCellSize = actualCellSize;
+            }
+            
+            // Ширина карты = (gridWidth - 1) * hexWidth + максимальное смещение для нечетных строк
+            // Максимальное смещение = hexOffset (для последней нечетной строки)
+            float maxOffset = (gridHeight > 0 && (gridHeight - 1) % 2 != 0) ? cachedHexOffset : 0f;
+            return (gridWidth - 1) * cachedHexWidth + maxOffset;
         }
     }
 }

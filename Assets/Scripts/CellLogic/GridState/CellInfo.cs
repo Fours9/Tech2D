@@ -9,6 +9,8 @@ namespace CellNameSpace
         [SerializeField] private int gridY = 0;
         
         private Renderer cellRenderer;
+        private CellMaterialManager cachedMaterialManager = null;
+        private bool materialManagerSearched = false;
         
         void Awake()
         {
@@ -76,10 +78,34 @@ namespace CellNameSpace
             if (cellRenderer == null)
                 cellRenderer = GetComponent<Renderer>();
             
-            if (cellRenderer != null)
+            if (cellRenderer == null)
+                return;
+            
+            // Кэшируем materialManager, но проверяем его каждый раз (на случай если он появился позже)
+            if (cachedMaterialManager == null || !cachedMaterialManager.gameObject.activeInHierarchy)
             {
-                CellColorManager.ApplyColorToCell(cellRenderer, cellType);
+                cachedMaterialManager = FindMaterialManager();
+                materialManagerSearched = true;
             }
+            
+            // Применяем материал или цвет (с защитой - если materialManager null, используется цвет)
+            CellColorManager.ApplyMaterialToCell(cellRenderer, cellType, cachedMaterialManager);
+        }
+        
+        /// <summary>
+        /// Находит CellMaterialManager в сцене
+        /// </summary>
+        private CellMaterialManager FindMaterialManager()
+        {
+            // Используем FindFirstObjectByType для поиска CellMaterialManager в сцене
+            // Но только в Play Mode, чтобы не зависать в Editor
+            if (Application.isPlaying)
+            {
+                return FindFirstObjectByType<CellMaterialManager>();
+            }
+            
+            // В Editor режиме возвращаем null, чтобы использовать цвета
+            return null;
         }
     }
 }

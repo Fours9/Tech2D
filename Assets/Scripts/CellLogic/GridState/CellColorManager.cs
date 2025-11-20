@@ -66,6 +66,59 @@ namespace CellNameSpace
                 meshRenderer.material.color = newColor;
             }
         }
+        
+        /// <summary>
+        /// Применяет материал к рендереру клетки
+        /// </summary>
+        /// <param name="renderer">Рендерер клетки</param>
+        /// <param name="cellType">Тип клетки</param>
+        /// <param name="materialManager">Менеджер материалов (может быть null)</param>
+        public static void ApplyMaterialToCell(Renderer renderer, CellType cellType, CellMaterialManager materialManager = null)
+        {
+            if (renderer == null)
+                return;
+            
+            // Защита: если materialManager не назначен или null, сразу используем цвета
+            if (materialManager == null)
+            {
+                ApplyColorToCell(renderer, cellType);
+                return;
+            }
+            
+            // Пытаемся получить материал из менеджера
+            Material material = null;
+            try
+            {
+                material = materialManager.GetMaterialForType(cellType);
+            }
+            catch (System.Exception)
+            {
+                // Если произошла ошибка при получении материала, используем цвет
+                ApplyColorToCell(renderer, cellType);
+                return;
+            }
+            
+            // Если материал найден и валиден, применяем его
+            if (material != null)
+            {
+                MeshRenderer meshRenderer = renderer as MeshRenderer;
+                if (meshRenderer != null)
+                {
+                    try
+                    {
+                        meshRenderer.material = material;
+                        return;
+                    }
+                    catch (System.Exception)
+                    {
+                        // Если не удалось применить материал, используем цвет
+                    }
+                }
+            }
+            
+            // Если материал не найден или не удалось применить, используем цвет как fallback
+            ApplyColorToCell(renderer, cellType);
+        }
     }
 }
 

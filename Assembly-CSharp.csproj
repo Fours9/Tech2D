@@ -64,6 +64,7 @@
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellInfo.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellularAutomata.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellTypeCompatibility.cs" />
+    <Compile Include="Assets\Scripts\CellLogic\CellMaterial\CellMaterialManager.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\TerrainGenerator.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellColorManager.cs" />
     <Compile Include="Assets\Scripts\Controllers\Camera\ClickDetector.cs" />
@@ -78,6 +79,9 @@
     <Compile Include="Assets\Scripts\Controllers\CameraController.cs" />
     <Compile Include="Assets\Scripts\Controllers\Camera\CameraZoomHandler.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\PerlinNoise.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Shaders\WorldSpaceTexture.shader" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
