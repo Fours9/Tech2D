@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 141372081}
   - component: {fileID: 141372080}
   - component: {fileID: 141372082}
+  - component: {fileID: 141372083}
   m_Layer: 0
   m_Name: Grid Creator
   m_TagString: Untagged
@@ -149,7 +150,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 505ef5c062bffc54e81f70c7182d3945, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Grid
-  cellPrefab: {fileID: 8894843892302018048, guid: 6c2e9b1d205d97348ac9ccc3dfc82e9b, type: 3}
+  cellPrefab: {fileID: 5993114145590717218, guid: 6c2e9b1d205d97348ac9ccc3dfc82e9b, type: 3}
   gridWidth: 100
   gridHeight: 100
   cellSize: 1
@@ -200,6 +201,24 @@ MonoBehaviour:
   materialMappings:
   - cellType: 4
     material: {fileID: 2100000, guid: 34bec83d0f6d5da4db18b2b1cbba59f6, type: 2}
+  - cellType: 2
+    material: {fileID: 2100000, guid: cdff800c624c36946a78da9d8882dae0, type: 2}
+--- !u!114 &141372083
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141372079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10bbf5b49f61f134dbe7bb87b28a5885, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CellOverlayManager
+  overlayMappings:
+  - cellType: 3
+    layer: 0
+    sprite: {fileID: 21300000, guid: 6d121d340ed00964292f3d6c1cfe13f1, type: 3}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -393,7 +412,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000
+  m_ApplyToSortingLayers: 00000000f9fdfa34a92133b7
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0

@@ -75,6 +75,7 @@
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellType.cs" />
     <Compile Include="Assets\Scripts\CellLogic\Grid.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\HexagonalGridHelper.cs" />
+    <Compile Include="Assets\Scripts\CellLogic\CellOverlay\CellOverlayManager.cs" />
     <Compile Include="Assets\Scripts\Controllers\Camera\CameraDragHandler.cs" />
     <Compile Include="Assets\Scripts\Controllers\CameraController.cs" />
     <Compile Include="Assets\Scripts\Controllers\Camera\CameraZoomHandler.cs" />
