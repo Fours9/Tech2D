@@ -58,12 +58,30 @@ namespace CellNameSpace
             
             // Для MeshRenderer (через Material)
             MeshRenderer meshRenderer = renderer as MeshRenderer;
-            if (meshRenderer != null && meshRenderer.material != null)
+            if (meshRenderer != null)
             {
-                // Сохраняем альфу из исходного цвета материала
-                Color originalColor = meshRenderer.material.color;
-                newColor.a = originalColor.a;
-                meshRenderer.material.color = newColor;
+                // Если есть instance материала (от предыдущего типа), нужно его сбросить
+                // чтобы не оставалась текстура от старого материала
+                if (meshRenderer.material != null && meshRenderer.material.name.Contains("(Instance)"))
+                {
+                    // Возвращаемся к sharedMaterial (если есть) или создаем новый стандартный материал
+                    // Но проще просто применить цвет к текущему материалу - текстура останется, но цвет изменится
+                    // Для правильной работы нужно сбросить материал полностью
+                    // Используем sharedMaterial если он есть, иначе создаем новый материал
+                    if (meshRenderer.sharedMaterial != null)
+                    {
+                        // Возвращаемся к sharedMaterial и меняем его цвет
+                        meshRenderer.material = meshRenderer.sharedMaterial;
+                    }
+                }
+                
+                if (meshRenderer.material != null)
+                {
+                    // Сохраняем альфу из исходного цвета материала
+                    Color originalColor = meshRenderer.material.color;
+                    newColor.a = originalColor.a;
+                    meshRenderer.material.color = newColor;
+                }
             }
         }
         
@@ -85,6 +103,8 @@ namespace CellNameSpace
                 return;
             }
             
+            MeshRenderer meshRenderer = renderer as MeshRenderer;
+            
             // Пытаемся получить материал из менеджера
             Material material = null;
             try
@@ -93,33 +113,46 @@ namespace CellNameSpace
             }
             catch (System.Exception)
             {
-                // Если произошла ошибка при получении материала, используем цвет
+                // Если произошла ошибка при получении материала, просто красим цветом
                 ApplyColorToCell(renderer, cellType);
                 return;
             }
             
-            // Если материал найден и валиден, применяем его
+            // Если материал найден для типа, применяем его
             if (material != null)
             {
-                MeshRenderer meshRenderer = renderer as MeshRenderer;
                 if (meshRenderer != null)
                 {
                     try
                     {
+                        // Используем material (создает instance), чтобы каждая клетка имела свой материал
                         meshRenderer.material = material;
+                        
+                        // Отладочная информация
+                        if (cellType == CellType.field || cellType == CellType.desert)
+                        {
+                            Debug.Log($"[CellColorManager] Applied material '{material.name}' to cellType={cellType}");
+                        }
                         return;
                     }
                     catch (System.Exception)
                     {
-                        // Если не удалось применить материал, используем цвет
+                        // Если не удалось применить материал, красим цветом
                     }
                 }
             }
             
-            // Если материал не найден или не удалось применить, используем цвет как fallback
+            // Если материал не найден для типа - красим цветом, НЕ меняя материал префаба
+            // Отладочная информация
+            if (cellType == CellType.field || cellType == CellType.desert)
+            {
+                Debug.Log($"[CellColorManager] Material NOT found for cellType={cellType}, coloring without changing material");
+            }
+            
             ApplyColorToCell(renderer, cellType);
         }
     }
 }
+
 
 

@@ -10,7 +10,6 @@ namespace CellNameSpace
         
         private Renderer cellRenderer;
         private CellMaterialManager cachedMaterialManager = null;
-        private bool materialManagerSearched = false;
         
         void Awake()
         {
@@ -30,8 +29,8 @@ namespace CellNameSpace
             gridY = y;
             cellType = type;
             
-            // Обновляем цвет при инициализации
-            UpdateCellColor();
+            // При первом создании клеток не меняем материал - оставляем материал префаба
+            // Материал/цвет будет применен позже при SetCellType
         }
         
         /// <summary>
@@ -85,12 +84,11 @@ namespace CellNameSpace
             if (cachedMaterialManager == null || !cachedMaterialManager.gameObject.activeInHierarchy)
             {
                 cachedMaterialManager = FindMaterialManager();
-                materialManagerSearched = true;
             }
             
             // Применяем материал или цвет (с защитой - если materialManager null, используется цвет)
             CellColorManager.ApplyMaterialToCell(cellRenderer, cellType, cachedMaterialManager);
-        }
+            }
         
         /// <summary>
         /// Находит CellMaterialManager в сцене
