@@ -430,5 +430,21 @@ namespace CellNameSpace
             }
             return null;
         }
+        
+        /// <summary>
+        /// Получает ширину сетки
+        /// </summary>
+        public int GetGridWidth()
+        {
+            return gridWidth;
+        }
+        
+        /// <summary>
+        /// Получает высоту сетки
+        /// </summary>
+        public int GetGridHeight()
+        {
+            return gridHeight;
+        }
     }
 }
