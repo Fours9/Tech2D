@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: be4484ad84d997542bc1e12c7056389a
+guid: 975e79da79c4e554cb189e74e727f1eb
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -1347532211411968617
-    second: Grass_0
+      213: 5522699185798641552
+    second: Water-Seamless_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Grass_0
+      name: Water-Seamless_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
         width: 1024
-        height: 1536
+        height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 79d946fd79a9c4de0800000000000000
-      internalID: -1347532211411968617
+      spriteID: 097fdd226a194ac40800000000000000
+      internalID: 5522699185798641552
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Grass_0: -1347532211411968617
+      Water-Seamless_0: 5522699185798641552
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

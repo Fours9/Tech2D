@@ -61,7 +61,32 @@ namespace CellNameSpace
         private void OnCellClick()
         {
             Debug.Log($"Клик по гексу: {gameObject.name} (позиция: {transform.position})");
-            // Здесь можно добавить дополнительную логику обработки клика по клетке
+            
+            // Проверяем, есть ли выбранный юнит
+            if (UnitSelectionManager.Instance.HasSelectedUnit())
+            {
+                UnitInfo selectedUnit = UnitSelectionManager.Instance.GetSelectedUnit();
+                UnitController unitController = selectedUnit.GetComponent<UnitController>();
+                
+                if (unitController != null)
+                {
+                    // Получаем информацию о клетке
+                    CellInfo cellInfo = GetComponent<CellInfo>();
+                    if (cellInfo != null)
+                    {
+                        // Перемещаем юнит на эту клетку
+                        unitController.MoveToCell(cellInfo);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"CellClick: CellInfo не найден на клетке {gameObject.name}");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"CellClick: UnitController не найден на выбранном юните");
+                }
+            }
         }
     }
 }

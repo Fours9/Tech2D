@@ -131,6 +131,8 @@ GameObject:
   - component: {fileID: 141372080}
   - component: {fileID: 141372082}
   - component: {fileID: 141372083}
+  - component: {fileID: 141372085}
+  - component: {fileID: 141372084}
   m_Layer: 0
   m_Name: Grid Creator
   m_TagString: Untagged
@@ -163,7 +165,7 @@ MonoBehaviour:
   shallowToDeepChance: 0.2
   waterProcessingIterations: 3
   mountainFrequency: 0.215
-  mountainFragmentation: 0.308
+  mountainFragmentation: 0.3
   mountainSeed: 0
   forestFrequency: 0.285
   forestFragmentation: 0.731
@@ -171,6 +173,9 @@ MonoBehaviour:
   desertFrequency: 0.269
   desertFragmentation: 0.269
   desertSeed: 0
+  cellsPerFrame: 50
+  useCoroutines: 1
+  pauseGameDuringGeneration: 1
 --- !u!4 &141372081
 Transform:
   m_ObjectHideFlags: 0
@@ -203,6 +208,14 @@ MonoBehaviour:
     material: {fileID: 2100000, guid: 34bec83d0f6d5da4db18b2b1cbba59f6, type: 2}
   - cellType: 2
     material: {fileID: 2100000, guid: cdff800c624c36946a78da9d8882dae0, type: 2}
+  - cellType: 3
+    material: {fileID: 2100000, guid: 28db0a830d2cf0a4a97e32ad8c613fcc, type: 2}
+  - cellType: 5
+    material: {fileID: 2100000, guid: 5955c57daf967324eb1581429db4968e, type: 2}
+  - cellType: 1
+    material: {fileID: 2100000, guid: f285362af4e01044383a89b54842f809, type: 2}
+  - cellType: 0
+    material: {fileID: 2100000, guid: 2d56d51568804bd408fcc815bc32f631, type: 2}
 --- !u!114 &141372083
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -218,7 +231,42 @@ MonoBehaviour:
   overlayMappings:
   - cellType: 3
     layer: 0
-    sprite: {fileID: 7591296699194663517, guid: ba095b85baecc5148a67abb6e17efe41, type: 3}
+    sprite: {fileID: 21300000, guid: 8e8159cf7f23dc641abd33f75d4ae418, type: 3}
+  - cellType: 5
+    layer: 0
+    sprite: {fileID: -8273445311213168830, guid: 661efa67ab82aa8479100778be373b98, type: 3}
+--- !u!114 &141372084
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141372079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5bc1f2287da97db49b019e28582545f2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitSelectionManager
+--- !u!114 &141372085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141372079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdafcf4a51b8ea4296f6ec5daec3e22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitManager
+  unitPrefab: {fileID: 7434544964083866290, guid: 3fdddeab81c771a4cb9ae446519aae5c, type: 3}
+  spawnDefaultUnitOnStart: 1
+  defaultSpawnPosition: {x: 0, y: 0}
+  findRandomSpawnPosition: 1
+  allowedCellTypes: 02000000
+  grid: {fileID: 0}
+  moveCameraToUnitOnSpawn: 1
+  instantCameraMove: 0
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -351,7 +399,7 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5.9, y: 2.63, z: -10}
+  m_LocalPosition: {x: 0, y: 0, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -412,7 +460,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000f9fdfa34a92133b7
+  m_ApplyToSortingLayers: 00000000f9fdfa34a92133b79bdf591d
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -453,7 +501,7 @@ Transform:
   m_GameObject: {fileID: 619394800}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -0.34, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

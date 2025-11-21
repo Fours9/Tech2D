@@ -388,5 +388,47 @@ namespace CellNameSpace
             float maxOffset = (gridHeight > 0 && (gridHeight - 1) % 2 != 0) ? cachedHexOffset : 0f;
             return (gridWidth - 1) * cachedHexWidth + maxOffset;
         }
+        
+        /// <summary>
+        /// Получает клетку по координатам сетки
+        /// </summary>
+        /// <param name="gridX">Координата X в сетке</param>
+        /// <param name="gridY">Координата Y в сетке</param>
+        /// <returns>GameObject клетки или null, если не найдена</returns>
+        public GameObject GetCellAt(int gridX, int gridY)
+        {
+            // Проверяем границы
+            if (gridX < 0 || gridX >= gridWidth || gridY < 0 || gridY >= gridHeight)
+            {
+                return null;
+            }
+            
+            // Вычисляем индекс в списке cells
+            // Формула: row * gridWidth + col
+            int index = gridY * gridWidth + gridX;
+            
+            if (index >= 0 && index < cells.Count)
+            {
+                return cells[index];
+            }
+            
+            return null;
+        }
+        
+        /// <summary>
+        /// Получает CellInfo по координатам сетки
+        /// </summary>
+        /// <param name="gridX">Координата X в сетке</param>
+        /// <param name="gridY">Координата Y в сетке</param>
+        /// <returns>CellInfo или null, если не найдена</returns>
+        public CellInfo GetCellInfoAt(int gridX, int gridY)
+        {
+            GameObject cell = GetCellAt(gridX, gridY);
+            if (cell != null)
+            {
+                return cell.GetComponent<CellInfo>();
+            }
+            return null;
+        }
     }
 }

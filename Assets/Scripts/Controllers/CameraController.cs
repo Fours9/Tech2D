@@ -187,6 +187,67 @@ namespace CellNameSpace
         {
             return clickDetector.IsMouseButtonDown();
         }
+        
+        /// <summary>
+        /// Перемещает камеру на указанную позицию (сохраняет Z координату)
+        /// </summary>
+        /// <param name="position">Целевая позиция камеры</param>
+        /// <param name="instant">Если true, перемещает мгновенно, иначе через targetCameraPosition</param>
+        public void MoveToPosition(Vector3 position, bool instant = false)
+        {
+            if (mainCamera == null)
+            {
+                Debug.LogWarning("CameraController: Камера не найдена, невозможно переместить");
+                return;
+            }
+            
+            // Сохраняем текущую Z координату камеры
+            Vector3 newPosition = new Vector3(position.x, position.y, mainCamera.transform.position.z);
+            
+            if (instant)
+            {
+                // Мгновенное перемещение
+                mainCamera.transform.position = newPosition;
+                targetCameraPosition = newPosition;
+            }
+            else
+            {
+                // Плавное перемещение через targetCameraPosition
+                targetCameraPosition = newPosition;
+            }
+        }
+        
+        /// <summary>
+        /// Перемещает камеру на позицию объекта
+        /// </summary>
+        /// <param name="target">Целевой объект</param>
+        /// <param name="instant">Если true, перемещает мгновенно</param>
+        public void MoveToTarget(Transform target, bool instant = false)
+        {
+            if (target == null)
+            {
+                Debug.LogWarning("CameraController: Целевой объект равен null");
+                return;
+            }
+            
+            MoveToPosition(target.position, instant);
+        }
+        
+        /// <summary>
+        /// Перемещает камеру на позицию GameObject
+        /// </summary>
+        /// <param name="target">Целевой GameObject</param>
+        /// <param name="instant">Если true, перемещает мгновенно</param>
+        public void MoveToTarget(GameObject target, bool instant = false)
+        {
+            if (target == null)
+            {
+                Debug.LogWarning("CameraController: Целевой GameObject равен null");
+                return;
+            }
+            
+            MoveToTarget(target.transform, instant);
+        }
     }
 }
 

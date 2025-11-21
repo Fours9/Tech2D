@@ -11,7 +11,7 @@ TagManager:
   - 
   - Water
   - UI
-  - 
+  - Unit
   - 
   - 
   - 
@@ -46,6 +46,9 @@ TagManager:
     locked: 0
   - name: BuildingsLayer
     uniqueID: 3073581481
+    locked: 0
+  - name: UnitLayer
+    uniqueID: 492429211
     locked: 0
   m_RenderingLayers:
   - Default

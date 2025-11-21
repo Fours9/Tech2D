@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 20dc92d32cdc4a142a5cb0b8bfcae1d1
+guid: 9be26b4050655cc4780a1c7ae872734a
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8282234792261890878
-    second: Grass_Seamless_0
+      213: 6406253344418567164
+    second: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 22_11_58_0"
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,7 +126,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Grass_Seamless_0
+      name: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 22_11_58_0"
       rect:
         serializedVersion: 2
         x: 0
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: e33b62399a860f270800000000000000
-      internalID: 8282234792261890878
+      spriteID: cf31a37997597e850800000000000000
+      internalID: 6406253344418567164
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Grass_Seamless_0: 8282234792261890878
+      "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 22_11_58_0": 6406253344418567164
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
