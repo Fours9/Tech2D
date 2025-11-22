@@ -63,6 +63,7 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellInfo.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellularAutomata.cs" />
+    <Compile Include="Assets\Scripts\UnitLogic\Pathfinder.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellTypeCompatibility.cs" />
     <Compile Include="Assets\Scripts\CellLogic\CellMaterial\CellMaterialManager.cs" />
     <Compile Include="Assets\Scripts\UnitLogic\UnitManager.cs" />
@@ -74,15 +75,18 @@
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellTypeDistribution.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\WaterBodyGenerator.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\TerrainCompatibility.cs" />
+    <Compile Include="Assets\Scripts\CityLogic\CityManager.cs" />
     <Compile Include="Assets\Scripts\UnitLogic\UnitType.cs" />
     <Compile Include="Assets\Scripts\UnitLogic\UnitController.cs" />
     <Compile Include="Assets\Scripts\UnitLogic\UnitSelection.cs" />
     <Compile Include="Assets\Scripts\Controllers\Cell\CellClick.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellType.cs" />
     <Compile Include="Assets\Scripts\CellLogic\Grid.cs" />
+    <Compile Include="Assets\Scripts\UI\CreateCityButton.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\HexagonalGridHelper.cs" />
     <Compile Include="Assets\Scripts\CellLogic\CellOverlay\CellOverlayManager.cs" />
     <Compile Include="Assets\Scripts\Controllers\Camera\CameraDragHandler.cs" />
+    <Compile Include="Assets\Scripts\UnitLogic\PathfindingHelper.cs" />
     <Compile Include="Assets\Scripts\Controllers\CameraController.cs" />
     <Compile Include="Assets\Scripts\Controllers\Camera\CameraZoomHandler.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\PerlinNoise.cs" />

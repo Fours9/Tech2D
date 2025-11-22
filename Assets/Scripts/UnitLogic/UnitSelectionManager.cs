@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 /// <summary>
 /// Менеджер для управления выбранным юнитом
@@ -8,6 +9,10 @@ public class UnitSelectionManager : MonoBehaviour
     private static UnitSelectionManager instance;
     
     private UnitInfo selectedUnit = null;
+    
+    // События для уведомления о выборе/снятии выбора юнита
+    public static event Action<UnitInfo> OnUnitSelectedEvent;
+    public static event Action OnUnitDeselectedEvent;
     
     public static UnitSelectionManager Instance
     {
@@ -55,6 +60,7 @@ public class UnitSelectionManager : MonoBehaviour
         if (selectedUnit != null)
         {
             OnUnitSelected(selectedUnit);
+            OnUnitSelectedEvent?.Invoke(selectedUnit);
             Debug.Log($"Юнит выбран: {selectedUnit.gameObject.name}");
         }
     }
@@ -68,6 +74,7 @@ public class UnitSelectionManager : MonoBehaviour
         {
             OnUnitDeselected(selectedUnit);
             selectedUnit = null;
+            OnUnitDeselectedEvent?.Invoke();
             Debug.Log("Выделение снято с юнита");
         }
     }

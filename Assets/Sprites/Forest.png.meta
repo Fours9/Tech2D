@@ -1,22 +1,22 @@
 fileFormatVersion: 2
-guid: 8e8159cf7f23dc641abd33f75d4ae418
+guid: 04be6412910df7249b6bf172ebf43b6e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -1455065289286457056
-    second: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_0"
+      213: 9085546173938197295
+    second: Forest_0
   - first:
-      213: 1690256838309498405
-    second: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_1"
+      213: 1101770504183819589
+    second: Forest_1
   - first:
-      213: 9110058970169494004
-    second: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_2"
+      213: -3755448495774436313
+    second: Forest_2
   - first:
-      213: -6117918087074532507
-    second: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_3"
+      213: -5622494010663576134
+    second: Forest_3
   - first:
-      213: 5974261906810862198
-    second: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_4"
+      213: 6197192568713671372
+    second: Forest_4
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -58,12 +58,12 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 80
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -138,7 +138,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_0"
+      name: Forest_0
       rect:
         serializedVersion: 2
         x: 179
@@ -153,14 +153,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 029641324d19ecbe0800000000000000
-      internalID: -1455065289286457056
+      spriteID: f23eeff9b18561e70800000000000000
+      internalID: 9085546173938197295
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_1"
+      name: Forest_1
       rect:
         serializedVersion: 2
         x: 379
@@ -175,14 +175,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 52ecc9a93aff47710800000000000000
-      internalID: 1690256838309498405
+      spriteID: 54d21e5af664a4f00800000000000000
+      internalID: 1101770504183819589
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_2"
+      name: Forest_2
       rect:
         serializedVersion: 2
         x: 614
@@ -197,14 +197,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 4f940dfbd5e6d6e70800000000000000
-      internalID: 9110058970169494004
+      spriteID: 724f6158d77f1ebc0800000000000000
+      internalID: -3755448495774436313
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_3"
+      name: Forest_3
       rect:
         serializedVersion: 2
         x: 182
@@ -219,14 +219,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5633cf6f9e9c81ba0800000000000000
-      internalID: -6117918087074532507
+      spriteID: abdd2ae8c73e8f1b0800000000000000
+      internalID: -5622494010663576134
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_4"
+      name: Forest_4
       rect:
         serializedVersion: 2
         x: 580
@@ -241,8 +241,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 67afb9e1d87d8e250800000000000000
-      internalID: 5974261906810862198
+      spriteID: cc27ede9ec9d00650800000000000000
+      internalID: 6197192568713671372
       vertices: []
       indices: 
       edges: []
@@ -251,7 +251,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -261,11 +261,11 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_0": -1455065289286457056
-      "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_1": 1690256838309498405
-      "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_2": 9110058970169494004
-      "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_3": -6117918087074532507
-      "ChatGPT Image 20 \u043D\u043E\u044F\u0431. 2025 \u0433., 17_57_30_4": 5974261906810862198
+      Forest_0: 9085546173938197295
+      Forest_1: 1101770504183819589
+      Forest_2: -3755448495774436313
+      Forest_3: -5622494010663576134
+      Forest_4: 6197192568713671372
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

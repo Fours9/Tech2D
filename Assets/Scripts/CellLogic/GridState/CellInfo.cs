@@ -295,5 +295,47 @@ namespace CellNameSpace
             // В Editor режиме возвращаем null
             return null;
         }
+        
+        /// <summary>
+        /// Устанавливает спрайт на слой построек (для городов и других строений)
+        /// </summary>
+        /// <param name="sprite">Спрайт для установки</param>
+        public void SetBuildingSprite(Sprite sprite)
+        {
+            if (buildingsOverlay == null)
+            {
+                Debug.LogWarning($"CellInfo: buildingsOverlay не назначен на клетке {gameObject.name}");
+                return;
+            }
+            
+            if (sprite != null)
+            {
+                buildingsOverlay.sprite = sprite;
+                buildingsOverlay.enabled = true;
+                
+                // Масштабируем спрайт под размер клетки
+                Vector2 cellSize = GetCellSize();
+                ScaleSpriteToCellSize(buildingsOverlay, sprite, cellSize);
+                
+                Debug.Log($"CellInfo: Спрайт строения установлен на клетку ({gridX}, {gridY})");
+            }
+            else
+            {
+                buildingsOverlay.sprite = null;
+                buildingsOverlay.enabled = false;
+            }
+        }
+        
+        /// <summary>
+        /// Удаляет спрайт со слоя построек
+        /// </summary>
+        public void ClearBuildingSprite()
+        {
+            if (buildingsOverlay != null)
+            {
+                buildingsOverlay.sprite = null;
+                buildingsOverlay.enabled = false;
+            }
+        }
     }
 }
