@@ -94,6 +94,11 @@ namespace CellNameSpace
             {
                 TryExpandCityToCell(cellPosition);
             }
+            // Проверяем, можно ли установить постройку (если выбрана постройка)
+            else
+            {
+                TryPlaceBuildingOnCell(cellPosition);
+            }
         }
         
         /// <summary>
@@ -144,6 +149,28 @@ namespace CellNameSpace
                         return;
                     }
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Пытается установить постройку на указанную клетку
+        /// </summary>
+        private void TryPlaceBuildingOnCell(Vector2Int cellPosition)
+        {
+            BuildingManager buildingManager = FindFirstObjectByType<BuildingManager>();
+            if (buildingManager == null)
+                return;
+            
+            // Проверяем, выбрана ли постройка
+            BuildingInfo selectedBuilding = buildingManager.GetSelectedBuilding();
+            if (selectedBuilding == null)
+                return;
+            
+            // Пытаемся установить постройку
+            bool success = buildingManager.PlaceBuilding(cellPosition, selectedBuilding);
+            if (success)
+            {
+                Debug.Log($"CellClick: Постройка '{selectedBuilding.name}' установлена на клетку ({cellPosition.x}, {cellPosition.y})");
             }
         }
     }
