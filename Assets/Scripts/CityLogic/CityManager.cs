@@ -105,6 +105,31 @@ public class CityManager : MonoBehaviour
         // Отмечаем центр города визуально
         MarkCellAsOwned(cityPosition, cityInfo);
         
+        // Сразу расширяем город на радиус 1 (центр + все соседние клетки)
+        if (grid != null)
+        {
+            int gridWidth = grid.GetGridWidth();
+            int gridHeight = grid.GetGridHeight();
+            
+            // Получаем всех соседей центра города
+            List<Vector2Int> neighbors = HexagonalGridHelper.GetNeighbors(
+                gridX, gridY, gridWidth, gridHeight);
+            
+            // Добавляем всех соседей к городу
+            foreach (Vector2Int neighborPos in neighbors)
+            {
+                // Проверяем, что клетка не принадлежит другому городу
+                if (!IsCellOwnedByAnyCity(neighborPos, cityPosition))
+                {
+                    cityInfo.ownedCells.Add(neighborPos);
+                    MarkCellAsOwned(neighborPos, cityInfo);
+                }
+            }
+            
+            cityInfo.expansionRadius = 1;
+            Debug.Log($"CityManager: Город {cityInfo.name} создан с радиусом 1. Клеток: {cityInfo.ownedCells.Count}");
+        }
+        
         // Удаляем юнит
         if (unitManager != null)
         {

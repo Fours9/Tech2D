@@ -89,8 +89,8 @@ namespace CellNameSpace
                     Debug.LogWarning($"CellClick: UnitController не найден на выбранном юните");
                 }
             }
-            // Проверяем, можно ли расширить город на эту клетку
-            else
+            // Проверяем, можно ли расширить город на эту клетку (только если режим расширения включен)
+            else if (ExpandCityButton.IsExpansionModeEnabled())
             {
                 TryExpandCityToCell(cellPosition);
             }

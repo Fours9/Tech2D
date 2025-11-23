@@ -2,23 +2,35 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Скрипт для кнопки расширения города
+/// Скрипт для кнопки-переключателя режима расширения города
+/// Когда включена - можно добавлять клетки к городу кликом
+/// Когда выключена - нельзя добавлять клетки
 /// </summary>
 public class ExpandCityButton : MonoBehaviour
 {
     [Header("Ссылки")]
-    [SerializeField] private Button button; // Кнопка (найдет автоматически, если не указана)
+    [SerializeField] private Toggle toggle; // Переключатель (найдет автоматически, если не указан)
     [SerializeField] private CityManager cityManager; // Менеджер городов (найдет автоматически, если не указан)
+    
+    private static bool expansionModeEnabled = false; // Статическая переменная для проверки режима расширения
+    
+    /// <summary>
+    /// Проверяет, включен ли режим расширения города
+    /// </summary>
+    public static bool IsExpansionModeEnabled()
+    {
+        return expansionModeEnabled;
+    }
     
     void Start()
     {
-        // Находим кнопку, если не указана
-        if (button == null)
+        // Находим переключатель, если не указан
+        if (toggle == null)
         {
-            button = GetComponent<Button>();
-            if (button == null)
+            toggle = GetComponent<Toggle>();
+            if (toggle == null)
             {
-                Debug.LogError("ExpandCityButton: Кнопка не найдена!");
+                Debug.LogError("ExpandCityButton: Toggle не найден! Используйте Toggle вместо Button.");
                 return;
             }
         }
@@ -30,91 +42,61 @@ public class ExpandCityButton : MonoBehaviour
             if (cityManager == null)
             {
                 Debug.LogError("ExpandCityButton: CityManager не найден!");
-                button.interactable = false;
+                if (toggle != null)
+                    toggle.interactable = false;
                 return;
             }
         }
         
-        // Подписываемся на событие клика кнопки
-        button.onClick.AddListener(OnButtonClick);
+        // Инициализируем состояние
+        expansionModeEnabled = toggle.isOn;
+        
+        // Подписываемся на событие изменения состояния переключателя
+        toggle.onValueChanged.AddListener(OnToggleValueChanged);
     }
     
     void OnDestroy()
     {
         // Отписываемся от события при уничтожении
-        if (button != null)
+        if (toggle != null)
         {
-            button.onClick.RemoveListener(OnButtonClick);
+            toggle.onValueChanged.RemoveListener(OnToggleValueChanged);
         }
     }
     
     /// <summary>
-    /// Обработчик клика по кнопке
+    /// Обработчик изменения состояния переключателя
     /// </summary>
-    private void OnButtonClick()
+    private void OnToggleValueChanged(bool isOn)
     {
-        // Проверяем, есть ли выбранный город (через клик по клетке с городом)
-        // Для упрощения, расширяем первый найденный город или город под курсором
-        // В будущем можно добавить систему выбора городов
+        expansionModeEnabled = isOn;
         
-        // Получаем все города
-        var allCities = cityManager.GetAllCities();
-        if (allCities.Count == 0)
+        if (isOn)
         {
-            Debug.LogWarning("ExpandCityButton: Нет городов для расширения");
-            return;
+            Debug.Log("ExpandCityButton: Режим расширения города включен. Кликайте по соседним клеткам для добавления к городу.");
         }
-        
-        // Для начала расширяем первый город (в будущем можно добавить выбор города)
-        // Или можно расширять город, на клетку которого кликнули
-        Vector2Int? selectedCityPosition = GetSelectedCityPosition();
-        
-        if (!selectedCityPosition.HasValue)
+        else
         {
-            // Если нет выбранного города, берем первый
-            foreach (var kvp in allCities)
-            {
-                selectedCityPosition = kvp.Key;
-                break;
-            }
-        }
-        
-        if (selectedCityPosition.HasValue)
-        {
-            // Расширяем город автоматически (на один радиус)
-            bool success = cityManager.ExpandCity(selectedCityPosition.Value);
-            
-            if (success)
-            {
-                Debug.Log($"ExpandCityButton: Город на позиции ({selectedCityPosition.Value.x}, {selectedCityPosition.Value.y}) успешно расширен");
-            }
-            else
-            {
-                Debug.LogWarning("ExpandCityButton: Не удалось расширить город (возможно, нет доступных клеток)");
-            }
+            Debug.Log("ExpandCityButton: Режим расширения города выключен.");
         }
     }
     
     /// <summary>
-    /// Получает позицию выбранного города (можно расширить для работы с системой выбора)
-    /// </summary>
-    private Vector2Int? GetSelectedCityPosition()
-    {
-        // В будущем здесь можно добавить логику получения выбранного города
-        // Например, через систему выбора клеток или UI панель городов
-        return null;
-    }
-    
-    /// <summary>
-    /// Обновляет состояние кнопки (активна/неактивна) в зависимости от наличия городов
+    /// Обновляет состояние переключателя (активен/неактивен) в зависимости от наличия городов
     /// </summary>
     public void UpdateButtonState()
     {
-        if (button == null || cityManager == null)
+        if (toggle == null || cityManager == null)
             return;
         
         var allCities = cityManager.GetAllCities();
-        button.interactable = allCities.Count > 0;
+        toggle.interactable = allCities.Count > 0;
+        
+        // Если нет городов, выключаем режим расширения
+        if (allCities.Count == 0 && toggle.isOn)
+        {
+            toggle.isOn = false;
+        }
     }
 }
 
