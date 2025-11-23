@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace CellNameSpace
 {
@@ -62,6 +63,16 @@ namespace CellNameSpace
         {
             Debug.Log($"Клик по гексу: {gameObject.name} (позиция: {transform.position})");
             
+            // Получаем информацию о клетке
+            CellInfo cellInfo = GetComponent<CellInfo>();
+            if (cellInfo == null)
+            {
+                Debug.LogWarning($"CellClick: CellInfo не найден на клетке {gameObject.name}");
+                return;
+            }
+            
+            Vector2Int cellPosition = new Vector2Int(cellInfo.GetGridX(), cellInfo.GetGridY());
+            
             // Проверяем, есть ли выбранный юнит
             if (UnitSelectionManager.Instance.HasSelectedUnit())
             {
@@ -70,21 +81,68 @@ namespace CellNameSpace
                 
                 if (unitController != null)
                 {
-                    // Получаем информацию о клетке
-                    CellInfo cellInfo = GetComponent<CellInfo>();
-                    if (cellInfo != null)
-                    {
-                        // Перемещаем юнит на эту клетку
-                        unitController.MoveToCell(cellInfo);
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"CellClick: CellInfo не найден на клетке {gameObject.name}");
-                    }
+                    // Перемещаем юнит на эту клетку
+                    unitController.MoveToCell(cellInfo);
                 }
                 else
                 {
                     Debug.LogWarning($"CellClick: UnitController не найден на выбранном юните");
+                }
+            }
+            // Проверяем, можно ли расширить город на эту клетку
+            else
+            {
+                TryExpandCityToCell(cellPosition);
+            }
+        }
+        
+        /// <summary>
+        /// Пытается расширить город на указанную клетку
+        /// </summary>
+        private void TryExpandCityToCell(Vector2Int cellPosition)
+        {
+            CityManager cityManager = FindFirstObjectByType<CityManager>();
+            if (cityManager == null)
+                return;
+            
+            // Проверяем, принадлежит ли клетка какому-либо городу
+            if (cityManager.IsCellOwnedByCity(cellPosition))
+            {
+                // Клетка уже принадлежит городу, ничего не делаем
+                return;
+            }
+            
+            // Ищем ближайший город, который может расшириться на эту клетку
+            var allCities = cityManager.GetAllCities();
+            foreach (var kvp in allCities)
+            {
+                CityInfo city = kvp.Value;
+                Vector2Int cityPosition = kvp.Key;
+                
+                // Проверяем, является ли эта клетка соседом города
+                CellNameSpace.Grid grid = FindFirstObjectByType<CellNameSpace.Grid>();
+                if (grid == null)
+                    return;
+                
+                int gridWidth = grid.GetGridWidth();
+                int gridHeight = grid.GetGridHeight();
+                
+                // Проверяем, является ли клетка соседом какой-либо клетки города
+                List<Vector2Int> neighbors = CellNameSpace.HexagonalGridHelper.GetNeighbors(
+                    cellPosition.x, cellPosition.y, gridWidth, gridHeight);
+                
+                foreach (Vector2Int neighborPos in neighbors)
+                {
+                    if (city.ownedCells.Contains(neighborPos))
+                    {
+                        // Нашли соседнюю клетку города, расширяем город
+                        bool success = cityManager.ExpandCity(cityPosition, cellPosition);
+                        if (success)
+                        {
+                            Debug.Log($"CellClick: Город {city.name} расширен на клетку ({cellPosition.x}, {cellPosition.y})");
+                        }
+                        return;
+                    }
                 }
             }
         }

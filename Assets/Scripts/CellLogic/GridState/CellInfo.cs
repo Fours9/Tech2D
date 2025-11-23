@@ -10,11 +10,13 @@ namespace CellNameSpace
         
         [SerializeField] private SpriteRenderer resourcesOverlay;
         [SerializeField] private SpriteRenderer buildingsOverlay;
+        [SerializeField] private SpriteRenderer cityBorderOverlay; // Оверлей для границы города (опционально)
 
         private Renderer cellRenderer;
         private CellMaterialManager cachedMaterialManager = null;
         private CellOverlayManager cachedOverlayManager = null;
         private Vector2? cachedCellSize = null; // Кэшированный размер клетки
+        private CityInfo owningCity = null; // Город, которому принадлежит клетка
         
         void Awake()
         {
@@ -336,6 +338,91 @@ namespace CellNameSpace
                 buildingsOverlay.sprite = null;
                 buildingsOverlay.enabled = false;
             }
+        }
+        
+        /// <summary>
+        /// Устанавливает принадлежность клетки к городу (визуальная индикация)
+        /// </summary>
+        /// <param name="city">Город, которому принадлежит клетка</param>
+        public void SetCityOwnership(CityInfo city)
+        {
+            owningCity = city;
+            
+            // Визуальная индикация: изменяем цвет клетки (делаем немного светлее)
+            if (cellRenderer == null)
+                cellRenderer = GetComponent<Renderer>();
+            
+            if (cellRenderer != null)
+            {
+                // Для SpriteRenderer
+                SpriteRenderer spriteRenderer = cellRenderer as SpriteRenderer;
+                if (spriteRenderer != null)
+                {
+                    Color originalColor = spriteRenderer.color;
+                    Color cityColor = new Color(
+                        Mathf.Min(1f, originalColor.r * 1.15f),
+                        Mathf.Min(1f, originalColor.g * 1.15f),
+                        Mathf.Min(1f, originalColor.b * 1.15f),
+                        originalColor.a
+                    );
+                    spriteRenderer.color = cityColor;
+                }
+                // Для MeshRenderer
+                else if (cellRenderer is MeshRenderer meshRenderer)
+                {
+                    if (meshRenderer.material != null)
+                    {
+                        Color originalColor = meshRenderer.material.color;
+                        Color cityColor = new Color(
+                            Mathf.Min(1f, originalColor.r * 1.15f),
+                            Mathf.Min(1f, originalColor.g * 1.15f),
+                            Mathf.Min(1f, originalColor.b * 1.15f),
+                            originalColor.a
+                        );
+                        meshRenderer.material.color = cityColor;
+                    }
+                }
+            }
+            
+            Debug.Log($"CellInfo: Клетка ({gridX}, {gridY}) теперь принадлежит городу {city.name}");
+        }
+        
+        /// <summary>
+        /// Убирает принадлежность клетки к городу
+        /// </summary>
+        public void ClearCityOwnership()
+        {
+            if (owningCity != null)
+            {
+                // Восстанавливаем оригинальный цвет
+                if (cellRenderer == null)
+                    cellRenderer = GetComponent<Renderer>();
+                
+                if (cellRenderer != null && cellRenderer.material != null)
+                {
+                    // Восстанавливаем цвет через UpdateCellColor
+                    UpdateCellColor(false);
+                }
+                
+                Debug.Log($"CellInfo: Клетка ({gridX}, {gridY}) больше не принадлежит городу {owningCity.name}");
+                owningCity = null;
+            }
+        }
+        
+        /// <summary>
+        /// Получает город, которому принадлежит клетка
+        /// </summary>
+        public CityInfo GetOwningCity()
+        {
+            return owningCity;
+        }
+        
+        /// <summary>
+        /// Проверяет, принадлежит ли клетка какому-либо городу
+        /// </summary>
+        public bool IsOwnedByCity()
+        {
+            return owningCity != null;
         }
     }
 }

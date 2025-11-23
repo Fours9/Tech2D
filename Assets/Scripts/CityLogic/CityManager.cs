@@ -93,10 +93,17 @@ public class CityManager : MonoBehaviour
         {
             position = cityPosition,
             cell = targetCell,
-            name = $"Город {cities.Count + 1}"
+            name = $"Город {cities.Count + 1}",
+            expansionRadius = 1
         };
         
+        // Добавляем центр города в список принадлежащих клеток
+        cityInfo.ownedCells.Add(cityPosition);
+        
         cities[cityPosition] = cityInfo;
+        
+        // Отмечаем центр города визуально
+        MarkCellAsOwned(cityPosition, cityInfo);
         
         // Удаляем юнит
         if (unitManager != null)
@@ -145,6 +152,157 @@ public class CityManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Расширяет город, добавляя соседние клетки
+    /// </summary>
+    /// <param name="cityPosition">Позиция центра города</param>
+    /// <param name="targetCellPosition">Позиция клетки для добавления (опционально, если null - расширяет на один радиус)</param>
+    /// <returns>true если расширение успешно, false иначе</returns>
+    public bool ExpandCity(Vector2Int cityPosition, Vector2Int? targetCellPosition = null)
+    {
+        if (!cities.TryGetValue(cityPosition, out CityInfo city))
+        {
+            Debug.LogWarning($"CityManager: Город на позиции ({cityPosition.x}, {cityPosition.y}) не найден");
+            return false;
+        }
+        
+        if (grid == null)
+        {
+            Debug.LogError("CityManager: Grid не найден!");
+            return false;
+        }
+        
+        int gridWidth = grid.GetGridWidth();
+        int gridHeight = grid.GetGridHeight();
+        
+        if (targetCellPosition.HasValue)
+        {
+            // Расширяем на конкретную клетку
+            Vector2Int targetPos = targetCellPosition.Value;
+            
+            // Проверяем, что клетка не принадлежит другому городу
+            if (IsCellOwnedByAnyCity(targetPos, cityPosition))
+            {
+                Debug.LogWarning($"CityManager: Клетка ({targetPos.x}, {targetPos.y}) уже принадлежит другому городу");
+                return false;
+            }
+            
+            // Проверяем, что клетка является соседом уже принадлежащих городу клеток
+            if (!IsCellAdjacentToCity(city, targetPos, gridWidth, gridHeight))
+            {
+                Debug.LogWarning($"CityManager: Клетка ({targetPos.x}, {targetPos.y}) не является соседом города");
+                return false;
+            }
+            
+            // Добавляем клетку к городу
+            city.ownedCells.Add(targetPos);
+            MarkCellAsOwned(targetPos, city);
+            Debug.Log($"CityManager: Клетка ({targetPos.x}, {targetPos.y}) добавлена к городу {city.name}");
+            return true;
+        }
+        else
+        {
+            // Автоматическое расширение на один радиус
+            List<Vector2Int> newCells = new List<Vector2Int>();
+            
+            // Получаем все соседние клетки для всех текущих клеток города
+            foreach (Vector2Int ownedCellPos in city.ownedCells)
+            {
+                List<Vector2Int> neighbors = HexagonalGridHelper.GetNeighbors(
+                    ownedCellPos.x, ownedCellPos.y, gridWidth, gridHeight);
+                
+                foreach (Vector2Int neighborPos in neighbors)
+                {
+                    // Проверяем, что клетка еще не принадлежит городу
+                    if (!city.ownedCells.Contains(neighborPos))
+                    {
+                        // Проверяем, что клетка не принадлежит другому городу
+                        if (!IsCellOwnedByAnyCity(neighborPos, cityPosition))
+                        {
+                            newCells.Add(neighborPos);
+                        }
+                    }
+                }
+            }
+            
+            // Добавляем все новые клетки
+            foreach (Vector2Int newCellPos in newCells)
+            {
+                city.ownedCells.Add(newCellPos);
+                MarkCellAsOwned(newCellPos, city);
+            }
+            
+            city.expansionRadius++;
+            Debug.Log($"CityManager: Город {city.name} расширен. Новых клеток: {newCells.Count}, радиус: {city.expansionRadius}");
+            return newCells.Count > 0;
+        }
+    }
+    
+    /// <summary>
+    /// Проверяет, принадлежит ли клетка какому-либо городу (кроме указанного)
+    /// </summary>
+    private bool IsCellOwnedByAnyCity(Vector2Int cellPosition, Vector2Int excludeCityPosition)
+    {
+        foreach (var kvp in cities)
+        {
+            if (kvp.Key == excludeCityPosition)
+                continue;
+            
+            if (kvp.Value.ownedCells.Contains(cellPosition))
+                return true;
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Проверяет, является ли клетка соседом города
+    /// </summary>
+    private bool IsCellAdjacentToCity(CityInfo city, Vector2Int cellPosition, int gridWidth, int gridHeight)
+    {
+        List<Vector2Int> neighbors = HexagonalGridHelper.GetNeighbors(
+            cellPosition.x, cellPosition.y, gridWidth, gridHeight);
+        
+        foreach (Vector2Int neighborPos in neighbors)
+        {
+            if (city.ownedCells.Contains(neighborPos))
+                return true;
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Отмечает клетку как принадлежащую городу (визуальная индикация)
+    /// </summary>
+    private void MarkCellAsOwned(Vector2Int cellPosition, CityInfo city)
+    {
+        CellInfo cell = GetCellAtPosition(cellPosition.x, cellPosition.y);
+        if (cell != null)
+        {
+            cell.SetCityOwnership(city);
+        }
+    }
+    
+    /// <summary>
+    /// Получает город, которому принадлежит клетка
+    /// </summary>
+    public CityInfo GetCityOwningCell(Vector2Int cellPosition)
+    {
+        foreach (var kvp in cities)
+        {
+            if (kvp.Value.ownedCells.Contains(cellPosition))
+                return kvp.Value;
+        }
+        return null;
+    }
+    
+    /// <summary>
+    /// Проверяет, принадлежит ли клетка городу
+    /// </summary>
+    public bool IsCellOwnedByCity(Vector2Int cellPosition)
+    {
+        return GetCityOwningCell(cellPosition) != null;
+    }
+    
+    /// <summary>
     /// Получает клетку по координатам сетки
     /// </summary>
     private CellInfo GetCellAtPosition(int gridX, int gridY)
@@ -176,8 +334,10 @@ public class CityManager : MonoBehaviour
 [System.Serializable]
 public class CityInfo
 {
-    public Vector2Int position;
-    public CellInfo cell;
+    public Vector2Int position; // Позиция центра города
+    public CellInfo cell; // Клетка центра города
     public string name;
+    public HashSet<Vector2Int> ownedCells = new HashSet<Vector2Int>(); // Клетки, принадлежащие городу
+    public int expansionRadius = 1; // Текущий радиус расширения (1 = только центр, 2 = центр + соседи, и т.д.)
 }
 
