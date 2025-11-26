@@ -223,7 +223,7 @@ MonoBehaviour:
   gridWidth: 100
   gridHeight: 100
   cellSize: 1
-  pixelGap: 0.1
+  pixelGap: 0
   waterFrequency: 0.385
   waterFragmentation: 0.008
   waterSeed: 0
@@ -760,7 +760,7 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -10}
+  m_LocalPosition: {x: 0.58, y: -1.03, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -896,7 +896,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000f9fdfa34a92133b79bdf591d
+  m_ApplyToSortingLayers: 00000000f9fdfa34a92133b79bdf591d03f91ea7
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -978,10 +978,10 @@ RectTransform:
   - {fileID: 1264103127}
   m_Father: {fileID: 951883435}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -415.1, y: -67.25}
-  m_SizeDelta: {x: 160, y: 24.7}
+  m_AnchorMin: {x: 0.040000003, y: 0.084370375}
+  m_AnchorMax: {x: 0.12179167, y: 0.10559261}
+  m_AnchoredPosition: {x: 1.5, y: -4.5000305}
+  m_SizeDelta: {x: 3, y: 1.7000122}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &668596954
 MonoBehaviour:
@@ -995,9 +995,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7543fd556a604ec449934a282d5e1051, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingPlacementButton
-  buildingName: H
-  buildingType: 0
-  buildingSprite: {fileID: 21300000, guid: 77edb8d23a060aa4db07505e04e7978d, type: 3}
+  buildingIndex: 0
   button: {fileID: 668596955}
   buildingManager: {fileID: 16604956}
 --- !u!114 &668596955
@@ -1130,12 +1128,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -1159,10 +1157,10 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 25
+  m_AdditionalShaderChannelsFlag: 0
   m_UpdateRectTransformForStandalone: 0
-  m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingLayerID: -1491142397
+  m_SortingOrder: 1
   m_TargetDisplay: 0
 --- !u!224 &951883435
 RectTransform:
@@ -1357,10 +1355,10 @@ RectTransform:
   - {fileID: 186001892}
   m_Father: {fileID: 951883435}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 421, y: -69.9}
-  m_SizeDelta: {x: 160, y: 30}
+  m_AnchorMin: {x: 0.90233326, y: 0.046000004}
+  m_AnchorMax: {x: 0.98700005, y: 0.073259264}
+  m_AnchoredPosition: {x: -1, y: 0.5}
+  m_SizeDelta: {x: -1, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1403361443
 MonoBehaviour:
@@ -1492,10 +1490,10 @@ RectTransform:
   - {fileID: 497851060}
   m_Father: {fileID: 951883435}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 421, y: -32.8}
-  m_SizeDelta: {x: 160, y: 20}
+  m_AnchorMin: {x: 0.8982916, y: 0.12414815}
+  m_AnchorMax: {x: 0.98231256, y: 0.14414816}
+  m_AnchoredPosition: {x: -1.5, y: 1.5}
+  m_SizeDelta: {x: -1, y: -3}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1653148175
 MonoBehaviour:
