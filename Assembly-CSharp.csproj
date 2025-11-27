@@ -66,6 +66,7 @@
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellInfo.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellularAutomata.cs" />
     <Compile Include="Assets\Scripts\UnitLogic\Pathfinder.cs" />
+    <Compile Include="Assets\Scripts\UnitLogic\UnitStats.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellTypeCompatibility.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\EnvMapAnimator.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextSelector_A.cs" />

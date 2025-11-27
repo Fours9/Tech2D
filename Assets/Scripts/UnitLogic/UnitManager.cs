@@ -9,7 +9,7 @@ using CellNameSpace;
 public class UnitManager : MonoBehaviour
 {
     [Header("Настройки спавна")]
-    [SerializeField] private GameObject unitPrefab; // Префаб юнита для спавна
+    [SerializeField] private UnitStats defaultUnitStats; // Тип юнита/статы для дефолтного спавна
     [SerializeField] private bool spawnDefaultUnitOnStart = true; // Спавнить ли дефолтного юнита при старте
     [SerializeField] private Vector2Int defaultSpawnPosition = new Vector2Int(0, 0); // Позиция спавна по умолчанию (gridX, gridY)
     [SerializeField] private bool findRandomSpawnPosition = false; // Если true, ищет случайную подходящую клетку
@@ -50,7 +50,7 @@ public class UnitManager : MonoBehaviour
         }
         
         // Спавним дефолтного юнита при старте, если включено
-        if (spawnDefaultUnitOnStart && unitPrefab != null)
+        if (spawnDefaultUnitOnStart && defaultUnitStats != null && defaultUnitStats.prefab != null)
         {
             // Ждем один кадр, чтобы Grid успел сгенерироваться
             StartCoroutine(SpawnDefaultUnitDelayed());
@@ -91,9 +91,9 @@ public class UnitManager : MonoBehaviour
     /// </summary>
     public GameObject SpawnUnit(Vector2Int? gridPosition = null)
     {
-        if (unitPrefab == null)
+        if (defaultUnitStats == null || defaultUnitStats.prefab == null)
         {
-            Debug.LogError("UnitManager: Префаб юнита не назначен!");
+            Debug.LogError("UnitManager: UnitStats или prefab не назначены!");
             return null;
         }
         
@@ -141,17 +141,18 @@ public class UnitManager : MonoBehaviour
         
         // Спавним юнита на позиции клетки
         Vector3 spawnPosition = targetCell.transform.position;
-        GameObject unit = Instantiate(unitPrefab, spawnPosition, Quaternion.identity);
+        GameObject unit = Instantiate(defaultUnitStats.prefab, spawnPosition, Quaternion.identity);
         
         // Инициализируем UnitInfo
         UnitInfo unitInfo = unit.GetComponent<UnitInfo>();
         if (unitInfo != null)
         {
             unitInfo.SetGridPosition(spawnPos.x, spawnPos.y);
+            unitInfo.SetUnitStats(defaultUnitStats);
         }
         else
         {
-            Debug.LogWarning($"UnitManager: UnitInfo не найден на префабе юнита {unitPrefab.name}");
+            Debug.LogWarning($"UnitManager: UnitInfo не найден на префабе юнита {defaultUnitStats.prefab.name}");
         }
         
         spawnedUnits.Add(unit);

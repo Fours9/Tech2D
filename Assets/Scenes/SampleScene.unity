@@ -559,7 +559,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9cdafcf4a51b8ea4296f6ec5daec3e22, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitManager
-  unitPrefab: {fileID: 7434544964083866290, guid: 3fdddeab81c771a4cb9ae446519aae5c, type: 3}
+  defaultUnitStats: {fileID: 11400000, guid: 3c3f583349a88a84c9a5127451b281b0, type: 2}
   spawnDefaultUnitOnStart: 1
   defaultSpawnPosition: {x: 0, y: 0}
   findRandomSpawnPosition: 1
