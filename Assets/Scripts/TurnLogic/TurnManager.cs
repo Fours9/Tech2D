@@ -315,7 +315,32 @@ public class TurnManager : MonoBehaviour
                 if (building == null)
                     continue;
 
-                switch (building.buildingType)
+                BuildingType buildingType = building.GetBuildingType();
+
+                // Пытаемся использовать BuildingStats из самого BuildingInfo
+                if (building.buildingStats != null)
+                {
+                    goldIncome += building.buildingStats.incomeGold;
+                    foodIncome += building.buildingStats.incomeFood;
+                    materialsIncome += building.buildingStats.incomeMaterials;
+                    continue;
+                }
+
+                // Пытаемся использовать BuildingStatsManager
+                if (BuildingStatsManager.Instance != null)
+                {
+                    BuildingStats stats = BuildingStatsManager.Instance.GetBuildingStats(buildingType);
+                    if (stats != null)
+                    {
+                        goldIncome += stats.incomeGold;
+                        foodIncome += stats.incomeFood;
+                        materialsIncome += stats.incomeMaterials;
+                        continue;
+                    }
+                }
+
+                // Fallback: старые жестко прописанные значения
+                switch (buildingType)
                 {
                     case BuildingType.Farm:
                         foodIncome += 1;

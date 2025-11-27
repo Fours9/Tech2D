@@ -3,15 +3,16 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Скрипт для кнопки выбора постройки
+/// Теперь использует BuildingStats через BuildingStatsManager
 /// </summary>
 public class BuildingPlacementButton : MonoBehaviour
 {
     [Header("Настройки")]
-    [SerializeField] private int buildingIndex = 0; // Индекс постройки в списке BuildingManager (0 = первая постройка)
+    [SerializeField] private BuildingType buildingType = BuildingType.Farm; // Тип постройки из BuildingStatsManager
     [SerializeField] private Button button; // Кнопка (найдет автоматически, если не указана)
     [SerializeField] private BuildingManager buildingManager; // Менеджер построек (найдет автоматически, если не указан)
     
-    private BuildingInfo buildingInfo; // Информация о постройке (берется из BuildingManager)
+    private BuildingStats buildingStats; // Статы постройки (из BuildingStatsManager)
     
     void Start()
     {
@@ -38,14 +39,14 @@ public class BuildingPlacementButton : MonoBehaviour
             }
         }
         
-        // Создаем или находим BuildingInfo
-        InitializeBuildingInfo();
+        // Инициализируем BuildingStats из BuildingStatsManager
+        InitializeBuildingStats();
         
         // Подписываемся на событие клика кнопки
         button.onClick.AddListener(OnButtonClick);
         
-        // Обновляем текст кнопки
-        UpdateButtonText();
+        // Обновляем текст и иконку кнопки
+        UpdateButtonUI();
     }
     
     void OnDestroy()
@@ -62,59 +63,90 @@ public class BuildingPlacementButton : MonoBehaviour
     /// </summary>
     private void OnButtonClick()
     {
-        if (buildingInfo == null)
+        if (buildingStats == null)
         {
-            Debug.LogWarning("BuildingPlacementButton: BuildingInfo не назначен!");
+            Debug.LogWarning($"BuildingPlacementButton: BuildingStats не найден для типа {buildingType}!");
             return;
         }
         
-        // Выбираем постройку для установки
+        // Создаем BuildingInfo из BuildingStats и выбираем постройку для установки
+        BuildingInfo buildingInfo = CreateBuildingInfoFromStats(buildingStats);
         buildingManager.SelectBuilding(buildingInfo);
-        Debug.Log($"BuildingPlacementButton: Выбрана постройка '{buildingInfo.name}'");
+        Debug.Log($"BuildingPlacementButton: Выбрана постройка '{buildingStats.displayName}' (тип: {buildingType})");
     }
     
     /// <summary>
-    /// Обновляет текст кнопки
+    /// Создает BuildingInfo из BuildingStats
     /// </summary>
-    private void UpdateButtonText()
+    private BuildingInfo CreateBuildingInfoFromStats(BuildingStats stats)
     {
-        // Ищем компонент Text на дочернем объекте
-        Text buttonText = GetComponentInChildren<Text>();
-        if (buttonText != null && buildingInfo != null)
+        BuildingInfo info = new BuildingInfo
         {
-            buttonText.text = buildingInfo.name;
+            buildingStats = stats,
+            // Поля для обратной совместимости заполняются автоматически через методы GetName(), GetSprite() и т.д.
+            name = stats.displayName,
+            sprite = stats.sprite,
+            buildingType = stats.buildingType,
+            description = stats.description
+        };
+        return info;
+    }
+    
+    /// <summary>
+    /// Обновляет текст и иконку кнопки
+    /// </summary>
+    private void UpdateButtonUI()
+    {
+        if (buildingStats == null)
+            return;
+        
+        // Обновляем текст кнопки
+        Text buttonText = GetComponentInChildren<Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = buildingStats.displayName;
+        }
+        
+        // Обновляем иконку кнопки, если есть Image компонент
+        Image buttonImage = button.image;
+        if (buttonImage != null && buildingStats.icon != null)
+        {
+            buttonImage.sprite = buildingStats.icon;
         }
     }
     
     /// <summary>
-    /// Инициализирует информацию о постройке из BuildingManager
+    /// Инициализирует BuildingStats из BuildingStatsManager
     /// </summary>
-    private void InitializeBuildingInfo()
+    private void InitializeBuildingStats()
     {
-        if (buildingManager == null)
-            return;
-        
-        var availableBuildings = buildingManager.GetAvailableBuildings();
-        
-        // Проверяем, что индекс валидный
-        if (buildingIndex >= 0 && buildingIndex < availableBuildings.Count)
+        if (BuildingStatsManager.Instance == null)
         {
-            buildingInfo = availableBuildings[buildingIndex];
+            Debug.LogError($"BuildingPlacementButton: BuildingStatsManager.Instance равен null! Кнопка для типа {buildingType} не будет работать.");
+            button.interactable = false;
+            return;
+        }
+        
+        buildingStats = BuildingStatsManager.Instance.GetBuildingStats(buildingType);
+        if (buildingStats == null)
+        {
+            Debug.LogWarning($"BuildingPlacementButton: BuildingStats не найден для типа {buildingType}. Проверьте настройки в BuildingStatsManager.");
+            button.interactable = false;
         }
         else
         {
-            Debug.LogWarning($"BuildingPlacementButton: Индекс {buildingIndex} вне диапазона. Доступно построек: {availableBuildings.Count}");
+            button.interactable = true;
         }
     }
     
     /// <summary>
-    /// Устанавливает индекс постройки (можно вызвать извне)
+    /// Устанавливает тип постройки (можно вызвать извне)
     /// </summary>
-    public void SetBuildingIndex(int index)
+    public void SetBuildingType(BuildingType type)
     {
-        buildingIndex = index;
-        InitializeBuildingInfo();
-        UpdateButtonText();
+        buildingType = type;
+        InitializeBuildingStats();
+        UpdateButtonUI();
     }
 }
 

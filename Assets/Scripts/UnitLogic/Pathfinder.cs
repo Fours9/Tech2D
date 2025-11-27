@@ -192,6 +192,7 @@ public static class Pathfinder
     
     /// <summary>
     /// Проверяет, проходима ли клетка
+    /// Использует CellStatsManager, если доступен, иначе fallback на старые значения
     /// </summary>
     private static bool IsWalkable(CellInfo cell)
     {
@@ -200,7 +201,13 @@ public static class Pathfinder
         
         CellType cellType = cell.GetCellType();
         
-        // Непроходимые типы клеток (сюда можно добавить горы, если нужно)
+        // Пытаемся использовать CellStatsManager
+        if (CellStatsManager.Instance != null)
+        {
+            return CellStatsManager.Instance.IsWalkable(cellType);
+        }
+        
+        // Fallback: Непроходимые типы клеток
         List<CellType> unwalkableTypes = new List<CellType>
         {
             CellType.deep_water,
@@ -229,13 +236,23 @@ public static class Pathfinder
 
     /// <summary>
     /// Общая внутренняя реализация стоимости перемещения.
+    /// Использует CellStatsManager, если доступен, иначе fallback на старые значения
     /// </summary>
     private static int GetMovementCostInternal(CellInfo cell)
     {
         if (cell == null)
             return int.MaxValue;
 
-        switch (cell.GetCellType())
+        CellType cellType = cell.GetCellType();
+        
+        // Пытаемся использовать CellStatsManager
+        if (CellStatsManager.Instance != null)
+        {
+            return CellStatsManager.Instance.GetMovementCost(cellType);
+        }
+
+        // Fallback: старые жестко прописанные значения
+        switch (cellType)
         {
             case CellType.field:
                 return 1; // Обычная земля

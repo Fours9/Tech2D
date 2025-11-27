@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f458615e6fc3044b8c2c444fed06f77, type: 3}
+  m_Name: Deep_WaterStats
+  m_EditorClassIdentifier: Assembly-CSharp::CellStats
+  id: 
+  displayName: 
+  description: 
+  cellType: 1
+  movementCost: 1
+  isWalkable: 1
+  material: {fileID: 2100000, guid: 2d56d51568804bd408fcc815bc32f631, type: 2}
+  baseColor: {r: 0.14618193, g: 0.24232297, b: 0.6886792, a: 1}
+  resourceOverlay: {fileID: 0}
+  buildingOverlay: {fileID: 0}

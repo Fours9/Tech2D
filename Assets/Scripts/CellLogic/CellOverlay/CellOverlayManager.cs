@@ -53,12 +53,34 @@ namespace CellNameSpace
         
         /// <summary>
         /// Получает спрайт оверлея для указанного типа клетки и слоя
+        /// Сначала пытается получить из CellStats, затем из старого маппинга (для обратной совместимости)
         /// </summary>
         /// <param name="cellType">Тип клетки</param>
         /// <param name="layer">Слой оверлея</param>
         /// <returns>Спрайт для данного типа и слоя, или null если не найден</returns>
         public Sprite GetOverlaySprite(CellType cellType, OverlayLayer layer)
         {
+            // Сначала пытаемся получить из CellStats
+            if (CellStatsManager.Instance != null)
+            {
+                CellStats stats = CellStatsManager.Instance.GetCellStats(cellType);
+                if (stats != null)
+                {
+                    switch (layer)
+                    {
+                        case OverlayLayer.Resources:
+                            if (stats.resourceOverlay != null)
+                                return stats.resourceOverlay;
+                            break;
+                        case OverlayLayer.Buildings:
+                            if (stats.buildingOverlay != null)
+                                return stats.buildingOverlay;
+                            break;
+                    }
+                }
+            }
+            
+            // Fallback: старый маппинг (для обратной совместимости)
             if (overlayDictionary == null)
             {
                 InitializeDictionary();

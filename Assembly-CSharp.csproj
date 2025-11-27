@@ -71,6 +71,7 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\EnvMapAnimator.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextSelector_A.cs" />
     <Compile Include="Assets\Scripts\BuildingLogic\BuildingManager.cs" />
+    <Compile Include="Assets\Scripts\CellLogic\CellStatsManager.cs" />
     <Compile Include="Assets\Scripts\UI\ExpandCityButton.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark02.cs" />
     <Compile Include="Assets\Scripts\CellLogic\CellMaterial\CellMaterialManager.cs" />
@@ -86,6 +87,7 @@
     <Compile Include="Assets\Scripts\Controllers\Camera\ClickDetector.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\CellTypeDistribution.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\WaterBodyGenerator.cs" />
+    <Compile Include="Assets\Scripts\BuildingLogic\BuildingStats.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexJitter.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\TerrainCompatibility.cs" />
     <Compile Include="Assets\Scripts\CityLogic\CityManager.cs" />
@@ -124,9 +126,11 @@
     <Compile Include="Assets\Scripts\TurnLogic\Orders\BuildBuildingOrder.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\DropdownSample.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexColorCycler.cs" />
+    <Compile Include="Assets\Scripts\CellLogic\CellStats.cs" />
     <Compile Include="Assets\Scripts\Controllers\Camera\CameraDragHandler.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\ObjectSpin.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_PhoneNumberValidator.cs" />
+    <Compile Include="Assets\Scripts\BuildingLogic\BuildingStatsManager.cs" />
     <Compile Include="Assets\Scripts\CityLogic\CitySelectionManager.cs" />
     <Compile Include="Assets\Scripts\UnitLogic\PathfindingHelper.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TextConsoleSimulator.cs" />

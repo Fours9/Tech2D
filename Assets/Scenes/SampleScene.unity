@@ -131,6 +131,7 @@ GameObject:
   - component: {fileID: 16604956}
   - component: {fileID: 16604955}
   - component: {fileID: 16604958}
+  - component: {fileID: 16604959}
   m_Layer: 0
   m_Name: CityManager
   m_TagString: Untagged
@@ -166,7 +167,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingManager
   availableBuildings:
-  - name: House
+  - buildingStats: {fileID: 0}
+    name: House
     sprite: {fileID: 21300000, guid: 77edb8d23a060aa4db07505e04e7978d, type: 3}
     buildingType: 0
     description: H
@@ -202,6 +204,21 @@ MonoBehaviour:
   gold: 0
   food: 0
   materials: 0
+--- !u!114 &16604959
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 16604954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc97046122ae25848ad7d6fa96d69d90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingStatsManager
+  buildingStatsMappings:
+  - buildingType: 0
+    buildingStats: {fileID: 11400000, guid: 65a88b4427a95614f8baa336d6ff87c3, type: 2}
 --- !u!1 &141372079
 GameObject:
   m_ObjectHideFlags: 0
@@ -214,6 +231,7 @@ GameObject:
   - component: {fileID: 141372080}
   - component: {fileID: 141372082}
   - component: {fileID: 141372083}
+  - component: {fileID: 141372084}
   m_Layer: 0
   m_Name: Grid Creator
   m_TagString: Untagged
@@ -284,19 +302,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02ccc3e9a22e0d24687ba09d3924380c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CellMaterialManager
-  materialMappings:
-  - cellType: 4
-    material: {fileID: 2100000, guid: 34bec83d0f6d5da4db18b2b1cbba59f6, type: 2}
-  - cellType: 2
-    material: {fileID: 2100000, guid: cdff800c624c36946a78da9d8882dae0, type: 2}
-  - cellType: 3
-    material: {fileID: 2100000, guid: 28db0a830d2cf0a4a97e32ad8c613fcc, type: 2}
-  - cellType: 5
-    material: {fileID: 2100000, guid: 5955c57daf967324eb1581429db4968e, type: 2}
-  - cellType: 1
-    material: {fileID: 2100000, guid: f285362af4e01044383a89b54842f809, type: 2}
-  - cellType: 0
-    material: {fileID: 2100000, guid: 2d56d51568804bd408fcc815bc32f631, type: 2}
 --- !u!114 &141372083
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -316,6 +321,31 @@ MonoBehaviour:
   - cellType: 5
     layer: 0
     sprite: {fileID: -8273445311213168830, guid: cb0b3c4a47434ec4eba12b0930fbc238, type: 3}
+--- !u!114 &141372084
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141372079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 785a02850b3176f408a78cda5f95cf86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CellStatsManager
+  cellStatsMappings:
+  - cellType: 0
+    cellStats: {fileID: 11400000, guid: 40618c5c460be63429cdde8e76a5d334, type: 2}
+  - cellType: 1
+    cellStats: {fileID: 11400000, guid: 57a45f904439f7041bb5cc1b11dc0e28, type: 2}
+  - cellType: 2
+    cellStats: {fileID: 11400000, guid: a27dfc918d136ca43a2317f9edabda01, type: 2}
+  - cellType: 3
+    cellStats: {fileID: 11400000, guid: 4bd84b5305030bc4180269dbdbe4fe35, type: 2}
+  - cellType: 4
+    cellStats: {fileID: 11400000, guid: 499ca0f124f0a794785ae8847fedf1c9, type: 2}
+  - cellType: 5
+    cellStats: {fileID: 11400000, guid: 9aa4e015217e92e439ea95475ac4577e, type: 2}
 --- !u!1 &186001891
 GameObject:
   m_ObjectHideFlags: 0

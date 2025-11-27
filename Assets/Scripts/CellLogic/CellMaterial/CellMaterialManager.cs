@@ -1,65 +1,65 @@
 using UnityEngine;
 using System.Collections.Generic;
+using CellNameSpace;
 
 namespace CellNameSpace
 {
     /// <summary>
-    /// Менеджер для управления материалами клеток в зависимости от их типа
+    /// Менеджер для управления материалами клеток в зависимости от их типа.
+    /// Теперь использует CellStats через CellStatsManager для получения материалов.
+    /// Старый маппинг удален - материалы берутся напрямую из CellStats.
     /// </summary>
     public class CellMaterialManager : MonoBehaviour
     {
-        [System.Serializable]
-        public class CellMaterialMapping
-        {
-            public CellType cellType;
-            public Material material;
-        }
-        
-        [Header("Материалы для типов клеток")]
-        [SerializeField] private List<CellMaterialMapping> materialMappings = new List<CellMaterialMapping>();
-        
-        private Dictionary<CellType, Material> materialDictionary;
-        
-        private void Awake()
-        {
-            InitializeDictionary();
-        }
-        
         /// <summary>
-        /// Инициализирует словарь материалов из списка маппингов
-        /// </summary>
-        private void InitializeDictionary()
-        {
-            materialDictionary = new Dictionary<CellType, Material>();
-            
-            foreach (var mapping in materialMappings)
-            {
-                if (mapping.material != null)
-                {
-                    materialDictionary[mapping.cellType] = mapping.material;
-                }
-            }
-        }
-        
-        /// <summary>
-        /// Получает материал для указанного типа клетки
+        /// Получает материал для указанного типа клетки из CellStats
         /// </summary>
         /// <param name="cellType">Тип клетки</param>
         /// <returns>Материал для данного типа, или null если не найден</returns>
         public Material GetMaterialForType(CellType cellType)
         {
-            if (materialDictionary == null)
+            // Используем CellStatsManager для получения материала из CellStats
+            if (CellStatsManager.Instance == null)
             {
-                InitializeDictionary();
+                // Логируем только один раз при первом обращении
+                if (!_hasLoggedMissingManager)
+                {
+                    Debug.LogWarning($"CellMaterialManager: CellStatsManager.Instance равен null! Материалы не будут применяться. Убедитесь, что CellStatsManager добавлен в сцену.");
+                    _hasLoggedMissingManager = true;
+                }
+                return null;
             }
             
-            if (materialDictionary.TryGetValue(cellType, out Material material))
+            CellStats stats = CellStatsManager.Instance.GetCellStats(cellType);
+            if (stats == null)
             {
-                return material;
+                // Логируем только один раз для каждого типа
+                if (!_loggedMissingStats.Contains(cellType))
+                {
+                    Debug.LogWarning($"CellMaterialManager: CellStats не найден для типа {cellType}. Проверьте, настроен ли маппинг в CellStatsManager.");
+                    _loggedMissingStats.Add(cellType);
+                }
+                return null;
             }
             
-            return null;
+            if (stats.material == null)
+            {
+                // Логируем только один раз для каждого типа
+                if (!_loggedMissingMaterials.Contains(cellType))
+                {
+                    Debug.LogWarning($"CellMaterialManager: В CellStats для типа {cellType} (ID: {stats.id ?? "null"}) не задан материал. Будет использоваться цвет.");
+                    _loggedMissingMaterials.Add(cellType);
+                }
+                return null;
+            }
+            
+            return stats.material;
         }
+        
+        // Флаги для предотвращения избыточного логирования
+        private static bool _hasLoggedMissingManager = false;
+        private static HashSet<CellType> _loggedMissingStats = new HashSet<CellType>();
+        private static HashSet<CellType> _loggedMissingMaterials = new HashSet<CellType>();
         
         /// <summary>
         /// Проверяет, есть ли материал для указанного типа клетки
@@ -68,49 +68,7 @@ namespace CellNameSpace
         /// <returns>true если материал найден, false иначе</returns>
         public bool HasMaterialForType(CellType cellType)
         {
-            if (materialDictionary == null)
-            {
-                InitializeDictionary();
-            }
-            
-            return materialDictionary.ContainsKey(cellType) && materialDictionary[cellType] != null;
-        }
-        
-        /// <summary>
-        /// Обновляет словарь материалов (вызывать после изменения materialMappings в Inspector)
-        /// </summary>
-        public void RefreshMaterials()
-        {
-            InitializeDictionary();
-        }
-        
-        /// <summary>
-        /// Публичный метод для обновления материалов (можно вызвать из Inspector через Context Menu)
-        /// </summary>
-        [ContextMenu("Refresh Materials")]
-        public void RefreshMaterialsPublic()
-        {
-            InitializeDictionary();
-            Debug.Log($"[CellMaterialManager] Materials refreshed. Dictionary count: {materialDictionary.Count}");
-            
-            // Выводим информацию о всех материалах
-            foreach (var kvp in materialDictionary)
-            {
-                Debug.Log($"[CellMaterialManager] {kvp.Key} -> {(kvp.Value != null ? kvp.Value.name : "NULL")}");
-            }
-        }
-        
-        /// <summary>
-        /// Вызывается при изменении значений в Inspector (только в Editor)
-        /// </summary>
-        private void OnValidate()
-        {
-            // В Editor режиме обновляем словарь при изменении в Inspector
-            if (!Application.isPlaying && materialMappings != null)
-            {
-                // Не вызываем InitializeDictionary здесь, чтобы не создавать словарь в Editor
-                // Но можно добавить проверку, если нужно
-            }
+            return GetMaterialForType(cellType) != null;
         }
     }
 }

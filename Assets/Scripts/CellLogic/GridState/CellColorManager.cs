@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace CellNameSpace
 {
@@ -7,17 +8,30 @@ namespace CellNameSpace
     /// </summary>
     public static class CellColorManager
     {
+        // Для предотвращения избыточного логирования
+        private static HashSet<CellType> _loggedErrors = new HashSet<CellType>();
         /// <summary>
-        /// Получает цвет для указанного типа клетки
+        /// Получает цвет для указанного типа клетки (из CellStats или fallback значения)
         /// </summary>
         /// <param name="cellType">Тип клетки</param>
         /// <returns>Цвет для данного типа</returns>
         public static Color GetColorForType(CellType cellType)
         {
+            // Пытаемся получить цвет из CellStats
+            if (CellStatsManager.Instance != null)
+            {
+                CellStats stats = CellStatsManager.Instance.GetCellStats(cellType);
+                if (stats != null)
+                {
+                    return stats.baseColor;
+                }
+            }
+            
+            // Fallback: старые жестко прописанные значения
             switch (cellType)
             {
                 case CellType.deep_water:
-                    return Color.blue; // Временно, замените на нужные цвета позже
+                    return Color.blue;
                 case CellType.shallow:
                     return Color.cyan;
                 case CellType.field:
@@ -94,15 +108,27 @@ namespace CellNameSpace
             
             MeshRenderer meshRenderer = renderer as MeshRenderer;
             
+            // Проверяем, что это MeshRenderer (для SpriteRenderer материалы не применяются)
+            if (meshRenderer == null)
+            {
+                ApplyColorToCell(renderer, cellType);
+                return;
+            }
+            
             // Пытаемся получить материал из менеджера
             Material material = null;
             try
             {
                 material = materialManager.GetMaterialForType(cellType);
             }
-            catch (System.Exception)
+            catch (System.Exception ex)
             {
-                // Если произошла ошибка при получении материала, просто красим цветом
+                // Логируем только при первой ошибке для каждого типа
+                if (!_loggedErrors.Contains(cellType))
+                {
+                    Debug.LogWarning($"CellColorManager: Ошибка при получении материала для типа {cellType}: {ex.Message}");
+                    _loggedErrors.Add(cellType);
+                }
                 ApplyColorToCell(renderer, cellType);
                 return;
             }
@@ -110,29 +136,25 @@ namespace CellNameSpace
             // Если материал найден для типа, применяем его
             if (material != null)
             {
-                if (meshRenderer != null)
+                try
                 {
-                    try
+                    // Используем sharedMaterial для оптимизации - не создаем instance для каждой клетки
+                    // Это значительно ускоряет создание больших сеток
+                    meshRenderer.sharedMaterial = material;
+                    return;
+                }
+                catch (System.Exception ex)
+                {
+                    // Логируем только при первой ошибке для каждого типа
+                    if (!_loggedErrors.Contains(cellType))
                     {
-                        // Используем sharedMaterial для оптимизации - не создаем instance для каждой клетки
-                        // Это значительно ускоряет создание больших сеток
-                        meshRenderer.sharedMaterial = material;
-                        return;
-                    }
-                    catch (System.Exception)
-                    {
-                        // Если не удалось применить материал, красим цветом
+                        Debug.LogWarning($"CellColorManager: Ошибка при применении материала '{material.name}' к клетке типа {cellType}: {ex.Message}");
+                        _loggedErrors.Add(cellType);
                     }
                 }
             }
             
             // Если материал не найден для типа - красим цветом, НЕ меняя материал префаба
-            // Отладочная информация
-            if (cellType == CellType.field || cellType == CellType.desert)
-            {
-
-            }
-            
             ApplyColorToCell(renderer, cellType);
         }
     }

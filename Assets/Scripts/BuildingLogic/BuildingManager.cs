@@ -7,9 +7,6 @@ using CellNameSpace;
 /// </summary>
 public class BuildingManager : MonoBehaviour
 {
-    [Header("Настройки построек")]
-    [SerializeField] private List<BuildingInfo> availableBuildings = new List<BuildingInfo>(); // Список доступных построек
-    
     [Header("Ссылки (опционально)")]
     [SerializeField] private CityManager cityManager; // Менеджер городов (найдет автоматически, если не указан)
     [SerializeField] private CellNameSpace.Grid grid; // Ссылка на Grid (найдет автоматически, если не указана)
@@ -84,16 +81,17 @@ public class BuildingManager : MonoBehaviour
         }
         
         // Устанавливаем спрайт постройки
-        if (building.sprite != null)
+        Sprite buildingSprite = building.GetSprite();
+        if (buildingSprite != null)
         {
-            cell.SetBuildingSprite(building.sprite);
+            cell.SetBuildingSprite(buildingSprite);
             placedBuildings[cellPosition] = building;
-            Debug.Log($"BuildingManager: Постройка '{building.name}' установлена на клетку ({cellPosition.x}, {cellPosition.y})");
+            Debug.Log($"BuildingManager: Постройка '{building.GetName()}' установлена на клетку ({cellPosition.x}, {cellPosition.y})");
             return true;
         }
         else
         {
-            Debug.LogWarning($"BuildingManager: У постройки '{building.name}' нет спрайта!");
+            Debug.LogWarning($"BuildingManager: У постройки '{building.GetName()}' нет спрайта!");
             return false;
         }
     }
@@ -134,7 +132,8 @@ public class BuildingManager : MonoBehaviour
     public void SelectBuilding(BuildingInfo building)
     {
         selectedBuilding = building;
-        Debug.Log($"BuildingManager: Выбрана постройка '{building?.name ?? "null"}'");
+        string buildingName = building != null ? building.GetName() : "null";
+        Debug.Log($"BuildingManager: Выбрана постройка '{buildingName}'");
     }
     
     /// <summary>
@@ -162,14 +161,6 @@ public class BuildingManager : MonoBehaviour
         return building;
     }
     
-    /// <summary>
-    /// Получает список всех доступных построек
-    /// </summary>
-    public List<BuildingInfo> GetAvailableBuildings()
-    {
-        return new List<BuildingInfo>(availableBuildings);
-    }
-
     /// <summary>
     /// Получает словарь всех установленных построек (копия для чтения).
     /// </summary>
