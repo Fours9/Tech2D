@@ -105,8 +105,41 @@ public class TurnManager : MonoBehaviour
             return;
         }
 
+        // Если это приказ на перемещение юнита, удаляем предыдущие приказы
+        // перемещения для того же юнита из очереди текущего хода.
+        if (order is MoveUnitOrder moveOrder)
+        {
+            // Мы не хотим, чтобы один и тот же юнит имел несколько приказов движения:
+            // должна выполняться только последняя команда игрока.
+            int removed = currentOrders.RemoveAll(existing =>
+                existing is MoveUnitOrder existingMove &&
+                ReferenceEquals(
+                    GetUnitControllerFromMove(existingMove),
+                    GetUnitControllerFromMove(moveOrder)
+                )
+            );
+
+            if (removed > 0)
+            {
+                Debug.Log($"TurnManager: Удалено {removed} старых приказ(ов) движения для того же юнита, сохранён только последний");
+            }
+        }
+
         currentOrders.Add(order);
         Debug.Log($"TurnManager: Приказ добавлен: {order.GetDescription()}");
+    }
+
+    /// <summary>
+    /// Вспомогательный метод для извлечения UnitController из MoveUnitOrder.
+    /// Нужен, чтобы можно было сравнивать приказы по юниту.
+    /// </summary>
+    private UnitController GetUnitControllerFromMove(MoveUnitOrder moveOrder)
+    {
+        // Используем reflection, чтобы не раскрывать внутренности MoveUnitOrder наружу.
+        if (moveOrder == null) return null;
+
+        var field = typeof(MoveUnitOrder).GetField("unitController", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        return field?.GetValue(moveOrder) as UnitController;
     }
 
     /// <summary>
