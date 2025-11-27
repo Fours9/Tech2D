@@ -169,6 +169,14 @@ public class BuildingManager : MonoBehaviour
     {
         return new List<BuildingInfo>(availableBuildings);
     }
+
+    /// <summary>
+    /// Получает словарь всех установленных построек (копия для чтения).
+    /// </summary>
+    public Dictionary<Vector2Int, BuildingInfo> GetAllPlacedBuildings()
+    {
+        return new Dictionary<Vector2Int, BuildingInfo>(placedBuildings);
+    }
     
     /// <summary>
     /// Получает клетку по координатам сетки

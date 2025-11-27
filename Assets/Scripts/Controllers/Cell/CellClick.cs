@@ -35,9 +35,9 @@ namespace CellNameSpace
                 return; // Игнорируем клик, если курсор над UI
             }
             
-            mouseDownOnThisCell = true;
-            mouseDownPosition = Input.mousePosition;
-            mouseDownTime = Time.time;
+                mouseDownOnThisCell = true;
+                mouseDownPosition = Input.mousePosition;
+                mouseDownTime = Time.time;
         }
         
         private void OnMouseUp()
@@ -67,8 +67,8 @@ namespace CellNameSpace
                     mouseDownOnThisCell = false;
                     return;
                 }
-            }
-            
+                }
+                
             // Проверяем, был ли это клик по этой клетке
             if (mouseDownOnThisCell)
             {
@@ -115,8 +115,18 @@ namespace CellNameSpace
                 
                 if (unitController != null)
                 {
-                    // Перемещаем юнит на эту клетку
-                    unitController.MoveToCell(cellInfo);
+                    // Если есть TurnManager и мы в фазе планирования — создаём приказ на перемещение
+                    if (TurnManager.Instance != null && TurnManager.Instance.GetCurrentState() == TurnState.Planning)
+                    {
+                        MoveUnitOrder moveOrder = new MoveUnitOrder(unitController, cellInfo);
+                        TurnManager.Instance.EnqueueOrder(moveOrder);
+                        Debug.Log("CellClick: Приказ на перемещение юнита добавлен в очередь");
+                    }
+                    else
+                    {
+                        // Fallback: если TurnManager недоступен или другая фаза — перемещаем сразу
+                        unitController.MoveToCell(cellInfo);
+                    }
                 }
                 else
                 {
@@ -135,7 +145,7 @@ namespace CellNameSpace
             {
                 CityManager cityManager = FindFirstObjectByType<CityManager>();
                 if (cityManager == null)
-                    return;
+                return;
                 
                 // Проверяем, принадлежит ли клетка выбранному городу
                 CityInfo cityOwningCell = cityManager.GetCityOwningCell(cellPosition);
@@ -158,7 +168,7 @@ namespace CellNameSpace
             {
                 CityManager cityManager = FindFirstObjectByType<CityManager>();
                 if (cityManager != null)
-                {
+            {
                     // Проверяем, принадлежит ли клетка какому-либо городу
                     CityInfo cityOwningCell = cityManager.GetCityOwningCell(cellPosition);
                     if (cityOwningCell != null)
@@ -168,9 +178,9 @@ namespace CellNameSpace
                         {
                             CitySelectionManager.Instance.SelectCity(cityOwningCell);
                         }
-                    }
-                    else
-                    {
+            }
+            else
+            {
                         // Клетка не принадлежит городу - постройки можно ставить только на клетки города
                         // Ничего не делаем
                     }
@@ -213,7 +223,7 @@ namespace CellNameSpace
                 Debug.Log($"CellClick: Город {selectedCity.name} расширен на клетку ({cellPosition.x}, {cellPosition.y})");
             }
             else
-            {
+                    {
                 // Если расширение не удалось (клетка не является соседом города), снимаем выделение
                 Debug.Log($"CellClick: Не удалось расширить город на клетку ({cellPosition.x}, {cellPosition.y}), снимаем выделение");
                 if (CitySelectionManager.Instance != null)
@@ -237,11 +247,21 @@ namespace CellNameSpace
             if (selectedBuilding == null)
                 return;
             
-            // Пытаемся установить постройку
-            bool success = buildingManager.PlaceBuilding(cellPosition, selectedBuilding);
-            if (success)
+            // Если есть TurnManager и мы в фазе планирования — создаём приказ на строительство
+            if (TurnManager.Instance != null && TurnManager.Instance.GetCurrentState() == TurnState.Planning)
             {
-                Debug.Log($"CellClick: Постройка '{selectedBuilding.name}' установлена на клетку ({cellPosition.x}, {cellPosition.y})");
+                BuildBuildingOrder buildOrder = new BuildBuildingOrder(cellPosition, selectedBuilding);
+                TurnManager.Instance.EnqueueOrder(buildOrder);
+                Debug.Log($"CellClick: Приказ на строительство '{selectedBuilding.name}' добавлен в очередь для клетки ({cellPosition.x}, {cellPosition.y})");
+            }
+            else
+            {
+                // Fallback: если TurnManager недоступен или другая фаза — строим сразу
+                bool success = buildingManager.PlaceBuilding(cellPosition, selectedBuilding);
+                if (success)
+                {
+                    Debug.Log($"CellClick: Постройка '{selectedBuilding.name}' установлена на клетку ({cellPosition.x}, {cellPosition.y})");
+                }
             }
         }
     }
