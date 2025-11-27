@@ -218,10 +218,14 @@ public class UnitController : MonoBehaviour
             if (unitInfo != null)
             {
                 unitInfo.SetGridPosition(targetCell.GetGridX(), targetCell.GetGridY());
-
-                // Тратим очки движения за этот шаг
-                int stepCost = Pathfinder.GetMovementCostPublic(targetCell);
-                unitInfo.TrySpendMovementPoints(stepCost);
+                
+                // Тратим очки движения за этот шаг ТОЛЬКО в фазе исполнения хода
+                if (TurnManager.Instance != null && 
+                    TurnManager.Instance.GetCurrentState() == TurnState.Resolving)
+                {
+                    int stepCost = Pathfinder.GetMovementCostPublic(targetCell);
+                    unitInfo.TrySpendMovementPoints(stepCost);
+                }
             }
             
             // Переходим к следующей клетке

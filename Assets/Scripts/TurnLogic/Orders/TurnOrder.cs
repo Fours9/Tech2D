@@ -30,6 +30,14 @@ public abstract class TurnOrder
     /// Исполнение приказа в фазе Resolving.
     /// </summary>
     public abstract void Execute(TurnManager turnManager);
+
+    /// <summary>
+    /// Завершён ли приказ. По умолчанию все моментальные приказы считаются
+    /// завершёнными сразу после вызова Execute.
+    /// Для асинхронных приказов (например, движения юнита) это свойство
+    /// переопределяется и проверяет фактическое окончание действия.
+    /// </summary>
+    public virtual bool IsComplete => true;
 }
 
 

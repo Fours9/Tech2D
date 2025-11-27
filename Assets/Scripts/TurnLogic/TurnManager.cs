@@ -141,7 +141,7 @@ public class TurnManager : MonoBehaviour
 
     /// <summary>
     /// Завершает фазу планирования и запускает фазу исполнения.
-    /// Пока просто переключает состояние; выполнение приказов добавим позже.
+    /// Приказы будут выполняться по очереди в Update, пока все не завершатся.
     /// </summary>
     public void EndPlanningAndResolve()
     {
@@ -151,43 +151,89 @@ public class TurnManager : MonoBehaviour
         currentState = TurnState.Resolving;
         Debug.Log($"TurnManager: Завершение планирования, начало исполнения. Ход {currentTurn}");
 
-        // Исполняем все приказы текущего хода
+        // Подготавливаем очередь приказов для последовательного исполнения
         ResolveOrders();
-
-        // После приказов применяем экономику конца хода (доход/производство)
-        ApplyEndTurnEconomy();
-
-        // После исполнения всех приказов завершаем ход
-        FinishTurn();
     }
 
     /// <summary>
-    /// Исполняет все приказы текущего хода в упорядоченном виде.
+    /// Подготавливает очередь приказов текущего хода к исполнению.
+    /// Сами приказы исполняются по одному в Update.
     /// </summary>
     private void ResolveOrders()
     {
+        // Очищаем состояние прошлой фазы исполнения
+        _pendingOrders.Clear();
+        _activeOrder = null;
+        _isResolvingOrders = false;
+
         if (currentOrders.Count == 0)
         {
             Debug.Log("TurnManager: Нет приказов для исполнения в этом ходу");
+            // Даже если приказов нет, окончание хода обработаем в Update,
+            // когда увидим, что очередь пуста.
+            _isResolvingOrders = true;
             return;
         }
 
         // Сортируем приказы по приоритету (чем меньше, тем раньше)
         currentOrders.Sort((a, b) => a.Priority.CompareTo(b.Priority));
 
-        foreach (var order in currentOrders)
+        // Переносим приказы в очередь для поочерёдного исполнения
+        _pendingOrders.AddRange(currentOrders);
+        currentOrders.Clear();
+
+        _activeOrder = null;
+        _isResolvingOrders = true;
+
+        Debug.Log($"TurnManager: Подготовлено {_pendingOrders.Count} приказ(ов) к исполнению");
+    }
+
+    // ---- Новая логика поочерёдного исполнения приказов ----
+
+    private readonly List<TurnOrder> _pendingOrders = new List<TurnOrder>();
+    private TurnOrder _activeOrder = null;
+    private bool _isResolvingOrders = false;
+
+    private void Update()
+    {
+        if (currentState != TurnState.Resolving || !_isResolvingOrders)
+            return;
+
+        // Если сейчас нет активного приказа — берём следующий
+        if (_activeOrder == null)
         {
+            if (_pendingOrders.Count == 0)
+            {
+                // Все приказы выполнены: применяем экономику и завершаем ход
+                _isResolvingOrders = false;
+                ApplyEndTurnEconomy();
+                FinishTurn();
+                return;
+            }
+
+            _activeOrder = _pendingOrders[0];
+            _pendingOrders.RemoveAt(0);
+
             try
             {
-                order.Execute(this);
+                _activeOrder.Execute(this);
+                Debug.Log($"TurnManager: Запущен приказ: {_activeOrder.GetDescription()}");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"TurnManager: Ошибка при выполнении приказа {order.GetDescription()}: {ex}");
+                Debug.LogError($"TurnManager: Ошибка при запуске приказа {_activeOrder.GetDescription()}: {ex}");
+                _activeOrder = null;
             }
         }
-
-        currentOrders.Clear();
+        else
+        {
+            // Ждём завершения активного приказа (для движения юнита — пока он не дойдёт)
+            if (_activeOrder.IsComplete)
+            {
+                Debug.Log($"TurnManager: Приказ завершён: {_activeOrder.GetDescription()}");
+                _activeOrder = null;
+            }
+        }
     }
 
     /// <summary>

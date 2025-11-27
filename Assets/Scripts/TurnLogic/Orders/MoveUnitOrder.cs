@@ -59,6 +59,17 @@ public class MoveUnitOrder : TurnOrder
             unitController.MoveToCell(targetCell);
         }
     }
+
+    /// <summary>
+    /// Приказ движения считается завершённым, когда юнит перестал двигаться.
+    /// </summary>
+    public override bool IsComplete
+    {
+        get
+        {
+            return unitController == null || !unitController.IsMoving();
+        }
+    }
 }
 
 
