@@ -5,6 +5,7 @@ using UnityEngine.UI;
 /// Скрипт для кнопки-переключателя режима расширения города
 /// Когда включена - можно добавлять клетки к городу кликом
 /// Когда выключена - нельзя добавлять клетки
+/// Работает только когда город выделен
 /// </summary>
 public class ExpandCityButton : MonoBehaviour
 {
@@ -49,10 +50,18 @@ public class ExpandCityButton : MonoBehaviour
         }
         
         // Инициализируем состояние
-        expansionModeEnabled = toggle.isOn;
+        expansionModeEnabled = false;
+        toggle.isOn = false;
         
         // Подписываемся на событие изменения состояния переключателя
         toggle.onValueChanged.AddListener(OnToggleValueChanged);
+        
+        // Подписываемся на события выбора города
+        CitySelectionManager.OnCitySelectedEvent += OnCitySelected;
+        CitySelectionManager.OnCityDeselectedEvent += OnCityDeselected;
+        
+        // Обновляем начальное состояние
+        UpdateButtonState();
     }
     
     void OnDestroy()
@@ -62,6 +71,30 @@ public class ExpandCityButton : MonoBehaviour
         {
             toggle.onValueChanged.RemoveListener(OnToggleValueChanged);
         }
+        
+        CitySelectionManager.OnCitySelectedEvent -= OnCitySelected;
+        CitySelectionManager.OnCityDeselectedEvent -= OnCityDeselected;
+    }
+    
+    /// <summary>
+    /// Обработчик события выбора города
+    /// </summary>
+    private void OnCitySelected(CityInfo city)
+    {
+        UpdateButtonState();
+    }
+    
+    /// <summary>
+    /// Обработчик события снятия выбора города
+    /// </summary>
+    private void OnCityDeselected()
+    {
+        // Выключаем режим расширения и toggle при снятии выделения
+        if (toggle != null && toggle.isOn)
+        {
+            toggle.isOn = false;
+        }
+        UpdateButtonState();
     }
     
     /// <summary>
@@ -69,9 +102,22 @@ public class ExpandCityButton : MonoBehaviour
     /// </summary>
     private void OnToggleValueChanged(bool isOn)
     {
-        expansionModeEnabled = isOn;
+        // Режим расширения работает только если город выделен
+        bool hasSelectedCity = CitySelectionManager.Instance != null && 
+                               CitySelectionManager.Instance.HasSelectedCity();
         
-        if (isOn)
+        if (isOn && !hasSelectedCity)
+        {
+            // Если пытаются включить без выбранного города, выключаем
+            toggle.isOn = false;
+            expansionModeEnabled = false;
+            Debug.LogWarning("ExpandCityButton: Нельзя включить режим расширения без выбранного города");
+            return;
+        }
+        
+        expansionModeEnabled = isOn && hasSelectedCity;
+        
+        if (expansionModeEnabled)
         {
             Debug.Log("ExpandCityButton: Режим расширения города включен. Кликайте по соседним клеткам для добавления к городу.");
         }
@@ -82,20 +128,24 @@ public class ExpandCityButton : MonoBehaviour
     }
     
     /// <summary>
-    /// Обновляет состояние переключателя (активен/неактивен) в зависимости от наличия городов
+    /// Обновляет состояние переключателя (активен/неактивен) в зависимости от наличия выбранного города
     /// </summary>
     public void UpdateButtonState()
     {
         if (toggle == null || cityManager == null)
             return;
         
-        var allCities = cityManager.GetAllCities();
-        toggle.interactable = allCities.Count > 0;
+        bool hasSelectedCity = CitySelectionManager.Instance != null && 
+                               CitySelectionManager.Instance.HasSelectedCity();
         
-        // Если нет городов, выключаем режим расширения
-        if (allCities.Count == 0 && toggle.isOn)
+        // Переключатель активен только если есть выбранный город
+        toggle.interactable = hasSelectedCity;
+        
+        // Если нет выбранного города, выключаем режим расширения
+        if (!hasSelectedCity && toggle.isOn)
         {
             toggle.isOn = false;
+            expansionModeEnabled = false;
         }
     }
 }

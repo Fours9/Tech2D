@@ -89,15 +89,62 @@ namespace CellNameSpace
                     Debug.LogWarning($"CellClick: UnitController не найден на выбранном юните");
                 }
             }
-            // Проверяем, можно ли расширить город на эту клетку (только если режим расширения включен)
-            else if (ExpandCityButton.IsExpansionModeEnabled())
+            // Проверяем, можно ли расширить город на эту клетку (только если режим расширения включен и город выделен)
+            else if (ExpandCityButton.IsExpansionModeEnabled() && 
+                     CitySelectionManager.Instance != null && 
+                     CitySelectionManager.Instance.HasSelectedCity())
             {
                 TryExpandCityToCell(cellPosition);
             }
-            // Проверяем, можно ли установить постройку (если выбрана постройка)
+            // Проверяем, есть ли выбранный город - обрабатываем клик для выделения/снятия выделения
+            else if (CitySelectionManager.Instance != null && CitySelectionManager.Instance.HasSelectedCity())
+            {
+                CityManager cityManager = FindFirstObjectByType<CityManager>();
+                if (cityManager == null)
+                    return;
+                
+                // Проверяем, принадлежит ли клетка выбранному городу
+                CityInfo cityOwningCell = cityManager.GetCityOwningCell(cellPosition);
+                CityInfo selectedCity = CitySelectionManager.Instance.GetSelectedCity();
+                
+                if (cityOwningCell != null && cityOwningCell == selectedCity)
+                {
+                    // Клетка принадлежит выбранному городу - подтверждаем выделение
+                    CitySelectionManager.Instance.SelectCity(selectedCity);
+                }
+                else
+                {
+                    // Клетка не принадлежит выбранному городу - снимаем выделение
+                    CitySelectionManager.Instance.DeselectCity();
+                }
+            }
+            // Если нет выбранного города, проверяем, можно ли выделить город по клику на его клетку
             else
             {
-                TryPlaceBuildingOnCell(cellPosition);
+                CityManager cityManager = FindFirstObjectByType<CityManager>();
+                if (cityManager != null)
+                {
+                    // Проверяем, принадлежит ли клетка какому-либо городу
+                    CityInfo cityOwningCell = cityManager.GetCityOwningCell(cellPosition);
+                    if (cityOwningCell != null)
+                    {
+                        // Выделяем город, которому принадлежит клетка
+                        if (CitySelectionManager.Instance != null)
+                        {
+                            CitySelectionManager.Instance.SelectCity(cityOwningCell);
+                        }
+                    }
+                    else
+                    {
+                        // Клетка не принадлежит городу - пытаемся установить постройку
+                        TryPlaceBuildingOnCell(cellPosition);
+                    }
+                }
+                else
+                {
+                    // Если нет CityManager, пытаемся установить постройку
+                    TryPlaceBuildingOnCell(cellPosition);
+                }
             }
         }
         
@@ -110,6 +157,17 @@ namespace CellNameSpace
             if (cityManager == null)
                 return;
             
+            // Проверяем, есть ли выбранный город
+            if (CitySelectionManager.Instance == null || !CitySelectionManager.Instance.HasSelectedCity())
+            {
+                Debug.LogWarning("CellClick: Нет выбранного города для расширения");
+                return;
+            }
+            
+            CityInfo selectedCity = CitySelectionManager.Instance.GetSelectedCity();
+            if (selectedCity == null)
+                return;
+            
             // Проверяем, принадлежит ли клетка какому-либо городу
             if (cityManager.IsCellOwnedByCity(cellPosition))
             {
@@ -117,38 +175,12 @@ namespace CellNameSpace
                 return;
             }
             
-            // Ищем ближайший город, который может расшириться на эту клетку
-            var allCities = cityManager.GetAllCities();
-            foreach (var kvp in allCities)
+            // Расширяем только выбранный город
+            Vector2Int cityPosition = selectedCity.position;
+            bool success = cityManager.ExpandCity(cityPosition, cellPosition);
+            if (success)
             {
-                CityInfo city = kvp.Value;
-                Vector2Int cityPosition = kvp.Key;
-                
-                // Проверяем, является ли эта клетка соседом города
-                CellNameSpace.Grid grid = FindFirstObjectByType<CellNameSpace.Grid>();
-                if (grid == null)
-                    return;
-                
-                int gridWidth = grid.GetGridWidth();
-                int gridHeight = grid.GetGridHeight();
-                
-                // Проверяем, является ли клетка соседом какой-либо клетки города
-                List<Vector2Int> neighbors = CellNameSpace.HexagonalGridHelper.GetNeighbors(
-                    cellPosition.x, cellPosition.y, gridWidth, gridHeight);
-                
-                foreach (Vector2Int neighborPos in neighbors)
-                {
-                    if (city.ownedCells.Contains(neighborPos))
-                    {
-                        // Нашли соседнюю клетку города, расширяем город
-                        bool success = cityManager.ExpandCity(cityPosition, cellPosition);
-                        if (success)
-                        {
-                            Debug.Log($"CellClick: Город {city.name} расширен на клетку ({cellPosition.x}, {cellPosition.y})");
-                        }
-                        return;
-                    }
-                }
+                Debug.Log($"CellClick: Город {selectedCity.name} расширен на клетку ({cellPosition.x}, {cellPosition.y})");
             }
         }
         
