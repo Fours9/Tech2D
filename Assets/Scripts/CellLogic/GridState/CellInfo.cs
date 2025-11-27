@@ -120,6 +120,12 @@ namespace CellNameSpace
             // Применяем материал или цвет (с защитой - если materialManager null, используется цвет)
             CellColorManager.ApplyMaterialToCell(cellRenderer, cellType, cachedMaterialManager);
             
+            // Если клетка принадлежит городу, применяем подсветку города поверх базового цвета
+            if (owningCity != null)
+            {
+                ApplyCityHighlight();
+            }
+            
             // Обновляем оверлеи при изменении типа клетки (если требуется)
             if (updateOverlays)
             {
@@ -342,70 +348,81 @@ namespace CellNameSpace
         
         /// <summary>
         /// Устанавливает принадлежность клетки к городу (визуальная индикация)
+        /// Подсвечивает клетку изменением цвета для визуального выделения
         /// </summary>
         /// <param name="city">Город, которому принадлежит клетка</param>
         public void SetCityOwnership(CityInfo city)
         {
             owningCity = city;
             
-            // Визуальная индикация: изменяем цвет клетки (делаем немного светлее)
-            if (cellRenderer == null)
-                cellRenderer = GetComponent<Renderer>();
-            
-            if (cellRenderer != null)
-            {
-                // Для SpriteRenderer
-                SpriteRenderer spriteRenderer = cellRenderer as SpriteRenderer;
-                if (spriteRenderer != null)
-                {
-                    Color originalColor = spriteRenderer.color;
-                    Color cityColor = new Color(
-                        Mathf.Min(1f, originalColor.r * 1.15f),
-                        Mathf.Min(1f, originalColor.g * 1.15f),
-                        Mathf.Min(1f, originalColor.b * 1.15f),
-                        originalColor.a
-                    );
-                    spriteRenderer.color = cityColor;
-                }
-                // Для MeshRenderer
-                else if (cellRenderer is MeshRenderer meshRenderer)
-                {
-                    if (meshRenderer.material != null)
-                    {
-                        Color originalColor = meshRenderer.material.color;
-                        Color cityColor = new Color(
-                            Mathf.Min(1f, originalColor.r * 1.15f),
-                            Mathf.Min(1f, originalColor.g * 1.15f),
-                            Mathf.Min(1f, originalColor.b * 1.15f),
-                            originalColor.a
-                        );
-                        meshRenderer.material.color = cityColor;
-                    }
-                }
-            }
+            // Визуальная индикация: подсвечиваем клетку изменением цвета
+            ApplyCityHighlight();
             
             Debug.Log($"CellInfo: Клетка ({gridX}, {gridY}) теперь принадлежит городу {city.name}");
         }
         
         /// <summary>
+        /// Применяет подсветку клетки города (изменение цвета)
+        /// </summary>
+        private void ApplyCityHighlight()
+        {
+            if (cellRenderer == null)
+                cellRenderer = GetComponent<Renderer>();
+            
+            if (cellRenderer == null)
+                return;
+            
+            // Получаем базовый цвет клетки из CellColorManager
+            Color baseColor = CellColorManager.GetColorForType(cellType);
+            
+            // Применяем подсветку: делаем цвет более ярким и добавляем легкий золотистый оттенок
+            Color cityColor = new Color(
+                Mathf.Min(1f, baseColor.r * 1.3f + 0.1f),  // Увеличиваем яркость и добавляем красный оттенок
+                Mathf.Min(1f, baseColor.g * 1.25f + 0.05f), // Увеличиваем яркость и добавляем зеленый оттенок
+                Mathf.Min(1f, baseColor.b * 1.2f),          // Увеличиваем яркость
+                baseColor.a
+            );
+            
+            // Для SpriteRenderer
+            SpriteRenderer spriteRenderer = cellRenderer as SpriteRenderer;
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = cityColor;
+                return;
+            }
+            
+            // Для MeshRenderer
+            MeshRenderer meshRenderer = cellRenderer as MeshRenderer;
+            if (meshRenderer != null)
+            {
+                // Если есть материал, изменяем его цвет
+                if (meshRenderer.material != null)
+                {
+                    meshRenderer.material.color = cityColor;
+                }
+                // Если материала нет, но есть sharedMaterial, создаем instance
+                else if (meshRenderer.sharedMaterial != null)
+                {
+                    meshRenderer.material.color = cityColor;
+                }
+            }
+        }
+        
+        /// <summary>
         /// Убирает принадлежность клетки к городу
+        /// Восстанавливает оригинальный цвет клетки
         /// </summary>
         public void ClearCityOwnership()
         {
             if (owningCity != null)
             {
-                // Восстанавливаем оригинальный цвет
-                if (cellRenderer == null)
-                    cellRenderer = GetComponent<Renderer>();
+                CityInfo cityToRemove = owningCity;
+                owningCity = null; // Очищаем перед обновлением цвета, чтобы подсветка не применилась снова
                 
-                if (cellRenderer != null && cellRenderer.material != null)
-                {
-                    // Восстанавливаем цвет через UpdateCellColor
-                    UpdateCellColor(false);
-                }
+                // Восстанавливаем оригинальный цвет через UpdateCellColor
+                UpdateCellColor(false);
                 
-                Debug.Log($"CellInfo: Клетка ({gridX}, {gridY}) больше не принадлежит городу {owningCity.name}");
-                owningCity = null;
+                Debug.Log($"CellInfo: Клетка ({gridX}, {gridY}) больше не принадлежит городу {cityToRemove.name}");
             }
         }
         
