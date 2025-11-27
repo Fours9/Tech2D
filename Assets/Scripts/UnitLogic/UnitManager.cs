@@ -62,10 +62,27 @@ public class UnitManager : MonoBehaviour
     /// </summary>
     private IEnumerator SpawnDefaultUnitDelayed()
     {
-        // Ждем, пока Grid сгенерируется
-        yield return new WaitForEndOfFrame();
-        yield return new WaitForEndOfFrame();
-        
+        // Ждем, пока Grid будет найден
+        while (grid == null)
+        {
+            grid = FindFirstObjectByType<CellNameSpace.Grid>();
+            if (grid != null)
+                break;
+            yield return null;
+        }
+
+        if (grid == null)
+        {
+            Debug.LogWarning("UnitManager: Не удалось найти Grid для спавна юнита");
+            yield break;
+        }
+
+        // Ждем, пока Grid завершит генерацию типов клеток
+        while (!grid.IsGenerationComplete)
+        {
+            yield return null;
+        }
+
         SpawnUnit();
     }
     

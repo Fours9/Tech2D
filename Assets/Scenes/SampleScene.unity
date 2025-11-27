@@ -562,8 +562,8 @@ MonoBehaviour:
   unitPrefab: {fileID: 7434544964083866290, guid: 3fdddeab81c771a4cb9ae446519aae5c, type: 3}
   spawnDefaultUnitOnStart: 1
   defaultSpawnPosition: {x: 0, y: 0}
-  findRandomSpawnPosition: 0
-  allowedCellTypes: 02000000
+  findRandomSpawnPosition: 1
+  allowedCellTypes: 020000000300000004000000
   grid: {fileID: 0}
   moveCameraToUnitOnSpawn: 1
   instantCameraMove: 0
@@ -1190,7 +1190,7 @@ GameObject:
   - component: {fileID: 668596955}
   - component: {fileID: 668596954}
   m_Layer: 5
-  m_Name: Building
+  m_Name: Build House
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1568,7 +1568,7 @@ GameObject:
   - component: {fileID: 1403361443}
   - component: {fileID: 1403361446}
   m_Layer: 5
-  m_Name: Button
+  m_Name: MakeCity
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1702,7 +1702,7 @@ GameObject:
   - component: {fileID: 1653148176}
   - component: {fileID: 1653148175}
   m_Layer: 5
-  m_Name: Build Toggle Button
+  m_Name: AddCellsToCity
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1805,7 +1805,7 @@ GameObject:
   - component: {fileID: 1887661418}
   - component: {fileID: 1887661417}
   m_Layer: 5
-  m_Name: Button
+  m_Name: TurnButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

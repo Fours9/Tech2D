@@ -58,6 +58,12 @@ namespace CellNameSpace
         private float cachedHexWidth = 0f;
         private float cachedHexOffset = 0f;
         private float cachedActualCellSize = 0f;
+
+        /// <summary>
+        /// Флаг, показывающий, что генерация сетки и типов клеток завершена.
+        /// Можно использовать, чтобы безопасно спавнить юнитов только после готовности карты.
+        /// </summary>
+        public bool IsGenerationComplete { get; private set; } = false;
         
         void Start()
         {
@@ -66,6 +72,9 @@ namespace CellNameSpace
         
         private void GenerateGrid()
         {
+            // При любом запуске генерации считаем, что она ещё не завершена
+            IsGenerationComplete = false;
+
             if (cellPrefab == null)
             {
                 Debug.LogError("Cell Prefab не назначен!");
@@ -241,6 +250,9 @@ namespace CellNameSpace
                 // Если корутины не используются, сразу возобновляем игру
                 ResumeGame();
             }
+
+            // Типы всех клеток применены — считаем генерацию завершённой
+            IsGenerationComplete = true;
         }
         
         /// <summary>
@@ -282,6 +294,9 @@ namespace CellNameSpace
             }
             
             Debug.Log("Применение типов клеток завершено");
+
+            // Типы всех клеток применены — считаем генерацию завершённой
+            IsGenerationComplete = true;
             
             // Возобновляем игру после завершения генерации
             ResumeGame();
