@@ -23,12 +23,14 @@ public class ReachableCellsHighlighter : MonoBehaviour
     {
         UnitSelectionManager.OnUnitSelectedEvent += OnUnitSelected;
         UnitSelectionManager.OnUnitDeselectedEvent += OnUnitDeselected;
+        TurnManager.OnPlanningPhaseStarted += OnPlanningPhaseStarted;
     }
 
     private void OnDisable()
     {
         UnitSelectionManager.OnUnitSelectedEvent -= OnUnitSelected;
         UnitSelectionManager.OnUnitDeselectedEvent -= OnUnitDeselected;
+        TurnManager.OnPlanningPhaseStarted -= OnPlanningPhaseStarted;
 
         ClearHighlight();
     }
@@ -44,6 +46,19 @@ public class ReachableCellsHighlighter : MonoBehaviour
         currentUnit = null;
         lastHighlightedPos = new Vector2Int(-1, -1);
         ClearHighlight();
+    }
+
+    /// <summary>
+    /// Обработчик события начала фазы планирования.
+    /// Обновляет подсветку, если юнит уже выделен (очки движения были восстановлены).
+    /// </summary>
+    private void OnPlanningPhaseStarted()
+    {
+        // Если юнит уже выделен, обновляем подсветку с учётом восстановленных очков движения
+        if (currentUnit != null)
+        {
+            HighlightReachableCells(currentUnit);
+        }
     }
 
     private void Update()

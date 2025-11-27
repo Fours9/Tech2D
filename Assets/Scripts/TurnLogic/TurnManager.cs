@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -19,6 +20,11 @@ public enum TurnState
 public class TurnManager : MonoBehaviour
 {
     public static TurnManager Instance { get; private set; }
+    
+    /// <summary>
+    /// Событие, вызываемое при начале фазы планирования (когда сбрасываются очки движения)
+    /// </summary>
+    public static event Action OnPlanningPhaseStarted;
 
     [Header("Состояние хода")]
     [SerializeField] private int currentTurn = 1;
@@ -170,6 +176,9 @@ public class TurnManager : MonoBehaviour
                 }
             }
         }
+        
+        // Уведомляем все системы о начале фазы планирования (для обновления подсветки и т.д.)
+        OnPlanningPhaseStarted?.Invoke();
     }
 
     /// <summary>
