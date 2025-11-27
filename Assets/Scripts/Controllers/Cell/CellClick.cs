@@ -117,7 +117,7 @@ namespace CellNameSpace
                 {
                     // Если есть TurnManager и мы в фазе планирования — создаём приказ на перемещение
                     if (TurnManager.Instance != null && TurnManager.Instance.GetCurrentState() == TurnState.Planning)
-                    {
+                        {
                         MoveUnitOrder moveOrder = new MoveUnitOrder(unitController, cellInfo);
                         TurnManager.Instance.EnqueueOrder(moveOrder);
                         Debug.Log("CellClick: Приказ на перемещение юнита добавлен в очередь");
@@ -257,10 +257,10 @@ namespace CellNameSpace
             else
             {
                 // Fallback: если TurnManager недоступен или другая фаза — строим сразу
-                bool success = buildingManager.PlaceBuilding(cellPosition, selectedBuilding);
-                if (success)
-                {
-                    Debug.Log($"CellClick: Постройка '{selectedBuilding.name}' установлена на клетку ({cellPosition.x}, {cellPosition.y})");
+            bool success = buildingManager.PlaceBuilding(cellPosition, selectedBuilding);
+            if (success)
+            {
+                Debug.Log($"CellClick: Постройка '{selectedBuilding.name}' установлена на клетку ({cellPosition.x}, {cellPosition.y})");
                 }
             }
         }

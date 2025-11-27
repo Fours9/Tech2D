@@ -424,5 +424,57 @@ namespace CellNameSpace
         {
             return owningCity != null;
         }
+
+        /// <summary>
+        /// Подсветить клетку как достижимую для текущего хода юнита.
+        /// В приоритете используем cityBorderOverlay как маркер контура.
+        /// Если он не назначен, явно красим клетку в заметный цвет.
+        /// </summary>
+        public void SetMovementHighlight(bool enabled)
+        {
+            if (cityBorderOverlay != null)
+            {
+                if (enabled)
+                {
+                    cityBorderOverlay.enabled = true;
+                    // Яркий циановый контур
+                    cityBorderOverlay.color = new Color(0f, 1f, 1f, 0.8f);
+                }
+                else
+                {
+                    cityBorderOverlay.enabled = false;
+                }
+            }
+            else
+            {
+                // Fallback: подсвечиваем саму клетку
+                if (cellRenderer == null)
+                    cellRenderer = GetComponent<Renderer>();
+
+                if (cellRenderer == null)
+                    return;
+
+                if (enabled)
+                {
+                    // Для SpriteRenderer
+                    SpriteRenderer spriteRenderer = cellRenderer as SpriteRenderer;
+                    if (spriteRenderer != null)
+                    {
+                        // Яркий цвет, хорошо видимый поверх террейна
+                        spriteRenderer.color = Color.cyan;
+                    }
+                    // Для MeshRenderer
+                    else if (cellRenderer is MeshRenderer meshRenderer && meshRenderer.material != null)
+                    {
+                        meshRenderer.material.color = Color.cyan;
+                    }
+                }
+                else
+                {
+                    // Сбрасываем цвет к базовому типу клетки
+                    UpdateCellColor(false);
+                }
+            }
+        }
     }
 }

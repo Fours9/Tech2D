@@ -35,7 +35,29 @@ public class MoveUnitOrder : TurnOrder
             return;
         }
 
-        unitController.MoveToCell(targetCell);
+        // Пытаемся получить оставшиеся очки движения юнита
+        UnitInfo info = unitController.GetComponent<UnitInfo>();
+        int maxMovement = int.MaxValue;
+
+        if (info != null)
+        {
+            int remaining = info.GetRemainingMovementPoints();
+            if (remaining > 0)
+            {
+                maxMovement = remaining;
+            }
+        }
+
+        // Если известен лимит очков движения — двигаемся с ограничением
+        if (maxMovement < int.MaxValue)
+        {
+            unitController.MoveToCellWithLimit(targetCell, maxMovement);
+        }
+        else
+        {
+            // Fallback: нет данных о статах — двигаем без ограничения
+            unitController.MoveToCell(targetCell);
+        }
     }
 }
 

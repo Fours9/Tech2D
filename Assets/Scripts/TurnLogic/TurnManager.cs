@@ -117,7 +117,26 @@ public class TurnManager : MonoBehaviour
     {
         currentState = TurnState.Planning;
         Debug.Log($"TurnManager: Начало фазы планирования. Ход {currentTurn}");
-        // Здесь в будущем можно будет оповещать подписчиков (UI, системы и т.д.)
+
+        // В начале фазы планирования сбрасываем очки движения у всех юнитов
+        if (unitManager == null)
+        {
+            unitManager = FindFirstObjectByType<UnitManager>();
+        }
+
+        if (unitManager != null)
+        {
+            var units = unitManager.GetSpawnedUnits();
+            foreach (var go in units)
+            {
+                if (go == null) continue;
+                UnitInfo info = go.GetComponent<UnitInfo>();
+                if (info != null)
+                {
+                    info.ResetMovementPoints();
+                }
+            }
+        }
     }
 
     /// <summary>

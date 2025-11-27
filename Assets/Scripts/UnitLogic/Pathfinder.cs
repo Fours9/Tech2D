@@ -118,7 +118,8 @@ public static class Pathfinder
                     continue;
                 
                 // Вычисляем стоимость движения к соседу
-                int movementCost = currentNode.gCost + GetDistance(currentNode.position, neighborPos);
+                // Вместо равномерной стоимости используем цену клетки (movement cost)
+                int movementCost = currentNode.gCost + GetMovementCost(neighborCell);
                 
                 // Ищем соседа в открытом списке
                 PathNode neighborNode = openList.Find(n => n.position.x == neighborPos.x && n.position.y == neighborPos.y);
@@ -197,18 +198,62 @@ public static class Pathfinder
         if (cell == null)
             return false;
         
-        // Здесь можно добавить проверку типа клетки
-        // Например, нельзя ходить по воде или горам
         CellType cellType = cell.GetCellType();
         
-        // Список непроходимых типов клеток
+        // Непроходимые типы клеток (сюда можно добавить горы, если нужно)
         List<CellType> unwalkableTypes = new List<CellType>
         {
             CellType.deep_water,
-            CellType.shallow // Можно убрать shallow, если хотите разрешить ходить по мелководью
+            CellType.shallow
         };
         
         return !unwalkableTypes.Contains(cellType);
+    }
+
+    /// <summary>
+    /// Стоимость перемещения на указанную клетку (movement cost).
+    /// Чем больше значение, тем \"тяжелее\" клетка для прохода.
+    /// </summary>
+    private static int GetMovementCost(CellInfo cell)
+    {
+        return GetMovementCostInternal(cell);
+    }
+
+    /// <summary>
+    /// Публичный доступ к стоимости перемещения (для других классов).
+    /// </summary>
+    public static int GetMovementCostPublic(CellInfo cell)
+    {
+        return GetMovementCostInternal(cell);
+    }
+
+    /// <summary>
+    /// Общая внутренняя реализация стоимости перемещения.
+    /// </summary>
+    private static int GetMovementCostInternal(CellInfo cell)
+    {
+        if (cell == null)
+            return int.MaxValue;
+
+        switch (cell.GetCellType())
+        {
+            case CellType.field:
+                return 1; // Обычная земля
+            case CellType.forest:
+                return 2; // Лес — дороже
+            case CellType.desert:
+                return 2; // Пустыня — дороже
+            case CellType.mountain:
+                return 3; // Горы — самые дорогие (если вообще проходимы)
+
+            // Воды по идее непроходимы, но на всякий случай ставим очень большую цену
+            case CellType.deep_water:
+            case CellType.shallow:
+                return 1000;
+
+            default:
+                return 1;
+        }
     }
     
     /// <summary>

@@ -58,7 +58,7 @@ namespace CellNameSpace
         private float cachedHexWidth = 0f;
         private float cachedHexOffset = 0f;
         private float cachedActualCellSize = 0f;
-
+        
         /// <summary>
         /// Флаг, показывающий, что генерация сетки и типов клеток завершена.
         /// Можно использовать, чтобы безопасно спавнить юнитов только после готовности карты.

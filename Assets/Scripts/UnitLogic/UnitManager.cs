@@ -82,7 +82,7 @@ public class UnitManager : MonoBehaviour
         {
             yield return null;
         }
-
+        
         SpawnUnit();
     }
     
@@ -149,6 +149,7 @@ public class UnitManager : MonoBehaviour
         {
             unitInfo.SetGridPosition(spawnPos.x, spawnPos.y);
             unitInfo.SetUnitStats(defaultUnitStats);
+            unitInfo.ResetMovementPoints();
         }
         else
         {

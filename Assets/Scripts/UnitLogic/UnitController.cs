@@ -36,9 +36,27 @@ public class UnitController : MonoBehaviour
     }
     
     /// <summary>
-    /// Переместить юнита на указанную клетку с построением маршрута
+    /// Переместить юнита на указанную клетку с построением полного маршрута
+    /// (без ограничения по очкам движения).
     /// </summary>
     public void MoveToCell(CellInfo targetCell)
+    {
+        BuildAndSetPath(targetCell, int.MaxValue);
+    }
+
+    /// <summary>
+    /// Переместить юнита на указанную клетку, ограничив длину маршрута
+    /// суммарной стоимостью перемещения (movement points).
+    /// </summary>
+    public void MoveToCellWithLimit(CellInfo targetCell, int maxMovementCost)
+    {
+        BuildAndSetPath(targetCell, maxMovementCost);
+    }
+
+    /// <summary>
+    /// Строит маршрут и применяет ограничение по стоимости движения.
+    /// </summary>
+    private void BuildAndSetPath(CellInfo targetCell, int maxMovementCost)
     {
         if (targetCell == null)
         {
@@ -93,13 +111,51 @@ public class UnitController : MonoBehaviour
         {
             path.RemoveAt(0);
         }
+
+        // Если есть ограничение по очкам движения — обрезаем путь
+        if (maxMovementCost < int.MaxValue)
+        {
+            path = TrimPathByMovementCost(startCell, path, maxMovementCost);
+        }
+        
+        if (path.Count == 0)
+        {
+            Debug.Log("UnitController: После ограничения по очкам движения путь пуст, юнит не двигается");
+            return;
+        }
         
         // Устанавливаем маршрут
         currentPath = path;
         currentPathIndex = 0;
         isMoving = true;
         
-        Debug.Log($"UnitController: Построен маршрут из {path.Count} клеток к ({targetCell.GetGridX()}, {targetCell.GetGridY()})");
+        Debug.Log($"UnitController: Построен маршрут из {path.Count} клеток (с ограничением {maxMovementCost}) к ({targetCell.GetGridX()}, {targetCell.GetGridY()})");
+    }
+
+    /// <summary>
+    /// Обрезает путь так, чтобы суммарная стоимость перемещения не превышала maxMovementCost.
+    /// </summary>
+    private List<CellInfo> TrimPathByMovementCost(CellInfo startCell, List<CellInfo> fullPath, int maxMovementCost)
+    {
+        List<CellInfo> result = new List<CellInfo>();
+        if (startCell == null || fullPath == null || fullPath.Count == 0)
+            return result;
+
+        int cost = 0;
+        CellInfo current = startCell;
+
+        foreach (var next in fullPath)
+        {
+            int stepCost = Pathfinder.GetMovementCostPublic(next);
+            if (cost + stepCost > maxMovementCost)
+                break;
+
+            cost += stepCost;
+            result.Add(next);
+            current = next;
+        }
+
+        return result;
     }
     
     /// <summary>
@@ -162,6 +218,10 @@ public class UnitController : MonoBehaviour
             if (unitInfo != null)
             {
                 unitInfo.SetGridPosition(targetCell.GetGridX(), targetCell.GetGridY());
+
+                // Тратим очки движения за этот шаг
+                int stepCost = Pathfinder.GetMovementCostPublic(targetCell);
+                unitInfo.TrySpendMovementPoints(stepCost);
             }
             
             // Переходим к следующей клетке
