@@ -318,6 +318,21 @@ public class CityManager : MonoBehaviour
     /// </summary>
     public CityInfo GetCityOwningCell(Vector2Int cellPosition)
     {
+        // Сначала используем кэш в CellInfo (оптимальный путь)
+        if (grid != null)
+        {
+            CellInfo cell = grid.GetCellInfoAt(cellPosition.x, cellPosition.y);
+            if (cell != null)
+            {
+                CityInfo owningCity = cell.GetOwningCity();
+                if (owningCity != null)
+                {
+                    return owningCity;
+                }
+            }
+        }
+        
+        // Fallback: если по какой-то причине кэш недоступен, используем старую логику
         foreach (var kvp in cities)
         {
             if (kvp.Value.ownedCells.Contains(cellPosition))
