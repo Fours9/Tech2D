@@ -147,6 +147,13 @@ public class CityManager : MonoBehaviour
             UnitSelectionManager.Instance.DeselectUnit();
         }
         
+        // Автоматически выделяем только что созданный город
+        if (CitySelectionManager.Instance != null)
+        {
+            CitySelectionManager.Instance.SelectCity(cityInfo);
+            Debug.Log($"CityManager: Город {cityInfo.name} автоматически выделен");
+        }
+        
         Debug.Log($"CityManager: Город создан на позиции ({gridX}, {gridY})");
         return true;
     }

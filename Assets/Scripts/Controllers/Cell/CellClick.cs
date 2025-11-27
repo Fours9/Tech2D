@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using System.Collections.Generic;
 
 namespace CellNameSpace
@@ -28,6 +29,12 @@ namespace CellNameSpace
 
         private void OnMouseDown()
         {
+            // Проверяем, не находится ли курсор над UI элементом
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                return; // Игнорируем клик, если курсор над UI
+            }
+            
             mouseDownOnThisCell = true;
             mouseDownPosition = Input.mousePosition;
             mouseDownTime = Time.time;
@@ -35,6 +42,33 @@ namespace CellNameSpace
         
         private void OnMouseUp()
         {
+            // Проверяем, не находится ли курсор над UI элементом
+            // Также проверяем, не началось ли нажатие над UI элементом
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                mouseDownOnThisCell = false; // Сбрасываем флаг
+                return; // Игнорируем клик, если курсор над UI
+            }
+            
+            // Дополнительная проверка: если нажатие началось над UI, но отпускание над клеткой,
+            // все равно игнорируем клик (проверяем позицию нажатия)
+            if (mouseDownOnThisCell && EventSystem.current != null)
+            {
+                // Проверяем, не было ли нажатие над UI элементом в момент OnMouseDown
+                // Для этого используем RaycastAll в позиции нажатия
+                UnityEngine.EventSystems.PointerEventData pointerData = new UnityEngine.EventSystems.PointerEventData(EventSystem.current);
+                pointerData.position = mouseDownPosition;
+                var results = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
+                EventSystem.current.RaycastAll(pointerData, results);
+                
+                // Если в момент нажатия курсор был над UI, игнорируем клик
+                if (results.Count > 0)
+                {
+                    mouseDownOnThisCell = false;
+                    return;
+                }
+            }
+            
             // Проверяем, был ли это клик по этой клетке
             if (mouseDownOnThisCell)
             {
@@ -109,8 +143,9 @@ namespace CellNameSpace
                 
                 if (cityOwningCell != null && cityOwningCell == selectedCity)
                 {
-                    // Клетка принадлежит выбранному городу - подтверждаем выделение
-                    CitySelectionManager.Instance.SelectCity(selectedCity);
+                    // Клетка принадлежит выбранному городу - не перевыделяем
+                    // Проверяем, выбрана ли постройка для установки
+                    TryPlaceBuildingOnCell(cellPosition);
                 }
                 else
                 {
@@ -136,14 +171,9 @@ namespace CellNameSpace
                     }
                     else
                     {
-                        // Клетка не принадлежит городу - пытаемся установить постройку
-                        TryPlaceBuildingOnCell(cellPosition);
+                        // Клетка не принадлежит городу - постройки можно ставить только на клетки города
+                        // Ничего не делаем
                     }
-                }
-                else
-                {
-                    // Если нет CityManager, пытаемся установить постройку
-                    TryPlaceBuildingOnCell(cellPosition);
                 }
             }
         }
@@ -181,6 +211,15 @@ namespace CellNameSpace
             if (success)
             {
                 Debug.Log($"CellClick: Город {selectedCity.name} расширен на клетку ({cellPosition.x}, {cellPosition.y})");
+            }
+            else
+            {
+                // Если расширение не удалось (клетка не является соседом города), снимаем выделение
+                Debug.Log($"CellClick: Не удалось расширить город на клетку ({cellPosition.x}, {cellPosition.y}), снимаем выделение");
+                if (CitySelectionManager.Instance != null)
+                {
+                    CitySelectionManager.Instance.DeselectCity();
+                }
             }
         }
         

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using CellNameSpace;
 
 /// <summary>
@@ -36,6 +37,12 @@ public class UnitSelection : MonoBehaviour
 
     private void OnMouseDown()
     {
+        // Проверяем, не находится ли курсор над UI элементом
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        {
+            return; // Игнорируем клик, если курсор над UI
+        }
+        
         Debug.Log($"UnitSelection: OnMouseDown вызван на {gameObject.name}");
         mouseDownOnThisUnit = true;
         mouseDownPosition = Input.mousePosition;
@@ -44,6 +51,13 @@ public class UnitSelection : MonoBehaviour
     
     private void OnMouseUp()
     {
+        // Проверяем, не находится ли курсор над UI элементом
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        {
+            mouseDownOnThisUnit = false; // Сбрасываем флаг
+            return; // Игнорируем клик, если курсор над UI
+        }
+        
         Debug.Log($"UnitSelection: OnMouseUp вызван на {gameObject.name}, mouseDownOnThisUnit = {mouseDownOnThisUnit}");
         
         // Проверяем, был ли это клик по этому юниту
