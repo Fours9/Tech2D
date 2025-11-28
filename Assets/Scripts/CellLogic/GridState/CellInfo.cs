@@ -17,11 +17,19 @@ namespace CellNameSpace
         private CellOverlayManager cachedOverlayManager = null;
         private Vector2? cachedCellSize = null; // Кэшированный размер клетки
         private CityInfo owningCity = null; // Город, которому принадлежит клетка
+        private Vector3 originalPosition; // Изначальная позиция клетки в мире
+        private bool originalPositionSet = false; // Флаг, что изначальная позиция уже установлена
         
         void Awake()
         {
             // Кэшируем рендерер при создании объекта
             cellRenderer = GetComponent<Renderer>();
+            // Сохраняем изначальную позицию только если она еще не была установлена
+            if (!originalPositionSet)
+            {
+                originalPosition = transform.position;
+                originalPositionSet = true;
+            }
         }
         
         /// <summary>
@@ -37,6 +45,13 @@ namespace CellNameSpace
             gridX = x;
             gridY = y;
             cellType = type;
+            
+            // Сохраняем изначальную позицию при инициализации только если она еще не была установлена
+            if (!originalPositionSet)
+            {
+                originalPosition = transform.position;
+                originalPositionSet = true;
+            }
             
             // Кэшируем менеджеры для оптимизации
             if (materialManager != null)
@@ -71,6 +86,15 @@ namespace CellNameSpace
         {
             return gridY;
         }
+        
+        /// <summary>
+        /// Получить изначальную позицию клетки в мире
+        /// </summary>
+        public Vector3 GetOriginalPosition()
+        {
+            return originalPosition;
+        }
+        
         
         /// <summary>
         /// Устанавливает менеджеры для оптимизации (избегает поиска через FindFirstObjectByType)

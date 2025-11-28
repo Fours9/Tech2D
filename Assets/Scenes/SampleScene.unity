@@ -166,12 +166,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: efb2019a0b226274ba626bd9d896fc9a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingManager
-  availableBuildings:
-  - buildingStats: {fileID: 0}
-    name: House
-    sprite: {fileID: 21300000, guid: 77edb8d23a060aa4db07505e04e7978d, type: 3}
-    buildingType: 0
-    description: H
   cityManager: {fileID: 16604955}
   grid: {fileID: 141372080}
 --- !u!4 &16604957
@@ -232,6 +226,7 @@ GameObject:
   - component: {fileID: 141372082}
   - component: {fileID: 141372083}
   - component: {fileID: 141372084}
+  - component: {fileID: 141372085}
   m_Layer: 0
   m_Name: Grid Creator
   m_TagString: Untagged
@@ -255,7 +250,7 @@ MonoBehaviour:
   gridWidth: 100
   gridHeight: 100
   cellSize: 1
-  pixelGap: 0
+  pixelGap: 0.1
   waterFrequency: 0.385
   waterFragmentation: 0.008
   waterSeed: 0
@@ -346,6 +341,23 @@ MonoBehaviour:
     cellStats: {fileID: 11400000, guid: 499ca0f124f0a794785ae8847fedf1c9, type: 2}
   - cellType: 5
     cellStats: {fileID: 11400000, guid: 9aa4e015217e92e439ea95475ac4577e, type: 2}
+--- !u!114 &141372085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141372079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07bd28684945b5b48be4f0fc402fd49c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CellHoverElevator
+  hoverRadius: 5
+  elevationHeight: 0.5
+  elevationSpeed: 3
+  grid: {fileID: 141372080}
+  mainCamera: {fileID: 519420031}
 --- !u!1 &186001891
 GameObject:
   m_ObjectHideFlags: 0
@@ -1243,7 +1255,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.040000003, y: 0.084370375}
   m_AnchorMax: {x: 0.12179167, y: 0.10559261}
-  m_AnchoredPosition: {x: 1.5, y: -4.5000916}
+  m_AnchoredPosition: {x: 1.5, y: -4.500122}
   m_SizeDelta: {x: 3, y: 1.7000122}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &668596954
@@ -1258,7 +1270,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7543fd556a604ec449934a282d5e1051, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingPlacementButton
-  buildingIndex: 0
+  buildingType: 0
   button: {fileID: 668596955}
   buildingManager: {fileID: 16604956}
 --- !u!114 &668596955
@@ -1666,7 +1678,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.90233326, y: 0.83328164}
   m_AnchorMax: {x: 0.98670614, y: 0.8696408}
-  m_AnchoredPosition: {x: 0.00012207031, y: 0}
+  m_AnchoredPosition: {x: 0.00024414062, y: 0}
   m_SizeDelta: {x: 0, y: -1.6860046}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1403361443
