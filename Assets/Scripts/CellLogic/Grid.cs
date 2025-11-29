@@ -13,6 +13,13 @@ namespace CellNameSpace
         [SerializeField] private float cellSize = 1f;
         [SerializeField] private float pixelGap = 0.1f; // Зазор между клетками в пикселях (1 пиксель = 0.01 единицы при стандартном PPU = 100)
         
+        [Header("Генерация суши")]
+        [Range(0f, 1f)]
+        [SerializeField] private float landFrequency = 0.5f; // Частота появления суши (field)
+        [Range(0f, 1f)]
+        [SerializeField] private float landFragmentation = 0.5f; // Раздробленность суши
+        [SerializeField] private int landSeed = 0; // Сид для генерации суши (0 = случайный)
+        
         [Header("Генерация водоемов")]
         [Range(0f, 1f)]
         [SerializeField] private float waterFrequency = 0.2f; // Частота появления водоемов
@@ -149,13 +156,13 @@ namespace CellNameSpace
                     cell.transform.localScale = cell.transform.localScale * cellSize;
                     cell.name = $"Cell_{row}_{col}";
                     
-                    // Все клетки сначала field
+                    // Все клетки сначала shallow
                     CellInfo cellInfo = cell.GetComponent<CellInfo>();
                     if (cellInfo != null)
                     {
                         // Пока не передаем менеджеры, они будут найдены позже при SetCellType
                         // Это оптимизирует процесс, так как менеджеры могут еще не быть инициализированы
-                        cellInfo.Initialize(col, row, CellType.field);
+                        cellInfo.Initialize(col, row, CellType.shallow);
                     }
                     else
                     {
@@ -175,9 +182,15 @@ namespace CellNameSpace
             {
                 for (int col = 0; col < gridWidth; col++)
                 {
-                    grid[col, row] = CellType.field;
+                    grid[col, row] = CellType.shallow;
                 }
             }
+            
+            // Генерируем сушу (field клетки)
+            int actualLandSeed = landSeed == 0 ? Random.Range(1, 1000000) : landSeed;
+            TerrainGenerator.GenerateLand(grid, gridWidth, gridHeight,
+                landFrequency, landFragmentation, actualLandSeed);
+            Debug.Log("Суша сгенерирована");
             
             // Генерируем водоемы
             int actualWaterSeed = waterSeed == 0 ? Random.Range(1, 1000000) : waterSeed;

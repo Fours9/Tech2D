@@ -23,3 +23,4 @@ MonoBehaviour:
   movementPoints: 4
   costGold: 10
   upkeepGold: 1
+  forbiddenCellTypes: 0000000001000000

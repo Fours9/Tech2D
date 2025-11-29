@@ -3,10 +3,52 @@ using UnityEngine;
 namespace CellNameSpace
 {
     /// <summary>
-    /// Класс для генерации типов местности (mountain, forest, desert)
+    /// Класс для генерации типов местности (land, mountain, forest, desert)
     /// </summary>
     public static class TerrainGenerator
     {
+        /// <summary>
+        /// Генерирует сушу (field клетки) на карте
+        /// </summary>
+        public static void GenerateLand(CellType[,] grid, int gridWidth, int gridHeight,
+            float landFrequency, float landFragmentation, int landSeed)
+        {
+            // Сохраняем состояние Random
+            Random.State oldState = Random.state;
+            Random.InitState(landSeed);
+            
+            // Генерируем offset для шума
+            float offsetX = Random.Range(-10000f, 10000f);
+            float offsetY = Random.Range(-10000f, 10000f);
+            
+            // Восстанавливаем состояние Random
+            Random.state = oldState;
+            
+            // Масштаб шума для суши (меньший базовый масштаб = более кучные области)
+            // При fragmentation = 0: scale = 0.05 (очень кучные области)
+            // При fragmentation = 1: scale = 0.1 (более раздробленные)
+            float scale = 0.05f * (1f + landFragmentation);
+            
+            // Применяем шум только к клеткам shallow, создавая field (сушу)
+            for (int row = 0; row < gridHeight; row++)
+            {
+                for (int col = 0; col < gridWidth; col++)
+                {
+                    // Применяем только к shallow (вода), создавая field (сушу)
+                    if (grid[col, row] == CellType.shallow)
+                    {
+                        float noiseValue = Mathf.PerlinNoise((col + offsetX) * scale, (row + offsetY) * scale);
+                        
+                        // Если значение шума меньше порога частоты, создаем сушу (field)
+                        if (noiseValue < landFrequency)
+                        {
+                            grid[col, row] = CellType.field;
+                        }
+                    }
+                }
+            }
+        }
+        
         /// <summary>
         /// Генерирует горы на карте
         /// </summary>

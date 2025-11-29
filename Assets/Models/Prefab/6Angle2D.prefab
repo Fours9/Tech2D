@@ -428,7 +428,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c699bdc897046bc458aea4a97e9a81a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CellInfo
-  cellType: 2
+  cellType: 1
   gridX: 0
   gridY: 0
   resourcesOverlay: {fileID: 5491893725550497440}

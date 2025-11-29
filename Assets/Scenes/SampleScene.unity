@@ -250,7 +250,10 @@ MonoBehaviour:
   gridWidth: 100
   gridHeight: 100
   cellSize: 1
-  pixelGap: 0
+  pixelGap: 0.1
+  landFrequency: 0.6
+  landFragmentation: 0
+  landSeed: 0
   waterFrequency: 0.385
   waterFragmentation: 0.008
   waterSeed: 0
