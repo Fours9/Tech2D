@@ -107,6 +107,13 @@ public class ReachableCellsHighlighter : MonoBehaviour
             return;
         }
 
+        // Получаем список запрещенных типов клеток для этого юнита
+        List<CellType> forbiddenCellTypes = null;
+        if (stats.forbiddenCellTypes != null && stats.forbiddenCellTypes.Count > 0)
+        {
+            forbiddenCellTypes = stats.forbiddenCellTypes;
+        }
+
         int remainingMovement = unit.GetRemainingMovementPoints();
         if (remainingMovement <= 0)
         {
@@ -148,7 +155,7 @@ public class ReachableCellsHighlighter : MonoBehaviour
                 if (neighbor == null)
                     continue;
 
-                if (!IsWalkableForHighlight(neighbor))
+                if (!IsWalkableForHighlight(neighbor, forbiddenCellTypes))
                     continue;
 
                 int stepCost = Pathfinder.GetMovementCostPublic(neighbor);
@@ -196,13 +203,28 @@ public class ReachableCellsHighlighter : MonoBehaviour
 
     /// <summary>
     /// Проверка проходимости для подсветки (упрощённая версия IsWalkable).
+    /// Учитывает запрещенные типы клеток для конкретного юнита.
     /// </summary>
-    private bool IsWalkableForHighlight(CellInfo cell)
+    private bool IsWalkableForHighlight(CellInfo cell, List<CellType> forbiddenCellTypes = null)
     {
         if (cell == null)
             return false;
 
         CellType type = cell.GetCellType();
+        
+        // Проверяем, не запрещен ли этот тип клетки для юнита
+        if (forbiddenCellTypes != null && forbiddenCellTypes.Contains(type))
+        {
+            return false;
+        }
+        
+        // Используем CellStatsManager, если доступен
+        if (CellStatsManager.Instance != null)
+        {
+            return CellStatsManager.Instance.IsWalkable(type);
+        }
+        
+        // Fallback: проверяем непроходимые типы
         return type != CellType.deep_water && type != CellType.shallow;
     }
 }

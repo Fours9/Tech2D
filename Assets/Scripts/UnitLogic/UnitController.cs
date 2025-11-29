@@ -115,13 +115,34 @@ public class UnitController : MonoBehaviour
             return;
         }
         
-        // Строим маршрут
-        List<CellInfo> path = Pathfinder.FindPath(startCell, targetCell, grid);
+        // Получаем список запрещенных типов клеток для этого юнита
+        List<CellType> forbiddenCellTypes = null;
+        UnitStats stats = unitInfo.GetUnitStats();
+        if (stats != null && stats.forbiddenCellTypes != null && stats.forbiddenCellTypes.Count > 0)
+        {
+            forbiddenCellTypes = stats.forbiddenCellTypes;
+        }
+        
+        // Строим маршрут с учетом запрещенных типов клеток
+        List<CellInfo> path = Pathfinder.FindPath(startCell, targetCell, grid, forbiddenCellTypes);
         
         if (path == null || path.Count == 0)
         {
             Debug.LogWarning($"UnitController: Не удалось построить маршрут к клетке ({targetCell.GetGridX()}, {targetCell.GetGridY()})");
             return;
+        }
+        
+        // Проверяем проходимость всех клеток в пути (дополнительная защита)
+        foreach (CellInfo cell in path)
+        {
+            if (cell != null)
+            {
+                if (!Pathfinder.IsWalkablePublic(cell, forbiddenCellTypes))
+                {
+                    Debug.LogWarning($"UnitController: Путь содержит непроходимую клетку ({cell.GetGridX()}, {cell.GetGridY()}, тип: {cell.GetCellType()}). Движение отменено.");
+                    return;
+                }
+            }
         }
         
         // Убираем первую клетку из пути (это текущая клетка)

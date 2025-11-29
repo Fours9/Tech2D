@@ -1,4 +1,6 @@
 using UnityEngine;
+using System.Collections.Generic;
+using CellNameSpace;
 
 /// <summary>
 /// Данные типа юнита: статы, визуал, стоимость.
@@ -26,6 +28,10 @@ public class UnitStats : ScriptableObject
     [Header("Экономика")]
     public int costGold = 10;
     public int upkeepGold = 1;
+    
+    [Header("Ограничения движения")]
+    [Tooltip("Типы клеток, по которым этот юнит не может перемещаться. Пустой список = нет ограничений.")]
+    public List<CellType> forbiddenCellTypes = new List<CellType>();
 }
 
 

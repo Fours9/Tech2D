@@ -33,12 +33,20 @@ public static class Pathfinder
     /// <param name="startCell">Стартовая клетка</param>
     /// <param name="targetCell">Целевая клетка</param>
     /// <param name="grid">Grid для получения размеров сетки</param>
+    /// <param name="forbiddenCellTypes">Список типов клеток, по которым нельзя перемещаться (опционально)</param>
     /// <returns>Список CellInfo в порядке от старта до цели, или null если путь не найден</returns>
-    public static List<CellInfo> FindPath(CellInfo startCell, CellInfo targetCell, CellNameSpace.Grid grid)
+    public static List<CellInfo> FindPath(CellInfo startCell, CellInfo targetCell, CellNameSpace.Grid grid, List<CellType> forbiddenCellTypes = null)
     {
         if (startCell == null || targetCell == null || grid == null)
         {
             Debug.LogWarning("Pathfinder: Один из параметров равен null");
+            return null;
+        }
+        
+        // Проверяем проходимость целевой клетки - если она непроходима, путь невозможен
+        if (!IsWalkable(targetCell, forbiddenCellTypes))
+        {
+            Debug.LogWarning($"Pathfinder: Целевая клетка ({targetCell.GetGridX()}, {targetCell.GetGridY()}) непроходима (тип: {targetCell.GetCellType()})");
             return null;
         }
         
@@ -114,7 +122,7 @@ public static class Pathfinder
                 
                 // Получаем клетку для проверки проходимости
                 CellInfo neighborCell = grid.GetCellInfoAt(neighborPos.x, neighborPos.y);
-                if (neighborCell == null || !IsWalkable(neighborCell))
+                if (neighborCell == null || !IsWalkable(neighborCell, forbiddenCellTypes))
                     continue;
                 
                 // Вычисляем стоимость движения к соседу
@@ -193,13 +201,20 @@ public static class Pathfinder
     /// <summary>
     /// Проверяет, проходима ли клетка
     /// Использует CellStatsManager, если доступен, иначе fallback на старые значения
+    /// Также учитывает список запрещенных типов клеток для конкретного юнита
     /// </summary>
-    private static bool IsWalkable(CellInfo cell)
+    private static bool IsWalkable(CellInfo cell, List<CellType> forbiddenCellTypes = null)
     {
         if (cell == null)
             return false;
         
         CellType cellType = cell.GetCellType();
+        
+        // Проверяем, не запрещен ли этот тип клетки для юнита
+        if (forbiddenCellTypes != null && forbiddenCellTypes.Count > 0 && forbiddenCellTypes.Contains(cellType))
+        {
+            return false;
+        }
         
         // Пытаемся использовать CellStatsManager
         if (CellStatsManager.Instance != null)
@@ -232,6 +247,14 @@ public static class Pathfinder
     public static int GetMovementCostPublic(CellInfo cell)
     {
         return GetMovementCostInternal(cell);
+    }
+    
+    /// <summary>
+    /// Публичный доступ к проверке проходимости (для других классов).
+    /// </summary>
+    public static bool IsWalkablePublic(CellInfo cell, List<CellType> forbiddenCellTypes = null)
+    {
+        return IsWalkable(cell, forbiddenCellTypes);
     }
 
     /// <summary>

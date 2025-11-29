@@ -144,6 +144,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UnitInformation
   gridX: -1
   gridY: -1
+  unitStats: {fileID: 11400000, guid: 3c3f583349a88a84c9a5127451b281b0, type: 2}
+  currentMovementPoints: 0
 --- !u!114 &4233303702732097416
 MonoBehaviour:
   m_ObjectHideFlags: 0
