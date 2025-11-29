@@ -353,8 +353,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07bd28684945b5b48be4f0fc402fd49c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellHoverElevator
-  hoverRadius: 5
-  elevationHeight: 0.5
+  hoverRadius: 3
+  elevationHeight: 0.8
   elevationSpeed: 3
   grid: {fileID: 141372080}
   mainCamera: {fileID: 519420031}

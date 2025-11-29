@@ -11,6 +11,12 @@ namespace CellNameSpace
         [SerializeField] private SpriteRenderer resourcesOverlay;
         [SerializeField] private SpriteRenderer buildingsOverlay;
         [SerializeField] private SpriteRenderer cityBorderOverlay; // Оверлей для границы города (опционально)
+        [SerializeField] private SpriteRenderer outlineOverlay; // Оверлей для обводки клетки (опционально)
+        
+        [Header("Настройки обводки")]
+        [SerializeField] private bool outlineEnabled = false; // Включена ли обводка
+        [SerializeField] private Color outlineColor = Color.black; // Цвет обводки
+        [SerializeField] [Range(1f, 10f)] private float outlineWidth = 2f; // Толщина обводки в пикселях
 
         private Renderer cellRenderer;
         private CellMaterialManager cachedMaterialManager = null;
@@ -19,6 +25,7 @@ namespace CellNameSpace
         private CityInfo owningCity = null; // Город, которому принадлежит клетка
         private Vector3 originalPosition; // Изначальная позиция клетки в мире
         private bool originalPositionSet = false; // Флаг, что изначальная позиция уже установлена
+        private MaterialPropertyBlock materialPropertyBlock = null; // MaterialPropertyBlock для передачи параметров в шейдер
         
         void Awake()
         {
@@ -30,6 +37,70 @@ namespace CellNameSpace
                 originalPosition = transform.position;
                 originalPositionSet = true;
             }
+        }
+        
+        void Start()
+        {
+            // Применяем настройки обводки из инспектора при запуске игры
+            ApplyOutlineFromInspector();
+            
+            // Убеждаемся, что originalPosition передана в шейдер
+            ApplyOriginalPositionToShader();
+        }
+        
+        /// <summary>
+        /// Вызывается при изменении значений в инспекторе (только в Editor)
+        /// Автоматически применяет настройки обводки
+        /// </summary>
+        void OnValidate()
+        {
+            // Применяем настройки обводки только если игра запущена
+            // В Editor режиме это позволит видеть изменения в реальном времени
+            if (Application.isPlaying)
+            {
+                ApplyOutlineFromInspector();
+            }
+        }
+        
+        /// <summary>
+        /// Применяет настройки обводки из полей инспектора
+        /// </summary>
+        private void ApplyOutlineFromInspector()
+        {
+            SetOutline(outlineEnabled, outlineColor, outlineWidth);
+        }
+        
+        /// <summary>
+        /// Получает текущее состояние обводки (включена/выключена)
+        /// </summary>
+        public bool IsOutlineEnabled()
+        {
+            return outlineEnabled;
+        }
+        
+        /// <summary>
+        /// Получает текущий цвет обводки
+        /// </summary>
+        public Color GetOutlineColor()
+        {
+            return outlineColor;
+        }
+        
+        /// <summary>
+        /// Получает текущую толщину обводки
+        /// </summary>
+        public float GetOutlineWidth()
+        {
+            return outlineWidth;
+        }
+        
+        /// <summary>
+        /// Применяет настройки обводки из инспектора (для использования в Editor через контекстное меню)
+        /// </summary>
+        [ContextMenu("Применить настройки обводки")]
+        private void ApplyOutlineContextMenu()
+        {
+            ApplyOutlineFromInspector();
         }
         
         /// <summary>
@@ -47,6 +118,7 @@ namespace CellNameSpace
             cellType = type;
             
             // Сохраняем изначальную позицию при инициализации только если она еще не была установлена
+            // Z координата не меняется при подъеме (только Y), поэтому перезапись не нужна
             if (!originalPositionSet)
             {
                 originalPosition = transform.position;
@@ -144,6 +216,9 @@ namespace CellNameSpace
             // Применяем материал или цвет (с защитой - если materialManager null, используется цвет)
             CellColorManager.ApplyMaterialToCell(cellRenderer, cellType, cachedMaterialManager);
             
+            // Передаем originalPosition в шейдер через MaterialPropertyBlock
+            ApplyOriginalPositionToShader();
+            
             // Если клетка принадлежит городу, применяем подсветку города поверх базового цвета
             if (owningCity != null)
             {
@@ -155,6 +230,36 @@ namespace CellNameSpace
             {
                 UpdateOverlays();
             }
+        }
+        
+        /// <summary>
+        /// Применяет originalPosition в шейдер через MaterialPropertyBlock
+        /// </summary>
+        private void ApplyOriginalPositionToShader()
+        {
+            if (cellRenderer == null)
+                return;
+            
+            MeshRenderer meshRenderer = cellRenderer as MeshRenderer;
+            if (meshRenderer == null)
+                return;
+            
+            // Создаем MaterialPropertyBlock, если его еще нет
+            if (materialPropertyBlock == null)
+            {
+                materialPropertyBlock = new MaterialPropertyBlock();
+            }
+            
+            // Получаем текущие свойства (если они уже были установлены)
+            meshRenderer.GetPropertyBlock(materialPropertyBlock);
+            
+            // Устанавливаем originalPosition в шейдер
+            // Используем Vector4 для совместимости с шейдером
+            Vector4 originalPos = new Vector4(originalPosition.x, originalPosition.y, originalPosition.z, 0f);
+            materialPropertyBlock.SetVector("_OriginalPosition", originalPos);
+            
+            // Применяем MaterialPropertyBlock к рендереру
+            meshRenderer.SetPropertyBlock(materialPropertyBlock);
         }
         
         /// <summary>
@@ -514,6 +619,243 @@ namespace CellNameSpace
                 {
                     // Сбрасываем цвет к базовому типу клетки
                     UpdateCellColor(false);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Включает/выключает обводку для клетки
+        /// </summary>
+        /// <param name="enabled">Включить обводку</param>
+        /// <param name="outlineColor">Цвет обводки (по умолчанию черный, если null - используется значение из инспектора)</param>
+        /// <param name="outlineWidth">Толщина обводки в пикселях (по умолчанию 2, если 0 - используется значение из инспектора)</param>
+        public void SetOutline(bool enabled, Color? outlineColor = null, float outlineWidth = 0f)
+        {
+            // Сохраняем значения в поля инспектора
+            outlineEnabled = enabled;
+            if (outlineColor.HasValue)
+            {
+                this.outlineColor = outlineColor.Value;
+            }
+            if (outlineWidth > 0f)
+            {
+                this.outlineWidth = outlineWidth;
+            }
+            
+            // Если outlineOverlay не назначен, пытаемся создать его автоматически
+            if (outlineOverlay == null)
+            {
+                outlineOverlay = CreateOutlineOverlay();
+            }
+            
+            if (outlineOverlay == null)
+            {
+                Debug.LogWarning($"CellInfo: Не удалось создать outlineOverlay для клетки {gameObject.name}. Убедитесь, что на префабе клетки есть SpriteRenderer для обводки.");
+                return;
+            }
+            
+            if (enabled)
+            {
+                // Используем цвет из поля инспектора
+                outlineOverlay.color = this.outlineColor;
+                
+                // Получаем размер клетки для правильного масштабирования обводки
+                Vector2 cellSize = GetCellSize();
+                
+                // Используем толщину из поля инспектора
+                float width = this.outlineWidth;
+                
+                // Создаем или получаем спрайт-контур
+                Sprite outlineSprite = GetOrCreateOutlineSprite(cellSize, width);
+                if (outlineSprite != null)
+                {
+                    outlineOverlay.sprite = outlineSprite;
+                    outlineOverlay.enabled = true;
+                    
+                    // Масштабируем спрайт под размер клетки
+                    ScaleSpriteToCellSize(outlineOverlay, outlineSprite, cellSize);
+                }
+                else
+                {
+                    outlineOverlay.enabled = false;
+                }
+            }
+            else
+            {
+                outlineOverlay.enabled = false;
+            }
+        }
+        
+        /// <summary>
+        /// Создает SpriteRenderer для обводки, если он не был назначен в инспекторе
+        /// </summary>
+        private SpriteRenderer CreateOutlineOverlay()
+        {
+            // Создаем дочерний GameObject для обводки
+            GameObject outlineObject = new GameObject("OutlineOverlay");
+            outlineObject.transform.SetParent(transform);
+            outlineObject.transform.localPosition = Vector3.zero;
+            outlineObject.transform.localRotation = Quaternion.identity;
+            outlineObject.transform.localScale = Vector3.one;
+            
+            // Добавляем SpriteRenderer
+            SpriteRenderer renderer = outlineObject.AddComponent<SpriteRenderer>();
+            
+            // Настраиваем порядок отрисовки (обводка должна быть поверх клетки)
+            renderer.sortingOrder = 10; // Высокий порядок для отображения поверх клетки
+            
+            return renderer;
+        }
+        
+        // Кэш для спрайта обводки (чтобы не создавать его каждый раз)
+        private static Sprite cachedOutlineSprite = null;
+        private static Vector2 cachedOutlineSize = Vector2.zero;
+        private static float cachedOutlineWidth = 0f;
+        
+        /// <summary>
+        /// Получает или создает спрайт-контур для обводки
+        /// </summary>
+        private Sprite GetOrCreateOutlineSprite(Vector2 cellSize, float outlineWidth)
+        {
+            // Проверяем, можно ли использовать кэшированный спрайт
+            if (cachedOutlineSprite != null && 
+                Mathf.Approximately(cachedOutlineSize.x, cellSize.x) && 
+                Mathf.Approximately(cachedOutlineSize.y, cellSize.y) &&
+                Mathf.Approximately(cachedOutlineWidth, outlineWidth))
+            {
+                return cachedOutlineSprite;
+            }
+            
+            // Создаем новый спрайт-контур
+            // Для шестиугольника создаем простой контурный спрайт
+            int textureSize = 256; // Размер текстуры для спрайта
+            Texture2D texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+            
+            // Заполняем прозрачным
+            Color[] pixels = new Color[textureSize * textureSize];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = Color.clear;
+            }
+            
+            // Рисуем контур шестиугольника
+            Vector2 center = new Vector2(textureSize / 2f, textureSize / 2f);
+            float radius = Mathf.Min(textureSize, textureSize) * 0.4f; // Радиус шестиугольника
+            float outlineThickness = Mathf.Clamp(outlineWidth * 2f, 2f, 20f); // Толщина обводки в пикселях текстуры
+            
+            // Рисуем шестиугольный контур
+            DrawHexagonOutline(pixels, textureSize, center, radius, outlineThickness, Color.white);
+            
+            texture.SetPixels(pixels);
+            texture.Apply();
+            
+            // Создаем спрайт из текстуры
+            Sprite sprite = Sprite.Create(
+                texture,
+                new Rect(0, 0, textureSize, textureSize),
+                new Vector2(0.5f, 0.5f), // Pivot в центре
+                100f // Pixels per unit
+            );
+            
+            // Кэшируем спрайт
+            // Удаляем старый кэшированный спрайт, если он есть
+            if (cachedOutlineSprite != null)
+            {
+                DestroyImmediate(cachedOutlineSprite.texture);
+                DestroyImmediate(cachedOutlineSprite);
+            }
+            
+            cachedOutlineSprite = sprite;
+            cachedOutlineSize = cellSize;
+            cachedOutlineWidth = outlineWidth;
+            
+            return sprite;
+        }
+        
+        /// <summary>
+        /// Рисует контур шестиугольника на текстуре
+        /// </summary>
+        private void DrawHexagonOutline(Color[] pixels, int textureSize, Vector2 center, float radius, float thickness, Color color)
+        {
+            int thicknessInt = Mathf.RoundToInt(thickness);
+            
+            // Генерируем точки шестиугольника
+            Vector2[] hexPoints = new Vector2[6];
+            for (int i = 0; i < 6; i++)
+            {
+                float angle = (i * 60f - 30f) * Mathf.Deg2Rad; // Поворачиваем на 30 градусов для правильной ориентации
+                hexPoints[i] = center + new Vector2(
+                    Mathf.Cos(angle) * radius,
+                    Mathf.Sin(angle) * radius
+                );
+            }
+            
+            // Рисуем линии между точками
+            for (int i = 0; i < 6; i++)
+            {
+                Vector2 start = hexPoints[i];
+                Vector2 end = hexPoints[(i + 1) % 6];
+                DrawLine(pixels, textureSize, start, end, thicknessInt, color);
+            }
+        }
+        
+        /// <summary>
+        /// Рисует линию на текстуре
+        /// </summary>
+        private void DrawLine(Color[] pixels, int textureSize, Vector2 start, Vector2 end, int thickness, Color color)
+        {
+            int x0 = Mathf.RoundToInt(start.x);
+            int y0 = Mathf.RoundToInt(start.y);
+            int x1 = Mathf.RoundToInt(end.x);
+            int y1 = Mathf.RoundToInt(end.y);
+            
+            // Алгоритм Брезенхема для рисования линии
+            int dx = Mathf.Abs(x1 - x0);
+            int dy = Mathf.Abs(y1 - y0);
+            int sx = x0 < x1 ? 1 : -1;
+            int sy = y0 < y1 ? 1 : -1;
+            int err = dx - dy;
+            
+            int halfThickness = thickness / 2;
+            
+            while (true)
+            {
+                // Рисуем пиксель с учетом толщины
+                for (int ty = -halfThickness; ty <= halfThickness; ty++)
+                {
+                    for (int tx = -halfThickness; tx <= halfThickness; tx++)
+                    {
+                        int px = x0 + tx;
+                        int py = y0 + ty;
+                        
+                        if (px >= 0 && px < textureSize && py >= 0 && py < textureSize)
+                        {
+                            float dist = Mathf.Sqrt(tx * tx + ty * ty);
+                            if (dist <= halfThickness)
+                            {
+                                int index = py * textureSize + px;
+                                if (index >= 0 && index < pixels.Length)
+                                {
+                                    pixels[index] = color;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (x0 == x1 && y0 == y1)
+                    break;
+                
+                int e2 = 2 * err;
+                if (e2 > -dy)
+                {
+                    err -= dy;
+                    x0 += sx;
+                }
+                if (e2 < dx)
+                {
+                    err += dx;
+                    y0 += sy;
                 }
             }
         }

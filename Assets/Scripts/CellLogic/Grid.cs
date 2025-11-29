@@ -123,6 +123,12 @@ namespace CellNameSpace
             Debug.Log($"Генерация сетки: {gridWidth}x{gridHeight}, размер клетки: {actualCellSize}, расстояние: {hexWidth}x{hexHeight}");
             
             // Сначала создаем все клетки как field
+            // ВАЖНО: визуально строим поле СВЕРХУ ВНИЗ,
+            // но логическая индексация (row/col и список cells) остаётся прежней.
+            //
+            // То есть row = 0 — это ВЕРХНЯЯ строка на карте,
+            // row = gridHeight - 1 — нижняя строка.
+            float startY = (gridHeight - 1) * hexHeight;
             for (int row = 0; row < gridHeight; row++)
             {
                 for (int col = 0; col < gridWidth; col++)
@@ -130,10 +136,12 @@ namespace CellNameSpace
                     // Смещение для нечетных строк для правильной гексагональной укладки
                     float offsetX = (row % 2 == 0) ? 0f : hexOffset;
                     float x = col * hexWidth + offsetX;
-                    float y = row * hexHeight;
+                    // Строим сетку сверху вниз: первая строка (row = 0) — самая верхняя
+                    float y = startY - row * hexHeight;
+                    // Z координата: верхние ряды имеют больший Z, нижние — меньший
+                    float z = gridHeight - row;
                     
-                    // Для 2D используем X и Y, Z оставляем 0
-                    Vector3 position = new Vector3(x, y, 0f);
+                    Vector3 position = new Vector3(x, y, z);
                     // Поворот префаба на 180 градусов по оси Y
                     Quaternion rotation = Quaternion.Euler(0f, 180f, 0f);
                     GameObject cell = Instantiate(cellPrefab, position, rotation, transform);
@@ -460,6 +468,27 @@ namespace CellNameSpace
         public int GetGridHeight()
         {
             return gridHeight;
+        }
+        
+        /// <summary>
+        /// Включает/выключает обводку для всех клеток
+        /// </summary>
+        /// <param name="enabled">Включить обводку</param>
+        /// <param name="outlineColor">Цвет обводки (по умолчанию черный)</param>
+        /// <param name="outlineWidth">Толщина обводки в пикселях (по умолчанию 2)</param>
+        public void SetAllCellsOutline(bool enabled, Color? outlineColor = null, float outlineWidth = 2f)
+        {
+            foreach (GameObject cell in cells)
+            {
+                if (cell == null)
+                    continue;
+                    
+                CellInfo cellInfo = cell.GetComponent<CellInfo>();
+                if (cellInfo != null)
+                {
+                    cellInfo.SetOutline(enabled, outlineColor, outlineWidth);
+                }
+            }
         }
     }
 }

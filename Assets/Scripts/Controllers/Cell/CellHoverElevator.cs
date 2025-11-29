@@ -91,11 +91,12 @@ public class CellHoverElevator : MonoBehaviour
         if (mainCamera == null || grid == null)
             return null;
         
-        // Сначала пробуем 2D raycast
+        // Сначала пробуем 2D raycast (работает в плоскости XY, игнорируя Z)
         Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-        mouseWorldPos.z = 0f; // Для 2D используем Z = 0
+        // Для 2D raycast Z координата не важна, так как Physics2D работает в плоскости XY
+        Vector2 mousePos2D = new Vector2(mouseWorldPos.x, mouseWorldPos.y);
         
-        RaycastHit2D hit2D = Physics2D.Raycast(mouseWorldPos, Vector2.zero, 0f);
+        RaycastHit2D hit2D = Physics2D.Raycast(mousePos2D, Vector2.zero, 0f);
         if (hit2D.collider != null)
         {
             CellInfo cellInfo = hit2D.collider.GetComponent<CellInfo>();
@@ -106,6 +107,7 @@ public class CellHoverElevator : MonoBehaviour
         }
         
         // Если 2D не сработал, пробуем 3D raycast (для MeshCollider)
+        // 3D raycast учитывает Z координату, поэтому он должен работать с разными Z
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit3D;
         if (Physics.Raycast(ray, out hit3D, Mathf.Infinity))
@@ -134,7 +136,8 @@ public class CellHoverElevator : MonoBehaviour
         
         // Получаем позицию курсора в мировых координатах
         Vector3 cursorWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-        cursorWorldPos.z = 0f; // Для 2D используем Z = 0
+        // Игнорируем Z координату курсора для расчета расстояния (используем только X и Y)
+        Vector2 cursorPos2D = new Vector2(cursorWorldPos.x, cursorWorldPos.y);
         
         // Получаем все клетки сетки
         int gridWidth = grid.GetGridWidth();
@@ -151,9 +154,11 @@ public class CellHoverElevator : MonoBehaviour
                 
                 // ВСЕГДА используем изначальную позицию из CellInfo, даже если клетка уже приподнята
                 Vector3 cellOriginalPos = cell.GetOriginalPosition();
+                // Используем только X и Y координаты для расчета расстояния (игнорируем Z)
+                Vector2 cellPos2D = new Vector2(cellOriginalPos.x, cellOriginalPos.y);
                 
-                // Вычисляем расстояние от курсора до изначальной позиции клетки (не текущей!)
-                float distance = Vector3.Distance(cursorWorldPos, cellOriginalPos);
+                // Вычисляем расстояние от курсора до изначальной позиции клетки (только по X и Y, игнорируя Z)
+                float distance = Vector2.Distance(cursorPos2D, cellPos2D);
                 
                 // Проверяем, попадает ли клетка в круг
                 if (distance <= hoverRadius)
