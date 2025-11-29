@@ -45,6 +45,12 @@ public class UnitController : MonoBehaviour
         {
             MoveAlongPath();
         }
+        else
+        {
+            // Синхронизируем позицию юнита с позицией клетки, на которой он стоит
+            // Это нужно, чтобы юнит поднимался вместе с клеткой при эффекте hover
+            SyncPositionWithCurrentCell();
+        }
     }
     
     /// <summary>
@@ -333,5 +339,38 @@ public class UnitController : MonoBehaviour
     public List<CellInfo> GetCurrentPath()
     {
         return new List<CellInfo>(currentPath);
+    }
+    
+    /// <summary>
+    /// Синхронизирует позицию юнита с позицией текущей клетки
+    /// Используется для того, чтобы юнит поднимался вместе с клеткой при эффекте hover
+    /// </summary>
+    private void SyncPositionWithCurrentCell()
+    {
+        if (unitInfo == null)
+            return;
+        
+        CellInfo currentCell = GetCurrentCell();
+        if (currentCell == null)
+            return;
+        
+        // Обновляем позицию юнита, синхронизируя X и Y с позицией клетки
+        // Z координата остается исходной (originalZ)
+        Vector3 cellPosition = currentCell.transform.position;
+        Vector3 targetPosition = new Vector3(cellPosition.x, cellPosition.y, originalZ);
+        
+        // Плавно синхронизируем позицию, чтобы юнит следовал за клеткой
+        // Используем высокую скорость для быстрой синхронизации с поднимающейся клеткой
+        float syncSpeed = moveSpeed * 2f; // Удваиваем скорость для более быстрой синхронизации
+        transform.position = Vector3.MoveTowards(
+            transform.position,
+            targetPosition,
+            syncSpeed * Time.deltaTime
+        );
+        
+        // Убеждаемся, что Z остается исходным
+        Vector3 pos = transform.position;
+        pos.z = originalZ;
+        transform.position = pos;
     }
 }

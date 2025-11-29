@@ -107,6 +107,7 @@
     <Compile Include="Assets\Scripts\CellLogic\GridState\CellType.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextInfoDebugTool.cs" />
     <Compile Include="Assets\Scripts\CellLogic\Grid.cs" />
+    <Compile Include="Assets\Scripts\UI\CanvasInputBlocker.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexShakeA.cs" />
     <Compile Include="Assets\Scripts\TurnLogic\Orders\TurnOrder.cs" />
     <Compile Include="Assets\Scripts\UI\CreateCityButton.cs" />

@@ -37,6 +37,12 @@ public class UnitSelection : MonoBehaviour
 
     private void OnMouseDown()
     {
+        // Блокируем действия игрока во время стадии воспроизведения приказов
+        if (TurnManager.Instance != null && TurnManager.Instance.GetCurrentState() == TurnState.Resolving)
+        {
+            return; // Игнорируем клик во время стадии воспроизведения
+        }
+        
         // Проверяем, не находится ли курсор над UI элементом
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
         {
@@ -51,6 +57,13 @@ public class UnitSelection : MonoBehaviour
     
     private void OnMouseUp()
     {
+        // Блокируем действия игрока во время стадии воспроизведения приказов
+        if (TurnManager.Instance != null && TurnManager.Instance.GetCurrentState() == TurnState.Resolving)
+        {
+            mouseDownOnThisUnit = false; // Сбрасываем флаг
+            return; // Игнорируем клик во время стадии воспроизведения
+        }
+        
         // Проверяем, не находится ли курсор над UI элементом
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
         {

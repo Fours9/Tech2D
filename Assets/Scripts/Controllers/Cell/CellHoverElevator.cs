@@ -53,6 +53,20 @@ public class CellHoverElevator : MonoBehaviour
     
     void Update()
     {
+        // Отключаем hover эффект во время стадии воспроизведения приказов
+        if (TurnManager.Instance != null && TurnManager.Instance.GetCurrentState() == TurnState.Resolving)
+        {
+            // Сбрасываем эффект и возвращаем клетки в исходное положение
+            if (currentHoveredCell != null)
+            {
+                currentHoveredCell = null;
+                ResetElevation();
+            }
+            // Продолжаем возвращать клетки обратно
+            AnimateReset();
+            return;
+        }
+        
         // Проверяем, не находится ли курсор над UI элементом
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
         {
