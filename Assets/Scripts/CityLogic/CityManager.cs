@@ -350,6 +350,20 @@ public class CityManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Получает цвет игрока для города
+    /// </summary>
+    /// <param name="city">Город</param>
+    /// <returns>Цвет игрока или белый по умолчанию</returns>
+    public static Color GetCityColor(CityInfo city)
+    {
+        if (city != null && city.player != null)
+        {
+            return city.player.playerColor;
+        }
+        return Color.white; // Цвет по умолчанию, если игрок не назначен
+    }
+    
+    /// <summary>
     /// Получает клетку по координатам сетки
     /// </summary>
     private CellInfo GetCellAtPosition(int gridX, int gridY)
@@ -386,5 +400,6 @@ public class CityInfo
     public string name;
     public HashSet<Vector2Int> ownedCells = new HashSet<Vector2Int>(); // Клетки, принадлежащие городу
     public int expansionRadius = 1; // Текущий радиус расширения (1 = только центр, 2 = центр + соседи, и т.д.)
+    public PlayerInfo player; // Игрок, которому принадлежит город
 }
 

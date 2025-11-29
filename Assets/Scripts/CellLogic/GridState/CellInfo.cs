@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Reflection;
 
 namespace CellNameSpace
 {
@@ -12,6 +13,8 @@ namespace CellNameSpace
         [SerializeField] private SpriteRenderer buildingsOverlay;
         [SerializeField] private SpriteRenderer cityBorderOverlay; // Оверлей для границы города (опционально)
         [SerializeField] private SpriteRenderer outlineOverlay; // Оверлей для обводки клетки (опционально)
+        [SerializeField] private SpriteRenderer ownershipOverlay; // Оверлей для тинтинга принадлежности (TintingLayer)
+        [SerializeField] private Sprite hexagonSprite; // Спрайт-шестиугольник для тинтинга (созданный из модели)
         
         [Header("Настройки обводки")]
         [SerializeField] private bool outlineEnabled = false; // Включена ли обводка
@@ -41,11 +44,19 @@ namespace CellNameSpace
         
         void Start()
         {
-            // Применяем настройки обводки из инспектора при запуске игры
-            ApplyOutlineFromInspector();
+            // НЕ применяем настройки обводки из инспектора при запуске игры
+            // Обводка должна включаться только явно через SetOutline()
+            // ApplyOutlineFromInspector(); // Отключено, чтобы обводка не была видна при создании карты
             
             // Убеждаемся, что originalPosition передана в шейдер
             ApplyOriginalPositionToShader();
+            
+            // Отключаем обводку при создании, если она была включена в префабе
+            if (outlineOverlay != null)
+            {
+                outlineOverlay.enabled = false;
+            }
+            outlineEnabled = false;
         }
         
         /// <summary>
@@ -219,10 +230,10 @@ namespace CellNameSpace
             // Передаем originalPosition в шейдер через MaterialPropertyBlock
             ApplyOriginalPositionToShader();
             
-            // Если клетка принадлежит городу, применяем подсветку города поверх базового цвета
+            // Если клетка принадлежит городу, применяем визуализацию принадлежности
             if (owningCity != null)
             {
-                ApplyCityHighlight();
+                ApplyOwnershipVisualization();
             }
             
             // Обновляем оверлеи при изменении типа клетки (если требуется)
@@ -484,69 +495,111 @@ namespace CellNameSpace
         {
             owningCity = city;
             
-            // Визуальная индикация: подсвечиваем клетку изменением цвета
-            ApplyCityHighlight();
+            // Визуальная индикация: применяем границы и overlay-тинтинг
+            ApplyOwnershipVisualization();
             
             Debug.Log($"CellInfo: Клетка ({gridX}, {gridY}) теперь принадлежит городу {city.name}");
         }
         
         /// <summary>
-        /// Применяет подсветку клетки города (изменение цвета)
+        /// Применяет визуализацию принадлежности клетки игроку/городу (границы + overlay-тинтинг)
         /// </summary>
-        private void ApplyCityHighlight()
+        private void ApplyOwnershipVisualization()
         {
-            if (cellRenderer == null)
-                cellRenderer = GetComponent<Renderer>();
-            
-            if (cellRenderer == null)
+            if (owningCity == null)
                 return;
             
-            // Получаем базовый цвет клетки из CellColorManager
-            Color baseColor = CellColorManager.GetColorForType(cellType);
+            // Получаем цвет игрока из города
+            Color playerColor = GetPlayerColorFromCity(owningCity);
             
-            // Применяем подсветку: делаем цвет более ярким и добавляем легкий золотистый оттенок
-            Color cityColor = new Color(
-                Mathf.Min(1f, baseColor.r * 1.3f + 0.1f),  // Увеличиваем яркость и добавляем красный оттенок
-                Mathf.Min(1f, baseColor.g * 1.25f + 0.05f), // Увеличиваем яркость и добавляем зеленый оттенок
-                Mathf.Min(1f, baseColor.b * 1.2f),          // Увеличиваем яркость
-                baseColor.a
-            );
+            // Применяем границы через обводку
+            SetOutline(true, playerColor, 2.5f);
             
-            // Для SpriteRenderer
-            SpriteRenderer spriteRenderer = cellRenderer as SpriteRenderer;
-            if (spriteRenderer != null)
+            // Применяем overlay-тинтинг
+            ApplyOwnershipTinting(playerColor);
+        }
+        
+        /// <summary>
+        /// Получает цвет игрока из города (вспомогательный метод для обхода проблем компиляции)
+        /// </summary>
+        private Color GetPlayerColorFromCity(CityInfo city)
+        {
+            if (city == null)
+                return Color.white;
+            
+            // Используем рефлексию для безопасного доступа к полю player
+            FieldInfo playerField = typeof(CityInfo).GetField("player");
+            if (playerField != null)
             {
-                spriteRenderer.color = cityColor;
+                object playerObj = playerField.GetValue(city);
+                if (playerObj != null)
+                {
+                    // Получаем поле playerColor через рефлексию
+                    FieldInfo colorField = playerObj.GetType().GetField("playerColor");
+                    if (colorField != null)
+                    {
+                        object colorObj = colorField.GetValue(playerObj);
+                        if (colorObj is Color)
+                        {
+                            return (Color)colorObj;
+                        }
+                    }
+                }
+            }
+            
+            return Color.white; // Цвет по умолчанию
+        }
+        
+        /// <summary>
+        /// Применяет легкий тинтинг принадлежности через overlay-слой
+        /// </summary>
+        /// <param name="playerColor">Цвет игрока</param>
+        private void ApplyOwnershipTinting(Color playerColor)
+        {
+            if (ownershipOverlay == null)
+            {
+                Debug.LogWarning($"CellInfo: ownershipOverlay не назначен на клетке {gameObject.name}. Убедитесь, что TintingLayer назначен в инспекторе.");
                 return;
             }
             
-            // Для MeshRenderer
-            MeshRenderer meshRenderer = cellRenderer as MeshRenderer;
-            if (meshRenderer != null)
+            if (hexagonSprite == null)
             {
-                // Если есть материал, изменяем его цвет
-                if (meshRenderer.material != null)
-                {
-                    meshRenderer.material.color = cityColor;
-                }
-                // Если материала нет, но есть sharedMaterial, создаем instance
-                else if (meshRenderer.sharedMaterial != null)
-                {
-                    meshRenderer.material.color = cityColor;
-                }
+                Debug.LogWarning($"CellInfo: hexagonSprite не назначен на клетке {gameObject.name}. Используйте Tools/Convert Model to Sprite для создания спрайта.");
+                return;
             }
+            
+            // Устанавливаем спрайт
+            ownershipOverlay.sprite = hexagonSprite;
+            ownershipOverlay.enabled = true;
+            
+            // Применяем цвет игрока с прозрачностью 20-30% для легкого тинтинга
+            Color tintColor = new Color(playerColor.r, playerColor.g, playerColor.b, 0.25f);
+            ownershipOverlay.color = tintColor;
+            
+            // Масштабируем спрайт под размер клетки (как для ресурсов и зданий)
+            Vector2 cellSize = GetCellSize();
+            ScaleSpriteToCellSize(ownershipOverlay, hexagonSprite, cellSize);
         }
         
         /// <summary>
         /// Убирает принадлежность клетки к городу
-        /// Восстанавливает оригинальный цвет клетки
+        /// Отключает границы и overlay-тинтинг
         /// </summary>
         public void ClearCityOwnership()
         {
             if (owningCity != null)
             {
                 CityInfo cityToRemove = owningCity;
-                owningCity = null; // Очищаем перед обновлением цвета, чтобы подсветка не применилась снова
+                owningCity = null; // Очищаем перед обновлением, чтобы визуализация не применилась снова
+                
+                // Отключаем границы
+                SetOutline(false);
+                
+                // Отключаем overlay-тинтинг
+                if (ownershipOverlay != null)
+                {
+                    ownershipOverlay.enabled = false;
+                }
                 
                 // Восстанавливаем оригинальный цвет через UpdateCellColor
                 UpdateCellColor(false);
@@ -727,8 +780,11 @@ namespace CellNameSpace
             }
             
             // Создаем новый спрайт-контур
-            // Для шестиугольника создаем простой контурный спрайт
-            int textureSize = 256; // Размер текстуры для спрайта
+            // Вычисляем размер текстуры на основе размера клетки для правильного масштабирования
+            float maxCellSize = Mathf.Max(cellSize.x, cellSize.y);
+            int textureSize = Mathf.Max(256, Mathf.RoundToInt(maxCellSize * 100f)); // Минимум 256, иначе масштабируем под размер клетки
+            textureSize = Mathf.Clamp(textureSize, 256, 1024); // Ограничиваем максимальный размер для производительности
+            
             Texture2D texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
             
             // Заполняем прозрачным
@@ -739,9 +795,11 @@ namespace CellNameSpace
             }
             
             // Рисуем контур шестиугольника
+            // Радиус должен соответствовать размеру клетки относительно текстуры
             Vector2 center = new Vector2(textureSize / 2f, textureSize / 2f);
-            float radius = Mathf.Min(textureSize, textureSize) * 0.4f; // Радиус шестиугольника
-            float outlineThickness = Mathf.Clamp(outlineWidth * 2f, 2f, 20f); // Толщина обводки в пикселях текстуры
+            // Используем размер клетки для расчета радиуса (приводим к размеру текстуры)
+            float radius = (maxCellSize / 2f) * (textureSize / maxCellSize) * 0.9f; // 90% от размера для правильного масштабирования
+            float outlineThickness = Mathf.Clamp(outlineWidth * (textureSize / 100f), 2f, 30f); // Толщина обводки масштабируется под размер текстуры
             
             // Рисуем шестиугольный контур
             DrawHexagonOutline(pixels, textureSize, center, radius, outlineThickness, Color.white);
@@ -749,12 +807,16 @@ namespace CellNameSpace
             texture.SetPixels(pixels);
             texture.Apply();
             
+            // Вычисляем pixels per unit на основе размера клетки
+            // Это обеспечит правильное масштабирование спрайта
+            float pixelsPerUnit = textureSize / maxCellSize;
+            
             // Создаем спрайт из текстуры
             Sprite sprite = Sprite.Create(
                 texture,
                 new Rect(0, 0, textureSize, textureSize),
                 new Vector2(0.5f, 0.5f), // Pivot в центре
-                100f // Pixels per unit
+                pixelsPerUnit // Pixels per unit рассчитывается на основе размера клетки
             );
             
             // Кэшируем спрайт

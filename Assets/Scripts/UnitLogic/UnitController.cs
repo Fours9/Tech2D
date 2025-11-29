@@ -14,6 +14,7 @@ public class UnitController : MonoBehaviour
     private List<CellInfo> currentPath = new List<CellInfo>(); // Текущий маршрут
     private int currentPathIndex = 0; // Индекс текущей клетки в маршруте
     private CellNameSpace.Grid grid; // Кэш Grid для поиска пути
+    private float originalZ; // Исходная Z-координата юнита
     
     void Start()
     {
@@ -21,6 +22,17 @@ public class UnitController : MonoBehaviour
         if (unitInfo == null)
         {
             Debug.LogError($"UnitController: UnitInfo не найден на {gameObject.name}");
+        }
+        
+        // Устанавливаем исходную Z-координату юнита в 0
+        originalZ = 0f;
+        
+        // Устанавливаем текущую Z-координату в 0, если она не равна 0
+        if (Mathf.Abs(transform.position.z) > 0.001f)
+        {
+            Vector3 pos = transform.position;
+            pos.z = 0f;
+            transform.position = pos;
         }
         
         // Находим Grid для поиска пути
@@ -201,13 +213,21 @@ public class UnitController : MonoBehaviour
             return;
         }
         
-        Vector3 targetPosition = targetCell.transform.position;
+        // Используем X и Y из позиции клетки, но сохраняем исходную Z-координату юнита
+        Vector3 targetPosition = new Vector3(
+            targetCell.transform.position.x,
+            targetCell.transform.position.y,
+            originalZ // Сохраняем исходную Z-координату
+        );
+        
         float distance = Vector3.Distance(transform.position, targetPosition);
         
         if (distance > 0.01f)
         {
             // Плавное перемещение к текущей клетке маршрута
-            transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+            Vector3 newPosition = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+            newPosition.z = originalZ; // Убеждаемся, что Z остается исходным
+            transform.position = newPosition;
         }
         else
         {
