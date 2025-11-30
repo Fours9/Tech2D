@@ -8,7 +8,8 @@ namespace CellNameSpace
         // Примечание: движение камеры теперь соответствует движению курсора 1:1 без сглаживания
         
         [Header("Настройки зума")]
-        [SerializeField] private float zoomSpeed = 80f; // Скорость приближения/отдаления
+        [SerializeField] [Range(1f, 200f)] [Tooltip("Скорость приближения/отдаления камеры. Чем меньше значение, тем медленнее зум.")]
+        private float zoomSpeed = 40f; // Скорость приближения/отдаления
         [SerializeField] private float minOrthoSize = 5f; // Минимальный размер (максимальное приближение)
         [SerializeField] private float maxOrthoSize = 100f; // Максимальный размер (максимальное отдаление)
         

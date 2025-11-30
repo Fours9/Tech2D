@@ -315,6 +315,8 @@ namespace CellNameSpace
                     resourcesOverlay.enabled = true;
                     // Масштабируем спрайт под размер клетки
                     ScaleSpriteToCellSize(resourcesOverlay, resourceSprite, cellSize);
+                    // Обновляем позицию и масштаб в зависимости от наличия постройки
+                    UpdateResourcePositionAndScale();
                 }
                 else
                 {
@@ -346,6 +348,9 @@ namespace CellNameSpace
                     buildingsOverlay.enabled = false;
                 }
             }
+            
+            // Обновляем позицию и масштаб ресурсов после обновления всех оверлеев
+            UpdateResourcePositionAndScale();
         }
         
         /// <summary>
@@ -425,6 +430,52 @@ namespace CellNameSpace
         }
         
         /// <summary>
+        /// Обновляет позицию и масштаб ресурсов в зависимости от наличия постройки
+        /// Если есть постройка, ресурсы уменьшаются в 4 раза и размещаются в центре по X и внизу по Y
+        /// </summary>
+        private void UpdateResourcePositionAndScale()
+        {
+            if (resourcesOverlay == null || resourcesOverlay.sprite == null || !resourcesOverlay.enabled)
+                return;
+            
+            // Проверяем, есть ли постройка на клетке
+            bool hasBuilding = buildingsOverlay != null && buildingsOverlay.sprite != null && buildingsOverlay.enabled;
+            
+            Vector2 cellSize = GetCellSize();
+            
+            if (hasBuilding)
+            {
+                // Вычисляем нормальный масштаб для ресурса
+                Vector2 spriteSize = resourcesOverlay.sprite.bounds.size;
+                float scaleX = cellSize.x / spriteSize.x;
+                float scaleY = cellSize.y / spriteSize.y;
+                float normalScale = Mathf.Min(scaleX, scaleY);
+                
+                // Уменьшаем масштаб в 4 раза
+                float reducedScale = normalScale * 0.25f;
+                resourcesOverlay.transform.localScale = new Vector3(reducedScale, reducedScale, 1f);
+                
+                // Перемещаем в центр по X и вниз по Y
+                // Центр по X = 0
+                // Вниз по Y - нижняя граница клетки плюс половина высоты уменьшенного спрайта
+                float scaledSpriteHeight = spriteSize.y * reducedScale;
+                float bottomY = -cellSize.y * 0.5f + scaledSpriteHeight * 0.5f;
+                
+                resourcesOverlay.transform.localPosition = new Vector3(0f, bottomY, resourcesOverlay.transform.localPosition.z);
+            }
+            else
+            {
+                // Если нет постройки, возвращаем ресурсы в центр с нормальным масштабом
+                Vector2 spriteSize = resourcesOverlay.sprite.bounds.size;
+                float scaleX = cellSize.x / spriteSize.x;
+                float scaleY = cellSize.y / spriteSize.y;
+                float uniformScale = Mathf.Min(scaleX, scaleY);
+                resourcesOverlay.transform.localScale = new Vector3(uniformScale, uniformScale, 1f);
+                resourcesOverlay.transform.localPosition = new Vector3(0f, 0f, resourcesOverlay.transform.localPosition.z);
+            }
+        }
+        
+        /// <summary>
         /// Находит CellMaterialManager в сцене
         /// </summary>
         private CellMaterialManager FindMaterialManager()
@@ -477,12 +528,18 @@ namespace CellNameSpace
                 Vector2 cellSize = GetCellSize();
                 ScaleSpriteToCellSize(buildingsOverlay, sprite, cellSize);
                 
+                // Обновляем позицию и масштаб ресурсов после установки постройки
+                UpdateResourcePositionAndScale();
+                
                 Debug.Log($"CellInfo: Спрайт строения установлен на клетку ({gridX}, {gridY})");
             }
             else
             {
                 buildingsOverlay.sprite = null;
                 buildingsOverlay.enabled = false;
+                
+                // Обновляем позицию и масштаб ресурсов после удаления постройки
+                UpdateResourcePositionAndScale();
             }
         }
         
@@ -495,6 +552,9 @@ namespace CellNameSpace
             {
                 buildingsOverlay.sprite = null;
                 buildingsOverlay.enabled = false;
+                
+                // Обновляем позицию и масштаб ресурсов после удаления постройки
+                UpdateResourcePositionAndScale();
             }
         }
         
