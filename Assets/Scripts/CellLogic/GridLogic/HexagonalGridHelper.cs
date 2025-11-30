@@ -118,17 +118,14 @@ namespace CellNameSpace
                 neighbors.Add(new Vector2Int(x + 1, y + 1)); // Нижний
             }
             
-            // Фильтруем соседей с учетом цикличности по горизонтали
+            // Фильтруем соседей, оставляя только те, что в пределах границ сетки
             List<Vector2Int> validNeighbors = new List<Vector2Int>();
             foreach (Vector2Int neighbor in neighbors)
             {
-                // Применяем цикличность по горизонтали (X)
-                int wrappedX = ((neighbor.x % gridWidth) + gridWidth) % gridWidth;
-                
-                // Вертикальные границы остаются обычными (без цикличности)
-                if (neighbor.y >= 0 && neighbor.y < gridHeight)
+                // Проверяем, что сосед находится в пределах границ сетки
+                if (neighbor.x >= 0 && neighbor.x < gridWidth && neighbor.y >= 0 && neighbor.y < gridHeight)
                 {
-                    validNeighbors.Add(new Vector2Int(wrappedX, neighbor.y));
+                    validNeighbors.Add(neighbor);
                 }
             }
             
