@@ -227,6 +227,7 @@ GameObject:
   - component: {fileID: 141372083}
   - component: {fileID: 141372084}
   - component: {fileID: 141372085}
+  - component: {fileID: 141372086}
   m_Layer: 0
   m_Name: Grid Creator
   m_TagString: Untagged
@@ -361,6 +362,20 @@ MonoBehaviour:
   elevationSpeed: 3
   grid: {fileID: 141372080}
   mainCamera: {fileID: 519420031}
+--- !u!114 &141372086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 141372079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6086b380fa0cbc6479805f354ab74f8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
+  fogOfWarEnabled: 1
+  grid: {fileID: 0}
 --- !u!1 &186001891
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Reflection;
+using FogOfWar;
 
 namespace CellNameSpace
 {
@@ -15,6 +16,13 @@ namespace CellNameSpace
         [SerializeField] private SpriteRenderer outlineOverlay; // Оверлей для обводки клетки (опционально)
         [SerializeField] private SpriteRenderer ownershipOverlay; // Оверлей для тинтинга принадлежности (TintingLayer)
         [SerializeField] private Sprite hexagonSprite; // Спрайт-шестиугольник для тинтинга (созданный из модели)
+        
+        [Header("Туман войны")]
+        [SerializeField] private FogOfWarState fogState = FogOfWarState.Hidden; // Состояние видимости клетки
+        private bool hasBeenExplored = false; // Была ли клетка когда-либо исследована
+        [SerializeField] private Renderer fogOfWarRenderer; // Renderer дочернего объекта тумана (MeshRenderer)
+        [SerializeField] [Range(0f, 1f)] private float hiddenAlpha = 1.0f; // Alpha для не разведанных клеток
+        [SerializeField] [Range(0f, 1f)] private float exploredAlpha = 0.6f; // Alpha для разведанных клеток
         
         [Header("Настройки обводки")]
         [SerializeField] private bool outlineEnabled = false; // Включена ли обводка
@@ -49,7 +57,11 @@ namespace CellNameSpace
             // ApplyOutlineFromInspector(); // Отключено, чтобы обводка не была видна при создании карты
             
             // Убеждаемся, что originalPosition передана в шейдер
+            // Это также применит параметры тумана войны через ApplyOriginalPositionToShader
             ApplyOriginalPositionToShader();
+            
+            // Убеждаемся, что видимость оверлеев соответствует текущему состоянию тумана
+            UpdateFogOfWarVisual();
             
             // Отключаем обводку при создании, если она была включена в префабе
             if (outlineOverlay != null)
@@ -754,8 +766,8 @@ namespace CellNameSpace
             // Добавляем SpriteRenderer
             SpriteRenderer renderer = outlineObject.AddComponent<SpriteRenderer>();
             
-            // Настраиваем порядок отрисовки (обводка должна быть поверх клетки)
-            renderer.sortingOrder = 10; // Высокий порядок для отображения поверх клетки
+            // Настраиваем порядок отрисовки
+            renderer.sortingOrder = 0;
             
             return renderer;
         }
@@ -921,5 +933,190 @@ namespace CellNameSpace
                 }
             }
         }
+        
+        // ========== ТУМАН ВОЙНЫ ==========
+        
+        /// <summary>
+        /// Устанавливает состояние тумана войны для клетки
+        /// </summary>
+        public void SetFogOfWarState(FogOfWarState state)
+        {
+            fogState = state;
+            
+            // Если клетка стала видимой, отмечаем её как исследованную
+            if (state == FogOfWarState.Visible)
+            {
+                hasBeenExplored = true;
+            }
+            
+            // Обновляем визуальное отображение тумана
+            UpdateFogOfWarVisual();
+        }
+        
+        /// <summary>
+        /// Получает текущее состояние тумана войны
+        /// </summary>
+        public FogOfWarState GetFogOfWarState()
+        {
+            return fogState;
+        }
+        
+        /// <summary>
+        /// Проверяет, была ли клетка когда-либо исследована
+        /// </summary>
+        public bool HasBeenExplored()
+        {
+            return hasBeenExplored;
+        }
+        
+        /// <summary>
+        /// Устанавливает alpha тумана войны на дочернем объекте
+        /// </summary>
+        private void UpdateFogOfWarAlpha()
+        {
+            if (fogOfWarRenderer == null)
+                return;
+            
+            // Определяем целевой alpha на основе состояния тумана
+            float targetAlpha = 0f;
+            switch (fogState)
+            {
+                case FogOfWarState.Hidden:
+                    targetAlpha = hiddenAlpha;
+                    break;
+                case FogOfWarState.Explored:
+                    targetAlpha = exploredAlpha;
+                    break;
+                case FogOfWarState.Visible:
+                    targetAlpha = 0f; // Полностью прозрачный
+                    break;
+            }
+            
+            // Используем MaterialPropertyBlock для изменения alpha без создания instance материала
+            MaterialPropertyBlock mpb = new MaterialPropertyBlock();
+            fogOfWarRenderer.GetPropertyBlock(mpb);
+            
+            // Получаем базовый цвет материала или используем черный по умолчанию
+            Color baseColor = Color.black;
+            if (mpb.HasColor("_Color"))
+            {
+                baseColor = mpb.GetColor("_Color");
+            }
+            else if (fogOfWarRenderer.sharedMaterial != null)
+            {
+                baseColor = fogOfWarRenderer.sharedMaterial.color;
+            }
+            
+            // Устанавливаем alpha
+            baseColor.a = targetAlpha;
+            mpb.SetColor("_Color", baseColor);
+            
+            // Применяем MaterialPropertyBlock к рендереру
+            fogOfWarRenderer.SetPropertyBlock(mpb);
+        }
+        
+        /// <summary>
+        /// Обновляет визуальное отображение тумана войны
+        /// </summary>
+        private void UpdateFogOfWarVisual()
+        {
+            // Устанавливаем alpha тумана на дочернем объекте
+            UpdateFogOfWarAlpha();
+            
+            // Управляем видимостью оверлеев
+            switch (fogState)
+            {
+                case FogOfWarState.Hidden:
+                    // Скрываем все оверлеи для скрытых клеток
+                    SetOverlaysVisibility(false);
+                    break;
+                    
+                case FogOfWarState.Explored:
+                case FogOfWarState.Visible:
+                    // Показываем оверлеи для исследованных и видимых клеток
+                    SetOverlaysVisibility(true);
+                    break;
+            }
+        }
+        
+        /// <summary>
+        /// Применяет параметры тумана войны в шейдер через MaterialPropertyBlock
+        /// </summary>
+        private void ApplyFogOfWarToShader()
+        {
+            if (cellRenderer == null)
+                cellRenderer = GetComponent<Renderer>();
+            
+            MeshRenderer meshRenderer = cellRenderer as MeshRenderer;
+            if (meshRenderer == null)
+                return;
+            
+            // Создаем MaterialPropertyBlock, если его еще нет
+            if (materialPropertyBlock == null)
+            {
+                materialPropertyBlock = new MaterialPropertyBlock();
+            }
+            
+            // Получаем текущие свойства (чтобы не потерять _OriginalPosition и другие)
+            meshRenderer.GetPropertyBlock(materialPropertyBlock);
+            
+            // Применяем параметры тумана
+            ApplyFogOfWarToShaderInternal();
+            
+            // Применяем MaterialPropertyBlock к рендереру
+            meshRenderer.SetPropertyBlock(materialPropertyBlock);
+        }
+        
+        /// <summary>
+        /// Внутренний метод для установки параметров тумана в MaterialPropertyBlock
+        /// (без получения и применения блока - вызывается из других методов)
+        /// </summary>
+        private void ApplyFogOfWarToShaderInternal()
+        {
+            // Устанавливаем состояние тумана в шейдер
+            // 0 = Hidden, 1 = Explored, 2 = Visible
+            float fogStateValue = 0f;
+            switch (fogState)
+            {
+                case FogOfWarState.Hidden:
+                    fogStateValue = 0f;
+                    break;
+                case FogOfWarState.Explored:
+                    fogStateValue = 1f;
+                    break;
+                case FogOfWarState.Visible:
+                    fogStateValue = 2f;
+                    break;
+            }
+            
+            materialPropertyBlock.SetFloat("_FogState", fogStateValue);
+            
+            // Устанавливаем цвета тумана (если они не заданы в материале, используем значения по умолчанию)
+            materialPropertyBlock.SetColor("_FogColor", new Color(0f, 0f, 0f, 1f)); // Черный туман
+        }
+        
+        /// <summary>
+        /// Устанавливает видимость оверлеев (ресурсы, постройки и т.д.)
+        /// </summary>
+        private void SetOverlaysVisibility(bool visible)
+        {
+            if (resourcesOverlay != null)
+            {
+                resourcesOverlay.enabled = visible;
+            }
+            if (buildingsOverlay != null)
+            {
+                buildingsOverlay.enabled = visible;
+            }
+            if (cityBorderOverlay != null && !outlineEnabled)
+            {
+                cityBorderOverlay.enabled = visible;
+            }
+            if (ownershipOverlay != null)
+            {
+                ownershipOverlay.enabled = visible;
+            }
+        }
+        
     }
 }

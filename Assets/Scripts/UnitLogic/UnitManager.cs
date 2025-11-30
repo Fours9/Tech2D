@@ -159,6 +159,12 @@ public class UnitManager : MonoBehaviour
         spawnedUnits.Add(unit);
         Debug.Log($"UnitManager: Юнит заспавнен на позиции ({spawnPos.x}, {spawnPos.y})");
         
+        // Обновляем видимость тумана войны после спавна юнита
+        if (FogOfWarManager.Instance != null)
+        {
+            FogOfWarManager.Instance.UpdateVisibility();
+        }
+        
         // Перемещаем камеру на юнита, если включено
         if (moveCameraToUnitOnSpawn && cameraController != null)
         {

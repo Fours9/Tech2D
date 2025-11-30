@@ -266,6 +266,12 @@ public class UnitController : MonoBehaviour
             {
                 unitInfo.SetGridPosition(targetCell.GetGridX(), targetCell.GetGridY());
                 
+                // Обновляем видимость тумана войны при перемещении юнита
+                if (FogOfWarManager.Instance != null)
+                {
+                    FogOfWarManager.Instance.UpdateVisibility();
+                }
+                
                 // Тратим очки движения за этот шаг ТОЛЬКО в фазе исполнения хода
                 if (TurnManager.Instance != null && 
                     TurnManager.Instance.GetCurrentState() == TurnState.Resolving)
@@ -290,6 +296,13 @@ public class UnitController : MonoBehaviour
         isMoving = false;
         currentPath.Clear();
         currentPathIndex = 0;
+        
+        // Обновляем видимость тумана войны после завершения движения
+        if (FogOfWarManager.Instance != null)
+        {
+            FogOfWarManager.Instance.UpdateVisibility();
+        }
+        
         Debug.Log($"UnitController: Юнит {gameObject.name} завершил маршрут");
     }
     

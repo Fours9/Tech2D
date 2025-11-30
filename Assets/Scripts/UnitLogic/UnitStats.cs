@@ -24,6 +24,8 @@ public class UnitStats : ScriptableObject
     public int attack = 2;
     public int defense = 1;
     public int movementPoints = 4;
+    [Tooltip("Радиус видимости для тумана войны (в клетках). Если 0, используется значение по умолчанию из FogOfWarManager.")]
+    public int visionRadius = 0; // 0 = использовать значение по умолчанию
 
     [Header("Экономика")]
     public int costGold = 10;
