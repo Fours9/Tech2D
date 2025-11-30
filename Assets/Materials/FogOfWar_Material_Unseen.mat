@@ -12,7 +12,15 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _RAGGEDEDGEBOTTOMLEFT_ON
+  - _RAGGEDEDGEBOTTOMRIGHT_ON
+  - _RAGGEDEDGEBOTTOM_ON
+  - _RAGGEDEDGEFLATLEFT_ON
+  - _RAGGEDEDGEFLATRIGHT_ON
+  - _RAGGEDEDGETOPLEFT_ON
+  - _RAGGEDEDGETOPRIGHT_ON
+  - _RAGGEDEDGETOP_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -57,6 +65,14 @@ Material:
     - _OutlineIntensity: 0.8
     - _OutlineWidth: 0.1
     - _PaperScale: 0.1
+    - _RaggedEdgeBottom: 1
+    - _RaggedEdgeBottomLeft: 1
+    - _RaggedEdgeBottomRight: 1
+    - _RaggedEdgeFlatLeft: 1
+    - _RaggedEdgeFlatRight: 1
+    - _RaggedEdgeTop: 1
+    - _RaggedEdgeTopLeft: 1
+    - _RaggedEdgeTopRight: 1
     - _RaggedEdgesIntensity: 0.1
     - _RaggedEdgesScale: 4
     - _SecondaryNoise: 0.3

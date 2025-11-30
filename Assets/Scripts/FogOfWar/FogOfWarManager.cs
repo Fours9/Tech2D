@@ -25,6 +25,20 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("Включены ли неровные края для тумана войны (FogOfWarNoise шейдер)")]
     [SerializeField] private bool raggedEdgesEnabled = false;
     
+    [Header("Неровные края по граням")]
+    [Tooltip("Включена ли неровность для Top Left (30-90°)")]
+    [SerializeField] private bool raggedEdgeTopLeft = true;
+    [Tooltip("Включена ли неровность для Top Right (90-150°)")]
+    [SerializeField] private bool raggedEdgeFlatLeft = true;
+    [Tooltip("Включена ли неровность для Flat Right (150-210°)")]
+    [SerializeField] private bool raggedEdgeBottomLeft = true;
+    [Tooltip("Включена ли неровность для Bottom Right (210-270°)")]
+    [SerializeField] private bool raggedEdgeBottomRight = true;
+    [Tooltip("Включена ли неровность для Bottom Left (270-330°)")]
+    [SerializeField] private bool raggedEdgeFlatRight = true;
+    [Tooltip("Включена ли неровность для Flat Left (330-30°)")]
+    [SerializeField] private bool raggedEdgeTopRight = true;
+    
     [Header("Материалы тумана")]
     [Tooltip("Материал для неразведанных клеток (темнее, почти глухой)")]
     [SerializeField] private Material fogUnseenMaterial;
@@ -129,13 +143,19 @@ public class FogOfWarManager : MonoBehaviour
         Debug.Log($"[FogOfWarManager] mesh.bounds.size: {meshBounds.size}");
         Debug.Log($"[FogOfWarManager] meshFilter.transform.localScale: {meshFilter.transform.localScale}");
         
-        // Устанавливаем _HexRadius, _VignetteEnabled и _RaggedEdgesEnabled в материалы тумана
+        // Устанавливаем _HexRadius, _VignetteEnabled, _RaggedEdgesEnabled и параметры граней в материалы тумана
         if (fogUnseenMaterial != null)
         {
             fogUnseenMaterial.SetFloat("_HexRadius", hexRadius);
             fogUnseenMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesEnabled ? 1.0f : 0.0f);
-            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {fogOfWarVignetteEnabled}, _RaggedEdgesEnabled = {raggedEdgesEnabled} в fogUnseenMaterial");
+            fogUnseenMaterial.SetFloat("_RaggedEdgeTopRight", raggedEdgeTopRight ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeTopLeft", raggedEdgeTopLeft ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeFlatLeft", raggedEdgeFlatLeft ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeBottomLeft", raggedEdgeBottomLeft ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeBottomRight", raggedEdgeBottomRight ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeFlatRight", raggedEdgeFlatRight ? 1.0f : 0.0f);
+            Debug.Log($"[FogOfWarManager] Установлены параметры неровных краев в fogUnseenMaterial");
         }
         
         if (fogExploredMaterial != null)
@@ -143,7 +163,13 @@ public class FogOfWarManager : MonoBehaviour
             fogExploredMaterial.SetFloat("_HexRadius", hexRadius);
             fogExploredMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesEnabled ? 1.0f : 0.0f);
-            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {fogOfWarVignetteEnabled}, _RaggedEdgesEnabled = {raggedEdgesEnabled} в fogExploredMaterial");
+            fogExploredMaterial.SetFloat("_RaggedEdgeTopRight", raggedEdgeTopRight ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeTopLeft", raggedEdgeTopLeft ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeFlatLeft", raggedEdgeFlatLeft ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeBottomLeft", raggedEdgeBottomLeft ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeBottomRight", raggedEdgeBottomRight ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeFlatRight", raggedEdgeFlatRight ? 1.0f : 0.0f);
+            Debug.Log($"[FogOfWarManager] Установлены параметры неровных краев в fogExploredMaterial");
         }
         
         // Устанавливаем _HexRadius и _VignetteEnabled во все материалы, использующие WorldSpaceTexture шейдер
@@ -560,6 +586,86 @@ public class FogOfWarManager : MonoBehaviour
     public bool IsRaggedEdgesEnabled()
     {
         return raggedEdgesEnabled;
+    }
+    
+    /// <summary>
+    /// Обновляет параметры граней в материалах тумана
+    /// </summary>
+    private void UpdateRaggedEdgesFaceParameters()
+    {
+        if (fogUnseenMaterial != null)
+        {
+            fogUnseenMaterial.SetFloat("_RaggedEdgeTopRight", raggedEdgeTopRight ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeTopLeft", raggedEdgeTopLeft ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeFlatLeft", raggedEdgeFlatLeft ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeBottomLeft", raggedEdgeBottomLeft ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeBottomRight", raggedEdgeBottomRight ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetFloat("_RaggedEdgeFlatRight", raggedEdgeFlatRight ? 1.0f : 0.0f);
+        }
+        
+        if (fogExploredMaterial != null)
+        {
+            fogExploredMaterial.SetFloat("_RaggedEdgeTopRight", raggedEdgeTopRight ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeTopLeft", raggedEdgeTopLeft ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeFlatLeft", raggedEdgeFlatLeft ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeBottomLeft", raggedEdgeBottomLeft ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeBottomRight", raggedEdgeBottomRight ? 1.0f : 0.0f);
+            fogExploredMaterial.SetFloat("_RaggedEdgeFlatRight", raggedEdgeFlatRight ? 1.0f : 0.0f);
+        }
+    }
+    
+    /// <summary>
+    /// Устанавливает состояние неровности для Top Left (30-90°)
+    /// </summary>
+    public void SetRaggedEdgeTopLeft(bool enabled)
+    {
+        raggedEdgeTopLeft = enabled;
+        UpdateRaggedEdgesFaceParameters();
+    }
+    
+    /// <summary>
+    /// Устанавливает состояние неровности для Top Right (90-150°)
+    /// </summary>
+    public void SetRaggedEdgeFlatLeft(bool enabled)
+    {
+        raggedEdgeFlatLeft = enabled;
+        UpdateRaggedEdgesFaceParameters();
+    }
+    
+    /// <summary>
+    /// Устанавливает состояние неровности для Flat Right (150-210°)
+    /// </summary>
+    public void SetRaggedEdgeBottomLeft(bool enabled)
+    {
+        raggedEdgeBottomLeft = enabled;
+        UpdateRaggedEdgesFaceParameters();
+    }
+    
+    /// <summary>
+    /// Устанавливает состояние неровности для Bottom Right (210-270°)
+    /// </summary>
+    public void SetRaggedEdgeBottomRight(bool enabled)
+    {
+        raggedEdgeBottomRight = enabled;
+        UpdateRaggedEdgesFaceParameters();
+    }
+    
+    /// <summary>
+    /// Устанавливает состояние неровности для Bottom Left (270-330°)
+    /// </summary>
+    public void SetRaggedEdgeFlatRight(bool enabled)
+    {
+        raggedEdgeFlatRight = enabled;
+        UpdateRaggedEdgesFaceParameters();
+    }
+    
+    /// <summary>
+    /// Устанавливает состояние неровности для Flat Left (330-30°)
+    /// </summary>
+    public void SetRaggedEdgeTopRight(bool enabled)
+    {
+        raggedEdgeTopRight = enabled;
+        UpdateRaggedEdgesFaceParameters();
     }
 }
 

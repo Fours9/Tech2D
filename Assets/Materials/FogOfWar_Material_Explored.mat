@@ -37,6 +37,12 @@ Material:
     m_Ints: []
     m_Floats:
     - _AnimationSpeed: 0
+    - _BurnAlphaLoss: 0.5
+    - _BurnDarken: 0.7
+    - _BurnNoiseScale: 5
+    - _BurnNoiseStrength: 0.3
+    - _BurnStart: 0.85
+    - _BurnWidth: 0.1
     - _EdgeDarkening: 0.5
     - _EdgeRadius: 0.7
     - _EdgeSoftness: 0.3
@@ -51,13 +57,24 @@ Material:
     - _OutlineIntensity: 0.8
     - _OutlineWidth: 0.1
     - _PaperScale: 0.3
+    - _RaggedEdgeBottom: 1
+    - _RaggedEdgeBottomLeft: 1
+    - _RaggedEdgeBottomRight: 1
+    - _RaggedEdgeTop: 0
+    - _RaggedEdgeTopLeft: 1
+    - _RaggedEdgeTopRight: 1
+    - _RaggedEdgesIntensity: 0.1
+    - _RaggedEdgesScale: 2
     - _SecondaryNoise: 0.3
+    - _SparkIntensity: 0.4
     - _TextureScale: 0.02
     m_Colors:
+    - _BurnColor: {r: 0.14999998, g: 0.049999982, b: 0.02, a: 1}
     - _Color: {r: 0.8207547, g: 0.7859113, b: 0.7859113, a: 0.34509805}
     - _ExploredTint: {r: 0.6132076, g: 0.49652335, b: 0.38470098, a: 0.6}
     - _GlowColor: {r: 1, g: 0.9, b: 0.7, a: 1}
     - _OriginalPosition: {r: 0, g: 0, b: 0, a: 0}
+    - _SparkColor: {r: 1, g: 0.6, b: 0.19999996, a: 1}
     - _UnseenTint: {r: 0.49056602, g: 0.39328822, b: 0.2985048, a: 0.9019608}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

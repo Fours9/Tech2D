@@ -12,6 +12,13 @@ Shader "Custom/FogOfWarNoise"
         [Header(Ragged Edges)]
         [Range(0.0, 1.0)] _RaggedEdgesIntensity ("Ragged Edges Intensity", Float) = 0.1
         [Range(0.1, 10.0)] _RaggedEdgesScale ("Ragged Edges Scale", Float) = 2.0
+        [Header(Ragged Edges Per Face)]
+        [Toggle] _RaggedEdgeTopLeft ("Top Left", Float) = 1.0
+        [Toggle] _RaggedEdgeFlatLeft ("Top Right", Float) = 1.0
+        [Toggle] _RaggedEdgeBottomLeft ("Flat Right", Float) = 1.0
+        [Toggle] _RaggedEdgeBottomRight ("Bottom Right", Float) = 1.0
+        [Toggle] _RaggedEdgeFlatRight ("Bottom Left", Float) = 1.0
+        [Toggle] _RaggedEdgeTopRight ("Flat Left", Float) = 1.0
     }
     
     SubShader
@@ -55,6 +62,12 @@ Shader "Custom/FogOfWarNoise"
             float _RaggedEdgesIntensity; // Интенсивность неровных краев (0-1)
             float _RaggedEdgesScale; // Масштаб шума для неровных краев
             float _RaggedEdgesEnabled; // Включены ли неровные края (0 или 1)
+            float _RaggedEdgeTopRight; // Включена ли неровность для Top Right (330-30°) (0 или 1)
+            float _RaggedEdgeTopLeft; // Включена ли неровность для Top Left (30-90°) (0 или 1)
+            float _RaggedEdgeFlatLeft; // Включена ли неровность для Flat Left (90-150°) (0 или 1)
+            float _RaggedEdgeBottomLeft; // Включена ли неровность для Bottom Left (150-210°) (0 или 1)
+            float _RaggedEdgeBottomRight; // Включена ли неровность для Bottom Right (210-270°) (0 или 1)
+            float _RaggedEdgeFlatRight; // Включена ли неровность для Flat Right (270-330°) (0 или 1)
             
             // Полная SDF для pointy-top шестиугольника
             // r - расстояние от центра до вершины (_HexRadius)
@@ -102,6 +115,50 @@ Shader "Custom/FogOfWarNoise"
                 float d = noise2D(i + float2(1.0, 1.0));
                 
                 return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
+            }
+            
+            // Определяет, какая грань ближе всего к точке p
+            // Для flat-top hex (сверху грань, а не вершина)
+            // Возвращает: 0=top (flat), 1=top-right, 2=bottom-right, 3=bottom (flat), 4=bottom-left, 5=top-left
+            int getClosestFace(float2 p, float r)
+            {
+                float angle = atan2(p.y, p.x); // Угол в радианах от -PI до PI
+                
+                // Нормализуем угол к диапазону [0, 2*PI]
+                if (angle < 0.0) angle += 6.28318530718; // 2*PI
+                
+                // 6 равных секторов по 60° (π/3 = 1.0472 rad)
+                // Сектора сдвинуты на 30° (π/6 = 0.5236 rad) относительно стандартных
+                const float pi_6 = 0.5235987756;   // π/6 = 30°
+                const float pi_2 = 1.5707963268;   // π/2 = 90°
+                const float pi_5_6 = 2.6179938780; // 5π/6 = 150°
+                const float pi_7_6 = 3.6651914292; // 7π/6 = 210°
+                const float pi_3_2 = 4.7123889804; // 3π/2 = 270°
+                const float pi_11_6 = 5.7595865316; // 11π/6 = 330°
+                
+                // Top-Left: 30-90° (центр 60°)
+                // Flat Left (Top flat): 90-150° (центр 120°)
+                // Bottom-Left: 150-210° (центр 180°)
+                // Bottom-Right: 210-270° (центр 240°)
+                // Flat Right (Bottom flat): 270-330° (центр 300°)
+                // Top-Right: 330-30° (центр 0°/360°)
+                if (angle >= pi_11_6 || angle < pi_6) return 1; // 330-30°: Top-Right
+                else if (angle < pi_2) return 5; // 30-90°: Top-Left
+                else if (angle < pi_5_6) return 0; // 90-150°: Flat Left (Top flat)
+                else if (angle < pi_7_6) return 4; // 150-210°: Bottom-Left
+                else if (angle < pi_3_2) return 2; // 210-270°: Bottom-Right
+                else return 3; // 270-330°: Flat Right (Bottom flat)
+            }
+            
+            // Получает значение включения для грани по индексу
+            float getFaceEnabled(int faceIndex)
+            {
+                if (faceIndex == 0) return _RaggedEdgeFlatLeft; // Flat Left (90-150°)
+                else if (faceIndex == 1) return _RaggedEdgeTopRight; // Top Right (330-30°)
+                else if (faceIndex == 2) return _RaggedEdgeBottomRight; // Bottom Right (210-270°)
+                else if (faceIndex == 3) return _RaggedEdgeFlatRight; // Flat Right (270-330°)
+                else if (faceIndex == 4) return _RaggedEdgeBottomLeft; // Bottom Left (150-210°)
+                else return _RaggedEdgeTopLeft; // Top Left (30-90°), faceIndex == 5
             }
             
             v2f vert (appdata v)
@@ -177,29 +234,39 @@ Shader "Custom/FogOfWarNoise"
                     // Вычисляем SDF для определения расстояния до края
                     float hexSDFValue = hexSDF(i.localPos, _HexRadius);
                     
-                    // Генерируем шум на основе мировых координат для стабильности
-                    float2 noiseCoord = i.worldPos.xy * _RaggedEdgesScale;
-                    float noiseValue = smoothNoise2D(noiseCoord);
+                    // Определяем ближайшую грань
+                    int closestFace = getClosestFace(i.localPos, _HexRadius);
                     
-                    // Преобразуем шум из [0, 1] в [-intensity, +intensity]
-                    // Это создаст неровности, которые будут "вдавливать" и "выдавливать" края
-                    float noiseOffset = (noiseValue - 0.5) * 2.0 * _RaggedEdgesIntensity * _HexRadius;
+                    // Проверяем, включен ли эффект для этой грани
+                    float faceEnabled = getFaceEnabled(closestFace);
                     
-                    // Применяем шум к SDF: если SDF + offset < 0, пиксель видим
-                    // Если SDF + offset >= 0, пиксель обрезаем (альфа = 0)
-                    float modifiedSDF = hexSDFValue + noiseOffset;
-                    
-                    // Если модифицированный SDF положительный (снаружи с учетом шума), обрезаем пиксель
-                    if (modifiedSDF > 0.0)
+                    // Применяем эффект только если он включен для этой грани
+                    if (faceEnabled > 0.5)
                     {
-                        col.a = 0.0;
-                    }
-                    else
-                    {
-                        // Плавный переход на краю для более мягкого обрезания
-                        // Используем smoothstep для создания плавного перехода
-                        float edgeFade = smoothstep(0.0, -_RaggedEdgesIntensity * _HexRadius * 0.5, modifiedSDF);
-                        col.a *= edgeFade;
+                        // Генерируем шум на основе мировых координат для стабильности
+                        float2 noiseCoord = i.worldPos.xy * _RaggedEdgesScale;
+                        float noiseValue = smoothNoise2D(noiseCoord);
+                        
+                        // Преобразуем шум из [0, 1] в [-intensity, +intensity]
+                        // Это создаст неровности, которые будут "вдавливать" и "выдавливать" края
+                        float noiseOffset = (noiseValue - 0.5) * 2.0 * _RaggedEdgesIntensity * _HexRadius;
+                        
+                        // Применяем шум к SDF: если SDF + offset < 0, пиксель видим
+                        // Если SDF + offset >= 0, пиксель обрезаем (альфа = 0)
+                        float modifiedSDF = hexSDFValue + noiseOffset;
+                        
+                        // Если модифицированный SDF положительный (снаружи с учетом шума), обрезаем пиксель
+                        if (modifiedSDF > 0.0)
+                        {
+                            col.a = 0.0;
+                        }
+                        else
+                        {
+                            // Плавный переход на краю для более мягкого обрезания
+                            // Используем smoothstep для создания плавного перехода
+                            float edgeFade = smoothstep(0.0, -_RaggedEdgesIntensity * _HexRadius * 0.5, modifiedSDF);
+                            col.a *= edgeFade;
+                        }
                     }
                 }
                 
