@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 using CellNameSpace;
 
@@ -9,6 +10,8 @@ public class CityManager : MonoBehaviour
 {
     [Header("Настройки городов")]
     [SerializeField] private Sprite cityCenterSprite; // Спрайт центра города
+    [Tooltip("Радиус видимости для тумана войны (в клетках) от каждой клетки города")]
+    [SerializeField] private int defaultCityVisionRadius = 2; // Радиус видимости по умолчанию
     
     [Header("Ссылки (опционально)")]
     [SerializeField] private CellNameSpace.Grid grid; // Ссылка на Grid (найдет автоматически, если не указана)
@@ -94,7 +97,8 @@ public class CityManager : MonoBehaviour
             position = cityPosition,
             cell = targetCell,
             name = $"Город {cities.Count + 1}",
-            expansionRadius = 1
+            expansionRadius = 1,
+            visionRadius = defaultCityVisionRadius
         };
         
         // Добавляем центр города в список принадлежащих клеток
@@ -155,6 +159,11 @@ public class CityManager : MonoBehaviour
         }
         
         Debug.Log($"CityManager: Город создан на позиции ({gridX}, {gridY})");
+        
+        // Обновляем видимость тумана войны после того, как все клетки города уже помечены
+        // Используем корутину, чтобы дождаться следующего кадра, когда юнит будет полностью удален
+        StartCoroutine(UpdateFogOfWarAfterCityCreation());
+        
         return true;
     }
     
@@ -229,6 +238,13 @@ public class CityManager : MonoBehaviour
             city.ownedCells.Add(targetPos);
             MarkCellAsOwned(targetPos, city);
             Debug.Log($"CityManager: Клетка ({targetPos.x}, {targetPos.y}) добавлена к городу {city.name}");
+            
+            // Обновляем видимость тумана войны после добавления клетки
+            if (FogOfWarManager.Instance != null)
+            {
+                FogOfWarManager.Instance.UpdateVisibility();
+            }
+            
             return true;
         }
         else
@@ -265,6 +281,13 @@ public class CityManager : MonoBehaviour
             
             city.expansionRadius++;
             Debug.Log($"CityManager: Город {city.name} расширен. Новых клеток: {newCells.Count}, радиус: {city.expansionRadius}");
+            
+            // Обновляем видимость тумана войны после расширения города
+            if (newCells.Count > 0 && FogOfWarManager.Instance != null)
+            {
+                FogOfWarManager.Instance.UpdateVisibility();
+            }
+            
             return newCells.Count > 0;
         }
     }
@@ -387,6 +410,21 @@ public class CityManager : MonoBehaviour
         
         return null;
     }
+    
+    /// <summary>
+    /// Обновляет туман войны в следующем кадре, после того как юнит полностью удален
+    /// </summary>
+    private IEnumerator UpdateFogOfWarAfterCityCreation()
+    {
+        // Ждем один кадр, чтобы Unity успел удалить юнит
+        yield return null;
+        
+        // Теперь обновляем видимость тумана войны
+        if (FogOfWarManager.Instance != null)
+        {
+            FogOfWarManager.Instance.UpdateVisibility();
+        }
+    }
 }
 
 /// <summary>
@@ -400,6 +438,7 @@ public class CityInfo
     public string name;
     public HashSet<Vector2Int> ownedCells = new HashSet<Vector2Int>(); // Клетки, принадлежащие городу
     public int expansionRadius = 1; // Текущий радиус расширения (1 = только центр, 2 = центр + соседи, и т.д.)
+    public int visionRadius = 2; // Радиус видимости для тумана войны (в клетках от каждой клетки города)
     public PlayerInfo player; // Игрок, которому принадлежит город
 }
 

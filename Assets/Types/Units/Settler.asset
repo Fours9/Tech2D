@@ -21,7 +21,7 @@ MonoBehaviour:
   attack: 2
   defense: 1
   movementPoints: 4
-  visionRadius: 10
+  visionRadius: 5
   costGold: 10
   upkeepGold: 1
   forbiddenCellTypes: 0000000001000000

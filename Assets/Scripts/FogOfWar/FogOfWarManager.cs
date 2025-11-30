@@ -17,6 +17,7 @@ public class FogOfWarManager : MonoBehaviour
     
     [Header("Ссылки")]
     [SerializeField] private CellNameSpace.Grid grid; // Сетка (найдется автоматически, если не указана)
+    [SerializeField] private CityManager cityManager; // Менеджер городов (найдется автоматически, если не указан)
     
     private HashSet<CellInfo> visibleCells = new HashSet<CellInfo>(); // Клетки, видимые в текущий момент
     private HashSet<CellInfo> exploredCells = new HashSet<CellInfo>(); // Клетки, которые были исследованы
@@ -38,6 +39,11 @@ public class FogOfWarManager : MonoBehaviour
         if (grid == null)
         {
             grid = FindFirstObjectByType<CellNameSpace.Grid>();
+        }
+        
+        if (cityManager == null)
+        {
+            cityManager = FindFirstObjectByType<CityManager>();
         }
         
         // Инициализируем все клетки как скрытые, если туман войны включен
@@ -75,7 +81,7 @@ public class FogOfWarManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Обновляет видимость всех клеток на основе позиций юнитов
+    /// Обновляет видимость всех клеток на основе позиций юнитов и городов
     /// </summary>
     public void UpdateVisibility()
     {
@@ -122,6 +128,42 @@ public class FogOfWarManager : MonoBehaviour
                     {
                         visibleCellCoords.Add(cellCoord);
                         newVisibleCellsList.Add(cell);
+                    }
+                }
+            }
+        }
+        
+        // Теперь обрабатываем города - для каждой клетки города считаем видимость на visionRadius клеток
+        if (cityManager != null)
+        {
+            Dictionary<Vector2Int, CityInfo> allCities = cityManager.GetAllCities();
+            foreach (var kvp in allCities)
+            {
+                CityInfo city = kvp.Value;
+                if (city == null || city.visionRadius <= 0)
+                    continue;
+                
+                // Для каждой клетки, принадлежащей городу, считаем видимость
+                foreach (Vector2Int ownedCellPos in city.ownedCells)
+                {
+                    CellInfo ownedCell = grid.GetCellInfoAt(ownedCellPos.x, ownedCellPos.y);
+                    if (ownedCell == null)
+                        continue;
+                    
+                    // Получаем все клетки в радиусе видимости от этой клетки города
+                    List<CellInfo> cellsInRange = GetCellsInVisionRange(ownedCellPos.x, ownedCellPos.y, city.visionRadius);
+                    
+                    foreach (CellInfo cell in cellsInRange)
+                    {
+                        if (cell != null)
+                        {
+                            Vector2Int cellCoord = new Vector2Int(cell.GetGridX(), cell.GetGridY());
+                            if (!visibleCellCoords.Contains(cellCoord))
+                            {
+                                visibleCellCoords.Add(cellCoord);
+                                newVisibleCellsList.Add(cell);
+                            }
+                        }
                     }
                 }
             }
