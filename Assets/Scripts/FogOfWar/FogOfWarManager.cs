@@ -12,7 +12,7 @@ public class FogOfWarManager : MonoBehaviour
     public static FogOfWarManager Instance { get; private set; }
     
     [Header("Настройки видимости")]
-    [Tooltip("Включен ли туман войны")]
+    [Tooltip("Включен ли туман войны. Если отключен, все клетки всегда будут видимыми.")]
     [SerializeField] private bool fogOfWarEnabled = true;
     
     [Header("Ссылки")]
@@ -46,10 +46,15 @@ public class FogOfWarManager : MonoBehaviour
             cityManager = FindFirstObjectByType<CityManager>();
         }
         
-        // Инициализируем все клетки как скрытые, если туман войны включен
+        // Инициализируем туман войны или делаем все клетки видимыми
         if (fogOfWarEnabled)
         {
             InitializeFogOfWar();
+        }
+        else
+        {
+            // Если туман войны отключен при старте, делаем все клетки видимыми
+            MakeAllCellsVisible();
         }
     }
     
@@ -299,28 +304,44 @@ public class FogOfWarManager : MonoBehaviour
         if (!enabled)
         {
             // Если туман войны отключен, делаем все клетки видимыми
-            if (grid != null)
-            {
-                int gridWidth = grid.GetGridWidth();
-                int gridHeight = grid.GetGridHeight();
-                
-                for (int x = 0; x < gridWidth; x++)
-                {
-                    for (int y = 0; y < gridHeight; y++)
-                    {
-                        CellInfo cell = grid.GetCellInfoAt(x, y);
-                        if (cell != null)
-                        {
-                            cell.SetFogOfWarState(FogOfWarState.Visible);
-                        }
-                    }
-                }
-            }
+            MakeAllCellsVisible();
         }
         else
         {
             // Если туман войны включен, инициализируем его
             InitializeFogOfWar();
+        }
+    }
+    
+    /// <summary>
+    /// Проверяет, включен ли туман войны
+    /// </summary>
+    public bool IsFogOfWarEnabled()
+    {
+        return fogOfWarEnabled;
+    }
+    
+    /// <summary>
+    /// Делает все клетки видимыми (используется при отключении тумана войны)
+    /// </summary>
+    private void MakeAllCellsVisible()
+    {
+        if (grid == null)
+            return;
+        
+        int gridWidth = grid.GetGridWidth();
+        int gridHeight = grid.GetGridHeight();
+        
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                CellInfo cell = grid.GetCellInfoAt(x, y);
+                if (cell != null)
+                {
+                    cell.SetFogOfWarState(FogOfWarState.Visible);
+                }
+            }
         }
     }
     

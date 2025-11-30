@@ -998,9 +998,22 @@ namespace CellNameSpace
         
         /// <summary>
         /// Устанавливает состояние тумана войны для клетки
+        /// Если туман войны отключен, всегда устанавливает состояние Visible и не позволяет его изменить
         /// </summary>
         public void SetFogOfWarState(FogOfWarState state)
         {
+            // Если туман войны отключен, всегда оставляем клетку видимой и игнорируем изменения
+            if (FogOfWarManager.Instance != null && !FogOfWarManager.Instance.IsFogOfWarEnabled())
+            {
+                if (fogState != FogOfWarState.Visible)
+                {
+                    fogState = FogOfWarState.Visible;
+                    hasBeenExplored = true;
+                    UpdateFogOfWarVisual();
+                }
+                return;
+            }
+            
             fogState = state;
             
             // Если клетка стала видимой, отмечаем её как исследованную

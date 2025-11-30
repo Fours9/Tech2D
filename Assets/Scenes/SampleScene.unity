@@ -152,6 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CityManager
   cityCenterSprite: {fileID: 7961463184084027955, guid: b6c80039455aacb42a12d4108ef4b34b, type: 3}
+  defaultCityVisionRadius: 2
   grid: {fileID: 141372080}
   unitManager: {fileID: 0}
 --- !u!114 &16604956
@@ -376,6 +377,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
   fogOfWarEnabled: 1
   grid: {fileID: 0}
+  cityManager: {fileID: 0}
 --- !u!1 &186001891
 GameObject:
   m_ObjectHideFlags: 0
@@ -935,7 +937,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e6ecd02963c157a47aaff66e499869e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CameraController
-  zoomSpeed: 80
+  zoomSpeed: 21
   minOrthoSize: 5
   maxOrthoSize: 100
   maxClickTime: 0.3
