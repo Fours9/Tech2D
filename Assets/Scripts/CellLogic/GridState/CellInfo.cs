@@ -21,8 +21,6 @@ namespace CellNameSpace
         [SerializeField] private FogOfWarState fogState = FogOfWarState.Hidden; // Состояние видимости клетки
         private bool hasBeenExplored = false; // Была ли клетка когда-либо исследована
         [SerializeField] private Renderer fogOfWarRenderer; // Renderer дочернего объекта тумана (MeshRenderer)
-        [SerializeField] [Range(0f, 1f)] private float hiddenAlpha = 1.0f; // Alpha для не разведанных клеток
-        [SerializeField] [Range(0f, 1f)] private float exploredAlpha = 0.6f; // Alpha для разведанных клеток
         
         [Header("Настройки обводки")]
         [SerializeField] private bool outlineEnabled = false; // Включена ли обводка
@@ -1044,8 +1042,8 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Устанавливает alpha тумана войны на дочернем объекте
-        /// Использует альфу из материала, если она задана, иначе использует hiddenAlpha/exploredAlpha
+        /// Устанавливает параметры тумана войны на дочернем объекте
+        /// Альфа всегда берется из _Color (Color (Alpha Override)) материала
         /// </summary>
         private void UpdateFogOfWarAlpha()
         {
