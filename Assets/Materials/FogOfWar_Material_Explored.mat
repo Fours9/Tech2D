@@ -26,6 +26,10 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: ccd7b6c55c59ebc408ac55e1126b9a39, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _PaperTexture:
         m_Texture: {fileID: 2800000, guid: c6d494bf8cc7e344892253ed187de18b, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -37,22 +41,24 @@ Material:
     - _EdgeRadius: 0.7
     - _EdgeSoftness: 0.3
     - _GlowInnerRadius: 0.75
-    - _GlowIntensityExplored: 0.5
-    - _GlowIntensityUnseen: 0.2
+    - _GlowIntensityExplored: 0.4
+    - _GlowIntensityUnseen: 0.3
     - _GlowOuterRadius: 0.95
-    - _HexRadius: 1
+    - _HexRadius: 0.01
     - _NoiseIntensity: 0.5
     - _NoiseScale: 10
     - _NoiseStrength: 0.3
     - _OutlineIntensity: 0.8
     - _OutlineWidth: 0.1
-    - _PaperScale: 1
+    - _PaperScale: 0.3
     - _SecondaryNoise: 0.3
+    - _TextureScale: 0.02
     m_Colors:
-    - _Color: {r: 0, g: 0, b: 0, a: 0.11372549}
-    - _ExploredTint: {r: 0.5, g: 0.45, b: 0.39999998, a: 0.6}
+    - _Color: {r: 0.8207547, g: 0.7859113, b: 0.7859113, a: 0.34509805}
+    - _ExploredTint: {r: 0.6132076, g: 0.49652335, b: 0.38470098, a: 0.6}
     - _GlowColor: {r: 1, g: 0.9, b: 0.7, a: 1}
-    - _UnseenTint: {r: 0.39999998, g: 0.34999996, b: 0.29999998, a: 0.9}
+    - _OriginalPosition: {r: 0, g: 0, b: 0, a: 0}
+    - _UnseenTint: {r: 0.49056602, g: 0.39328822, b: 0.2985048, a: 0.9019608}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &2029293465828844410

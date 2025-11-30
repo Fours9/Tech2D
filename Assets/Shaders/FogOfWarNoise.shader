@@ -48,6 +48,7 @@ Shader "Custom/FogOfWarNoise"
             float _HexRadius; // Радиус гексагона для расчета виньетки
             float _EdgeRadius; // От какого расстояния от центра начинать затемнение (0-1)
             float _EdgeDarkening; // Насколько сильно затемнять у самого края (0-1)
+            float _VignetteEnabled; // Включена ли виньетка (0 или 1)
             
             // Полная SDF для pointy-top шестиугольника
             // r - расстояние от центра до вершины (_HexRadius)
@@ -104,39 +105,43 @@ Shader "Custom/FogOfWarNoise"
                 fixed4 col = tex2D(_MainTex, uv) * _Color;
                 
                 // Расчет виньетки на основе полной SDF правильного pointy-top шестиугольника
-                // _HexRadius - расстояние от центра до вершины
-                float hexSDFValue = hexSDF(i.localPos, _HexRadius);
-                
-                // Нормализуем: 0 в центре, 1 на границе
-                // В центре hexSDF отрицательное (для pointy-top hex в центре SDF = -r*sqrt(3)/2 до плоской стороны)
-                // На границе hexSDF = 0
-                // Для pointy-top hex минимальное значение в центре = -r*sqrt(3)/2 (до плоской стороны)
-                float minSDF = -_HexRadius * sqrt(3.0) * 0.5; // Минимальное значение в центре
-                
-                // Нормализуем: (sdf - minSDF) / (0 - minSDF)
-                // При sdf = minSDF (центр) → 0
-                // При sdf = 0 (граница) → 1
-                float hexDist01 = (hexSDFValue - minSDF) / (0.0 - minSDF);
-                hexDist01 = saturate(hexDist01); // Ограничиваем 0-1
-                
-                // Вычисляем фактор затемнения:
-                // Если hexDist01 < _EdgeRadius → фактор = 0 (не затемняем)
-                // Если hexDist01 >= _EdgeRadius → фактор плавно растет от 0 до 1
-                float darkeningFactor = 0.0;
-                if (hexDist01 > _EdgeRadius)
+                // Применяем только если виньетка включена
+                if (_VignetteEnabled > 0.5)
                 {
-                    // Нормализуем на оставшийся промежуток от _EdgeRadius до 1.0
-                    darkeningFactor = (hexDist01 - _EdgeRadius) / (1.0 - _EdgeRadius);
-                    darkeningFactor = saturate(darkeningFactor); // Ограничиваем 0-1
+                    // _HexRadius - расстояние от центра до вершины
+                    float hexSDFValue = hexSDF(i.localPos, _HexRadius);
+                    
+                    // Нормализуем: 0 в центре, 1 на границе
+                    // В центре hexSDF отрицательное (для pointy-top hex в центре SDF = -r*sqrt(3)/2 до плоской стороны)
+                    // На границе hexSDF = 0
+                    // Для pointy-top hex минимальное значение в центре = -r*sqrt(3)/2 (до плоской стороны)
+                    float minSDF = -_HexRadius * sqrt(3.0) * 0.5; // Минимальное значение в центре
+                    
+                    // Нормализуем: (sdf - minSDF) / (0 - minSDF)
+                    // При sdf = minSDF (центр) → 0
+                    // При sdf = 0 (граница) → 1
+                    float hexDist01 = (hexSDFValue - minSDF) / (0.0 - minSDF);
+                    hexDist01 = saturate(hexDist01); // Ограничиваем 0-1
+                    
+                    // Вычисляем фактор затемнения:
+                    // Если hexDist01 < _EdgeRadius → фактор = 0 (не затемняем)
+                    // Если hexDist01 >= _EdgeRadius → фактор плавно растет от 0 до 1
+                    float darkeningFactor = 0.0;
+                    if (hexDist01 > _EdgeRadius)
+                    {
+                        // Нормализуем на оставшийся промежуток от _EdgeRadius до 1.0
+                        darkeningFactor = (hexDist01 - _EdgeRadius) / (1.0 - _EdgeRadius);
+                        darkeningFactor = saturate(darkeningFactor); // Ограничиваем 0-1
+                    }
+                    
+                    // Множитель яркости:
+                    // При факторе 0 → яркость = 1.0 (ничего не меняем)
+                    // При факторе 1 → яркость = 1.0 - _EdgeDarkening
+                    float brightnessMultiplier = lerp(1.0, 1.0 - _EdgeDarkening, darkeningFactor);
+                    
+                    // Применяем виньетку к цвету
+                    col.rgb *= brightnessMultiplier;
                 }
-                
-                // Множитель яркости:
-                // При факторе 0 → яркость = 1.0 (ничего не меняем)
-                // При факторе 1 → яркость = 1.0 - _EdgeDarkening
-                float brightnessMultiplier = lerp(1.0, 1.0 - _EdgeDarkening, darkeningFactor);
-                
-                // Применяем виньетку к цвету
-                col.rgb *= brightnessMultiplier;
                 
                 return col;
             }

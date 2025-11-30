@@ -252,7 +252,7 @@ MonoBehaviour:
   gridWidth: 100
   gridHeight: 100
   cellSize: 1
-  pixelGap: 0.1
+  pixelGap: 0
   landFrequency: 0.6
   landFragmentation: 0
   landSeed: 0
@@ -376,8 +376,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
   fogOfWarEnabled: 1
-  grid: {fileID: 0}
-  cityManager: {fileID: 0}
+  fogUnseenMaterial: {fileID: 2100000, guid: abb2da62ef9a6f5478f34f4574ca4ede, type: 2}
+  fogExploredMaterial: {fileID: 2100000, guid: 1e49d6f8224044d429a2d8534a7ee258, type: 2}
+  grid: {fileID: 141372080}
+  cityManager: {fileID: 16604955}
 --- !u!1 &186001891
 GameObject:
   m_ObjectHideFlags: 0

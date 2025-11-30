@@ -15,6 +15,12 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("Включен ли туман войны. Если отключен, все клетки всегда будут видимыми.")]
     [SerializeField] private bool fogOfWarEnabled = true;
     
+    [Header("Настройки виньетки")]
+    [Tooltip("Включена ли виньетка для тумана войны (FogOfWarNoise шейдер)")]
+    [SerializeField] private bool fogOfWarVignetteEnabled = true;
+    [Tooltip("Включена ли виньетка для текстур клеток (WorldSpaceTexture шейдер)")]
+    [SerializeField] private bool worldSpaceTextureVignetteEnabled = true;
+    
     [Header("Материалы тумана")]
     [Tooltip("Материал для неразведанных клеток (темнее, почти глухой)")]
     [SerializeField] private Material fogUnseenMaterial;
@@ -119,17 +125,41 @@ public class FogOfWarManager : MonoBehaviour
         Debug.Log($"[FogOfWarManager] mesh.bounds.size: {meshBounds.size}");
         Debug.Log($"[FogOfWarManager] meshFilter.transform.localScale: {meshFilter.transform.localScale}");
         
-        // Устанавливаем _HexRadius в материалы тумана
+        // Устанавливаем _HexRadius и _VignetteEnabled в материалы тумана
         if (fogUnseenMaterial != null)
         {
             fogUnseenMaterial.SetFloat("_HexRadius", hexRadius);
-            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius} в fogUnseenMaterial");
+            fogUnseenMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
+            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {fogOfWarVignetteEnabled} в fogUnseenMaterial");
         }
         
         if (fogExploredMaterial != null)
         {
             fogExploredMaterial.SetFloat("_HexRadius", hexRadius);
-            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius} в fogExploredMaterial");
+            fogExploredMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
+            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {fogOfWarVignetteEnabled} в fogExploredMaterial");
+        }
+        
+        // Устанавливаем _HexRadius и _VignetteEnabled во все материалы, использующие WorldSpaceTexture шейдер
+        Shader worldSpaceTextureShader = Shader.Find("Custom/WorldSpaceTexture");
+        if (worldSpaceTextureShader != null)
+        {
+            // Находим все материалы с этим шейдером
+            Material[] allMaterials = Resources.FindObjectsOfTypeAll<Material>();
+            int materialsUpdated = 0;
+            foreach (Material mat in allMaterials)
+            {
+                if (mat != null && mat.shader != null && mat.shader.name == "Custom/WorldSpaceTexture")
+                {
+                    mat.SetFloat("_HexRadius", hexRadius);
+                    mat.SetFloat("_VignetteEnabled", worldSpaceTextureVignetteEnabled ? 1.0f : 0.0f);
+                    materialsUpdated++;
+                }
+            }
+            if (materialsUpdated > 0)
+            {
+                Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {worldSpaceTextureVignetteEnabled} в {materialsUpdated} материалах с шейдером WorldSpaceTexture");
+            }
         }
     }
     
@@ -434,6 +464,67 @@ public class FogOfWarManager : MonoBehaviour
     public Material GetFogExploredMaterial()
     {
         return fogExploredMaterial;
+    }
+    
+    /// <summary>
+    /// Включает или выключает виньетку для тумана войны (FogOfWarNoise шейдер)
+    /// </summary>
+    public void SetFogOfWarVignetteEnabled(bool enabled)
+    {
+        fogOfWarVignetteEnabled = enabled;
+        
+        // Обновляем _VignetteEnabled в материалах тумана
+        float vignetteValue = enabled ? 1.0f : 0.0f;
+        
+        if (fogUnseenMaterial != null)
+        {
+            fogUnseenMaterial.SetFloat("_VignetteEnabled", vignetteValue);
+        }
+        
+        if (fogExploredMaterial != null)
+        {
+            fogExploredMaterial.SetFloat("_VignetteEnabled", vignetteValue);
+        }
+    }
+    
+    /// <summary>
+    /// Включает или выключает виньетку для текстур клеток (WorldSpaceTexture шейдер)
+    /// </summary>
+    public void SetWorldSpaceTextureVignetteEnabled(bool enabled)
+    {
+        worldSpaceTextureVignetteEnabled = enabled;
+        
+        // Обновляем _VignetteEnabled во всех материалах с WorldSpaceTexture шейдером
+        float vignetteValue = enabled ? 1.0f : 0.0f;
+        
+        Shader worldSpaceTextureShader = Shader.Find("Custom/WorldSpaceTexture");
+        if (worldSpaceTextureShader != null)
+        {
+            Material[] allMaterials = Resources.FindObjectsOfTypeAll<Material>();
+            foreach (Material mat in allMaterials)
+            {
+                if (mat != null && mat.shader != null && mat.shader.name == "Custom/WorldSpaceTexture")
+                {
+                    mat.SetFloat("_VignetteEnabled", vignetteValue);
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Проверяет, включена ли виньетка для тумана войны
+    /// </summary>
+    public bool IsFogOfWarVignetteEnabled()
+    {
+        return fogOfWarVignetteEnabled;
+    }
+    
+    /// <summary>
+    /// Проверяет, включена ли виньетка для текстур клеток
+    /// </summary>
+    public bool IsWorldSpaceTextureVignetteEnabled()
+    {
+        return worldSpaceTextureVignetteEnabled;
     }
 }
 
