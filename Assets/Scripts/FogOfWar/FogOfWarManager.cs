@@ -15,6 +15,12 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("Включен ли туман войны. Если отключен, все клетки всегда будут видимыми.")]
     [SerializeField] private bool fogOfWarEnabled = true;
     
+    [Header("Материалы тумана")]
+    [Tooltip("Материал для неразведанных клеток (темнее, почти глухой)")]
+    [SerializeField] private Material fogUnseenMaterial;
+    [Tooltip("Материал для разведанных, но невидимых клеток (светлее, с более заметным glow)")]
+    [SerializeField] private Material fogExploredMaterial;
+    
     [Header("Ссылки")]
     [SerializeField] private CellNameSpace.Grid grid; // Сетка (найдется автоматически, если не указана)
     [SerializeField] private CityManager cityManager; // Менеджер городов (найдется автоматически, если не указан)
@@ -31,6 +37,13 @@ public class FogOfWarManager : MonoBehaviour
         }
         
         Instance = this;
+        
+        // Перемещаем GameObject в корень, если он дочерний (DontDestroyOnLoad работает только для корневых объектов)
+        if (transform.parent != null)
+        {
+            transform.SetParent(null);
+        }
+        
         DontDestroyOnLoad(gameObject);
     }
     
@@ -345,6 +358,21 @@ public class FogOfWarManager : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// Получает материал для неразведанных клеток
+    /// </summary>
+    public Material GetFogUnseenMaterial()
+    {
+        return fogUnseenMaterial;
+    }
+    
+    /// <summary>
+    /// Получает материал для разведанных, но невидимых клеток
+    /// </summary>
+    public Material GetFogExploredMaterial()
+    {
+        return fogExploredMaterial;
+    }
 }
 
 

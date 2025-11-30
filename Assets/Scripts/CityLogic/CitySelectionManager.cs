@@ -36,6 +36,13 @@ public class CitySelectionManager : MonoBehaviour
         if (instance == null)
         {
             instance = this;
+            
+            // Перемещаем GameObject в корень, если он дочерний (DontDestroyOnLoad работает только для корневых объектов)
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
+            
             DontDestroyOnLoad(gameObject);
         }
         else if (instance != this)

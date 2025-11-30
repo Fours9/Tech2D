@@ -37,6 +37,7 @@ namespace CellNameSpace
         private Vector3 originalPosition; // Изначальная позиция клетки в мире
         private bool originalPositionSet = false; // Флаг, что изначальная позиция уже установлена
         private MaterialPropertyBlock materialPropertyBlock = null; // MaterialPropertyBlock для передачи параметров в шейдер
+        private MaterialPropertyBlock fogOfWarPropertyBlock = null; // MaterialPropertyBlock для тумана войны
         
         void Awake()
         {
@@ -1044,48 +1045,33 @@ namespace CellNameSpace
         
         /// <summary>
         /// Устанавливает alpha тумана войны на дочернем объекте
+        /// Использует альфу из материала, если она задана, иначе использует hiddenAlpha/exploredAlpha
         /// </summary>
         private void UpdateFogOfWarAlpha()
         {
-            if (fogOfWarRenderer == null)
+            if (fogOfWarRenderer == null || fogOfWarRenderer.sharedMaterial == null)
                 return;
             
-            // Определяем целевой alpha на основе состояния тумана
-            float targetAlpha = 0f;
-            switch (fogState)
-            {
-                case FogOfWarState.Hidden:
-                    targetAlpha = hiddenAlpha;
-                    break;
-                case FogOfWarState.Explored:
-                    targetAlpha = exploredAlpha;
-                    break;
-                case FogOfWarState.Visible:
-                    targetAlpha = 0f; // Полностью прозрачный
-                    break;
-            }
-            
             // Используем MaterialPropertyBlock для изменения alpha без создания instance материала
-            MaterialPropertyBlock mpb = new MaterialPropertyBlock();
-            fogOfWarRenderer.GetPropertyBlock(mpb);
-            
-            // Получаем базовый цвет материала или используем черный по умолчанию
-            Color baseColor = Color.black;
-            if (mpb.HasColor("_Color"))
+            // Кэшируем MaterialPropertyBlock для оптимизации
+            if (fogOfWarPropertyBlock == null)
             {
-                baseColor = mpb.GetColor("_Color");
-            }
-            else if (fogOfWarRenderer.sharedMaterial != null)
-            {
-                baseColor = fogOfWarRenderer.sharedMaterial.color;
+                fogOfWarPropertyBlock = new MaterialPropertyBlock();
             }
             
-            // Устанавливаем alpha
-            baseColor.a = targetAlpha;
-            mpb.SetColor("_Color", baseColor);
+            // Получаем текущие свойства из рендерера
+            fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+            
+            // Передаем _OriginalPosition для правильного натягивания текстуры
+            Vector4 originalPos = new Vector4(originalPosition.x, originalPosition.y, originalPosition.z, 0f);
+            fogOfWarPropertyBlock.SetVector("_OriginalPosition", originalPos);
+            
+            // НЕ трогаем альфу - она всегда берется из _Color (Color (Alpha Override))
+            // Пользователь может управлять альфой напрямую через Inspector материала
+            // Альфа из материала будет использована напрямую в шейдере
             
             // Применяем MaterialPropertyBlock к рендереру
-            fogOfWarRenderer.SetPropertyBlock(mpb);
+            fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
         }
         
         /// <summary>
@@ -1093,20 +1079,42 @@ namespace CellNameSpace
         /// </summary>
         private void UpdateFogOfWarVisual()
         {
-            // Устанавливаем alpha тумана на дочернем объекте
-            UpdateFogOfWarAlpha();
+            if (fogOfWarRenderer == null)
+                return;
             
-            // Управляем видимостью оверлеев
+            // Управляем видимостью рендерера и выбором материала
             switch (fogState)
             {
                 case FogOfWarState.Hidden:
+                    // Неразведено: показываем туман с материалом Fog_Unseen
+                    fogOfWarRenderer.enabled = true;
+                    if (FogOfWarManager.Instance != null && FogOfWarManager.Instance.GetFogUnseenMaterial() != null)
+                    {
+                        fogOfWarRenderer.sharedMaterial = FogOfWarManager.Instance.GetFogUnseenMaterial();
+                    }
+                    // Устанавливаем alpha тумана
+                    UpdateFogOfWarAlpha();
                     // Скрываем все оверлеи для скрытых клеток
                     SetOverlaysVisibility(false);
                     break;
                     
                 case FogOfWarState.Explored:
+                    // Разведено, но не видно: показываем туман с материалом Fog_Explored
+                    fogOfWarRenderer.enabled = true;
+                    if (FogOfWarManager.Instance != null && FogOfWarManager.Instance.GetFogExploredMaterial() != null)
+                    {
+                        fogOfWarRenderer.sharedMaterial = FogOfWarManager.Instance.GetFogExploredMaterial();
+                    }
+                    // Устанавливаем alpha тумана
+                    UpdateFogOfWarAlpha();
+                    // Показываем оверлеи для исследованных клеток
+                    SetOverlaysVisibility(true);
+                    break;
+                    
                 case FogOfWarState.Visible:
-                    // Показываем оверлеи для исследованных и видимых клеток
+                    // Видимо: отключаем рендерер тумана
+                    fogOfWarRenderer.enabled = false;
+                    // Показываем оверлеи для видимых клеток
                     SetOverlaysVisibility(true);
                     break;
             }

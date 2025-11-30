@@ -30,6 +30,13 @@ public class BuildingStatsManager : MonoBehaviour
         }
 
         Instance = this;
+        
+        // Перемещаем GameObject в корень, если он дочерний (DontDestroyOnLoad работает только для корневых объектов)
+        if (transform.parent != null)
+        {
+            transform.SetParent(null);
+        }
+        
         DontDestroyOnLoad(gameObject);
         InitializeDictionary();
     }
