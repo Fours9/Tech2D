@@ -9,6 +9,9 @@ Shader "Custom/FogOfWarNoise"
         // _HexRadius устанавливается автоматически через код, не отображается в инспекторе
         [Range(0.0, 1.0)] _EdgeRadius ("Edge Radius", Float) = 0.7
         [Range(0.0, 1.0)] _EdgeDarkening ("Edge Darkening", Float) = 0.4
+        [Header(Ragged Edges)]
+        [Range(0.0, 1.0)] _RaggedEdgesIntensity ("Ragged Edges Intensity", Float) = 0.1
+        [Range(0.1, 10.0)] _RaggedEdgesScale ("Ragged Edges Scale", Float) = 2.0
     }
     
     SubShader
@@ -49,6 +52,9 @@ Shader "Custom/FogOfWarNoise"
             float _EdgeRadius; // От какого расстояния от центра начинать затемнение (0-1)
             float _EdgeDarkening; // Насколько сильно затемнять у самого края (0-1)
             float _VignetteEnabled; // Включена ли виньетка (0 или 1)
+            float _RaggedEdgesIntensity; // Интенсивность неровных краев (0-1)
+            float _RaggedEdgesScale; // Масштаб шума для неровных краев
+            float _RaggedEdgesEnabled; // Включены ли неровные края (0 или 1)
             
             // Полная SDF для pointy-top шестиугольника
             // r - расстояние от центра до вершины (_HexRadius)
@@ -74,6 +80,28 @@ Shader "Custom/FogOfWarNoise"
                 // Берем максимум - это и есть расстояние до ближайшей грани
                 // Отрицательное значение = внутри, 0 = на границе, положительное = снаружи
                 return max(distToFlat, distToDiag);
+            }
+            
+            // Простая функция шума для создания неровных краев
+            // Использует дробную часть синуса для создания псевдослучайного значения
+            float noise2D(float2 p)
+            {
+                return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
+            }
+            
+            // Сглаженный шум (fractal noise)
+            float smoothNoise2D(float2 p)
+            {
+                float2 i = floor(p);
+                float2 f = frac(p);
+                f = f * f * (3.0 - 2.0 * f); // Smoothstep для интерполяции
+                
+                float a = noise2D(i);
+                float b = noise2D(i + float2(1.0, 0.0));
+                float c = noise2D(i + float2(0.0, 1.0));
+                float d = noise2D(i + float2(1.0, 1.0));
+                
+                return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
             }
             
             v2f vert (appdata v)
@@ -141,6 +169,38 @@ Shader "Custom/FogOfWarNoise"
                     
                     // Применяем виньетку к цвету
                     col.rgb *= brightnessMultiplier;
+                }
+                
+                // Применяем неровные края, если эффект включен
+                if (_RaggedEdgesEnabled > 0.5)
+                {
+                    // Вычисляем SDF для определения расстояния до края
+                    float hexSDFValue = hexSDF(i.localPos, _HexRadius);
+                    
+                    // Генерируем шум на основе мировых координат для стабильности
+                    float2 noiseCoord = i.worldPos.xy * _RaggedEdgesScale;
+                    float noiseValue = smoothNoise2D(noiseCoord);
+                    
+                    // Преобразуем шум из [0, 1] в [-intensity, +intensity]
+                    // Это создаст неровности, которые будут "вдавливать" и "выдавливать" края
+                    float noiseOffset = (noiseValue - 0.5) * 2.0 * _RaggedEdgesIntensity * _HexRadius;
+                    
+                    // Применяем шум к SDF: если SDF + offset < 0, пиксель видим
+                    // Если SDF + offset >= 0, пиксель обрезаем (альфа = 0)
+                    float modifiedSDF = hexSDFValue + noiseOffset;
+                    
+                    // Если модифицированный SDF положительный (снаружи с учетом шума), обрезаем пиксель
+                    if (modifiedSDF > 0.0)
+                    {
+                        col.a = 0.0;
+                    }
+                    else
+                    {
+                        // Плавный переход на краю для более мягкого обрезания
+                        // Используем smoothstep для создания плавного перехода
+                        float edgeFade = smoothstep(0.0, -_RaggedEdgesIntensity * _HexRadius * 0.5, modifiedSDF);
+                        col.a *= edgeFade;
+                    }
                 }
                 
                 return col;

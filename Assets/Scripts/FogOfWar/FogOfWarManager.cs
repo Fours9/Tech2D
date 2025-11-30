@@ -21,6 +21,10 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("Включена ли виньетка для текстур клеток (WorldSpaceTexture шейдер)")]
     [SerializeField] private bool worldSpaceTextureVignetteEnabled = true;
     
+    [Header("Настройки неровных краев")]
+    [Tooltip("Включены ли неровные края для тумана войны (FogOfWarNoise шейдер)")]
+    [SerializeField] private bool raggedEdgesEnabled = false;
+    
     [Header("Материалы тумана")]
     [Tooltip("Материал для неразведанных клеток (темнее, почти глухой)")]
     [SerializeField] private Material fogUnseenMaterial;
@@ -125,19 +129,21 @@ public class FogOfWarManager : MonoBehaviour
         Debug.Log($"[FogOfWarManager] mesh.bounds.size: {meshBounds.size}");
         Debug.Log($"[FogOfWarManager] meshFilter.transform.localScale: {meshFilter.transform.localScale}");
         
-        // Устанавливаем _HexRadius и _VignetteEnabled в материалы тумана
+        // Устанавливаем _HexRadius, _VignetteEnabled и _RaggedEdgesEnabled в материалы тумана
         if (fogUnseenMaterial != null)
         {
             fogUnseenMaterial.SetFloat("_HexRadius", hexRadius);
             fogUnseenMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
-            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {fogOfWarVignetteEnabled} в fogUnseenMaterial");
+            fogUnseenMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesEnabled ? 1.0f : 0.0f);
+            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {fogOfWarVignetteEnabled}, _RaggedEdgesEnabled = {raggedEdgesEnabled} в fogUnseenMaterial");
         }
         
         if (fogExploredMaterial != null)
         {
             fogExploredMaterial.SetFloat("_HexRadius", hexRadius);
             fogExploredMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
-            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {fogOfWarVignetteEnabled} в fogExploredMaterial");
+            fogExploredMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesEnabled ? 1.0f : 0.0f);
+            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {fogOfWarVignetteEnabled}, _RaggedEdgesEnabled = {raggedEdgesEnabled} в fogExploredMaterial");
         }
         
         // Устанавливаем _HexRadius и _VignetteEnabled во все материалы, использующие WorldSpaceTexture шейдер
@@ -525,6 +531,35 @@ public class FogOfWarManager : MonoBehaviour
     public bool IsWorldSpaceTextureVignetteEnabled()
     {
         return worldSpaceTextureVignetteEnabled;
+    }
+    
+    /// <summary>
+    /// Включает или выключает неровные края для тумана войны (FogOfWarNoise шейдер)
+    /// </summary>
+    public void SetRaggedEdgesEnabled(bool enabled)
+    {
+        raggedEdgesEnabled = enabled;
+        
+        // Обновляем _RaggedEdgesEnabled в материалах тумана
+        float raggedEdgesValue = enabled ? 1.0f : 0.0f;
+        
+        if (fogUnseenMaterial != null)
+        {
+            fogUnseenMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesValue);
+        }
+        
+        if (fogExploredMaterial != null)
+        {
+            fogExploredMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesValue);
+        }
+    }
+    
+    /// <summary>
+    /// Проверяет, включены ли неровные края для тумана войны
+    /// </summary>
+    public bool IsRaggedEdgesEnabled()
+    {
+        return raggedEdgesEnabled;
     }
 }
 

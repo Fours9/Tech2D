@@ -376,8 +376,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
   fogOfWarEnabled: 1
-  fogOfWarVignetteEnabled: 1
-  worldSpaceTextureVignetteEnabled: 0
+  fogOfWarVignetteEnabled: 0
+  worldSpaceTextureVignetteEnabled: 1
+  raggedEdgesEnabled: 1
   fogUnseenMaterial: {fileID: 2100000, guid: abb2da62ef9a6f5478f34f4574ca4ede, type: 2}
   fogExploredMaterial: {fileID: 2100000, guid: 1e49d6f8224044d429a2d8534a7ee258, type: 2}
   grid: {fileID: 141372080}
@@ -946,7 +947,6 @@ MonoBehaviour:
   maxOrthoSize: 100
   maxClickTime: 0.3
   maxClickDistance: 5
-  grid: {fileID: 0}
 --- !u!1 &522318777
 GameObject:
   m_ObjectHideFlags: 0
