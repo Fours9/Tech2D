@@ -12,7 +12,12 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _RAGGEDEDGEBOTTOMLEFT_ON
+  - _RAGGEDEDGEBOTTOMRIGHT_ON
+  - _RAGGEDEDGEBOTTOM_ON
+  - _RAGGEDEDGETOPLEFT_ON
+  - _RAGGEDEDGETOPRIGHT_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -46,10 +51,13 @@ Material:
     - _EdgeDarkening: 0.5
     - _EdgeRadius: 0.7
     - _EdgeSoftness: 0.3
+    - _GlowFlickerSpeed: 1
     - _GlowInnerRadius: 0.75
+    - _GlowIntensity: 0.3
     - _GlowIntensityExplored: 0.4
     - _GlowIntensityUnseen: 0.3
     - _GlowOuterRadius: 0.95
+    - _GlowWidth: 0.02
     - _HexRadius: 0.01
     - _NoiseIntensity: 0.5
     - _NoiseScale: 10
@@ -60,6 +68,8 @@ Material:
     - _RaggedEdgeBottom: 1
     - _RaggedEdgeBottomLeft: 1
     - _RaggedEdgeBottomRight: 1
+    - _RaggedEdgeFlatLeft: 1
+    - _RaggedEdgeFlatRight: 1
     - _RaggedEdgeTop: 0
     - _RaggedEdgeTopLeft: 1
     - _RaggedEdgeTopRight: 1
@@ -68,11 +78,12 @@ Material:
     - _SecondaryNoise: 0.3
     - _SparkIntensity: 0.4
     - _TextureScale: 0.02
+    - _VignetteHexRadius: 1
     m_Colors:
     - _BurnColor: {r: 0.14999998, g: 0.049999982, b: 0.02, a: 1}
     - _Color: {r: 0.8207547, g: 0.7859113, b: 0.7859113, a: 0.34509805}
     - _ExploredTint: {r: 0.6132076, g: 0.49652335, b: 0.38470098, a: 0.6}
-    - _GlowColor: {r: 1, g: 0.9, b: 0.7, a: 1}
+    - _GlowColor: {r: 1, g: 0.8, b: 0.6, a: 1}
     - _OriginalPosition: {r: 0, g: 0, b: 0, a: 0}
     - _SparkColor: {r: 1, g: 0.6, b: 0.19999996, a: 1}
     - _UnseenTint: {r: 0.49056602, g: 0.39328822, b: 0.2985048, a: 0.9019608}

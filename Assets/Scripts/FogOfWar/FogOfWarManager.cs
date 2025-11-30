@@ -28,6 +28,19 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("Включены ли неровные края для тумана войны (FogOfWarNoise шейдер)")]
     [SerializeField] private bool raggedEdgesEnabled = false;
     
+    [Header("Настройки тления краев")]
+    [Tooltip("Цвет тления вдоль рваного края")]
+    [SerializeField] private Color glowColor = new Color(1.0f, 0.7f, 0.4f, 1.0f);
+    [Tooltip("Интенсивность тления (0-1)")]
+    [Range(0.0f, 1.0f)]
+    [SerializeField] private float glowIntensity = 0.6f;
+    [Tooltip("Ширина зоны тления (0-0.1)")]
+    [Range(0.0f, 0.1f)]
+    [SerializeField] private float glowWidth = 0.05f;
+    [Tooltip("Скорость мерцания (0-5)")]
+    [Range(0.0f, 5.0f)]
+    [SerializeField] private float glowFlickerSpeed = 1.5f;
+    
     [Header("Неровные края по граням")]
     [Tooltip("Включена ли неровность для Top Left (30-90°)")]
     [SerializeField] private bool raggedEdgeTopLeft = true;
@@ -146,7 +159,7 @@ public class FogOfWarManager : MonoBehaviour
         Debug.Log($"[FogOfWarManager] mesh.bounds.size: {meshBounds.size}");
         Debug.Log($"[FogOfWarManager] meshFilter.transform.localScale: {meshFilter.transform.localScale}");
         
-        // Устанавливаем _HexRadius, _VignetteHexRadius, _VignetteEnabled, _RaggedEdgesEnabled и параметры граней в материалы тумана
+        // Устанавливаем _HexRadius, _VignetteHexRadius, _VignetteEnabled, _RaggedEdgesEnabled, параметры граней и тления в материалы тумана
         if (fogUnseenMaterial != null)
         {
             fogUnseenMaterial.SetFloat("_HexRadius", hexRadius);
@@ -159,6 +172,10 @@ public class FogOfWarManager : MonoBehaviour
             fogUnseenMaterial.SetFloat("_RaggedEdgeBottomLeft", raggedEdgeBottomLeft ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgeBottomRight", raggedEdgeBottomRight ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgeFlatRight", raggedEdgeFlatRight ? 1.0f : 0.0f);
+            fogUnseenMaterial.SetColor("_GlowColor", glowColor);
+            fogUnseenMaterial.SetFloat("_GlowIntensity", glowIntensity);
+            fogUnseenMaterial.SetFloat("_GlowWidth", glowWidth);
+            fogUnseenMaterial.SetFloat("_GlowFlickerSpeed", glowFlickerSpeed);
             Debug.Log($"[FogOfWarManager] Установлены параметры неровных краев в fogUnseenMaterial");
         }
         
@@ -174,6 +191,10 @@ public class FogOfWarManager : MonoBehaviour
             fogExploredMaterial.SetFloat("_RaggedEdgeBottomLeft", raggedEdgeBottomLeft ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgeBottomRight", raggedEdgeBottomRight ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgeFlatRight", raggedEdgeFlatRight ? 1.0f : 0.0f);
+            fogExploredMaterial.SetColor("_GlowColor", glowColor);
+            fogExploredMaterial.SetFloat("_GlowIntensity", glowIntensity);
+            fogExploredMaterial.SetFloat("_GlowWidth", glowWidth);
+            fogExploredMaterial.SetFloat("_GlowFlickerSpeed", glowFlickerSpeed);
             Debug.Log($"[FogOfWarManager] Установлены параметры неровных краев в fogExploredMaterial");
         }
         
@@ -598,14 +619,37 @@ public class FogOfWarManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Обновляет параметры тления в материалах тумана
+    /// </summary>
+    private void UpdateGlowParameters()
+    {
+        if (fogUnseenMaterial != null)
+        {
+            fogUnseenMaterial.SetColor("_GlowColor", glowColor);
+            fogUnseenMaterial.SetFloat("_GlowIntensity", glowIntensity);
+            fogUnseenMaterial.SetFloat("_GlowWidth", glowWidth);
+            fogUnseenMaterial.SetFloat("_GlowFlickerSpeed", glowFlickerSpeed);
+        }
+        
+        if (fogExploredMaterial != null)
+        {
+            fogExploredMaterial.SetColor("_GlowColor", glowColor);
+            fogExploredMaterial.SetFloat("_GlowIntensity", glowIntensity);
+            fogExploredMaterial.SetFloat("_GlowWidth", glowWidth);
+            fogExploredMaterial.SetFloat("_GlowFlickerSpeed", glowFlickerSpeed);
+        }
+    }
+    
+    /// <summary>
     /// Вызывается при изменении значений в инспекторе
     /// </summary>
     private void OnValidate()
     {
-        // Обновляем _VignetteHexRadius при изменении значения в инспекторе
+        // Обновляем параметры при изменении значений в инспекторе
         if (Application.isPlaying)
         {
             UpdateVignetteHexRadius();
+            UpdateGlowParameters();
         }
     }
     

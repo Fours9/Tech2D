@@ -14,6 +14,11 @@ Shader "Custom/FogOfWarNoise"
         [Header(Ragged Edges)]
         [Range(0.0, 1.0)] _RaggedEdgesIntensity ("Ragged Edges Intensity", Float) = 0.1
         [Range(0.1, 10.0)] _RaggedEdgesScale ("Ragged Edges Scale", Float) = 2.0
+        [Header(Glowing Edge)]
+        _GlowColor ("Glow Color", Color) = (1.0, 0.7, 0.4, 1.0)
+        [Range(0.0, 1.0)] _GlowIntensity ("Glow Intensity", Float) = 0.6
+        [Range(0.0, 0.1)] _GlowWidth ("Glow Width", Float) = 0.05
+        [Range(0.0, 5.0)] _GlowFlickerSpeed ("Glow Flicker Speed", Float) = 1.5
         [Header(Ragged Edges Per Face)]
         [Toggle] _RaggedEdgeTopLeft ("Top Left", Float) = 1.0
         [Toggle] _RaggedEdgeFlatLeft ("Top Right", Float) = 1.0
@@ -71,6 +76,10 @@ Shader "Custom/FogOfWarNoise"
             float _RaggedEdgeBottomLeft; // Включена ли неровность для Bottom Left (150-210°) (0 или 1)
             float _RaggedEdgeBottomRight; // Включена ли неровность для Bottom Right (210-270°) (0 или 1)
             float _RaggedEdgeFlatRight; // Включена ли неровность для Flat Right (270-330°) (0 или 1)
+            fixed4 _GlowColor; // Цвет тления
+            float _GlowIntensity; // Интенсивность тления (0-1)
+            float _GlowWidth; // Ширина зоны тления (0-0.1)
+            float _GlowFlickerSpeed; // Скорость мерцания (0-5)
             
             // Полная SDF для pointy-top шестиугольника
             // r - расстояние от центра до вершины (_HexRadius)
@@ -233,12 +242,15 @@ Shader "Custom/FogOfWarNoise"
                     col.rgb *= brightnessMultiplier;
                 }
                 
+                // Вычисляем SDF для определения расстояния до края (нужно для тления)
+                float hexSDFValue = hexSDF(i.localPos, _HexRadius);
+                float modifiedSDF = hexSDFValue;
+                float edgeFade = 1.0;
+                bool isRaggedEdgeActive = false;
+                
                 // Применяем неровные края, если эффект включен
                 if (_RaggedEdgesEnabled > 0.5)
                 {
-                    // Вычисляем SDF для определения расстояния до края
-                    float hexSDFValue = hexSDF(i.localPos, _HexRadius);
-                    
                     // Определяем ближайшую грань
                     int closestFace = getClosestFace(i.localPos, _HexRadius);
                     
@@ -248,6 +260,8 @@ Shader "Custom/FogOfWarNoise"
                     // Применяем эффект только если он включен для этой грани
                     if (faceEnabled > 0.5)
                     {
+                        isRaggedEdgeActive = true;
+                        
                         // Генерируем шум на основе мировых координат для стабильности
                         float2 noiseCoord = i.worldPos.xy * _RaggedEdgesScale;
                         float noiseValue = smoothNoise2D(noiseCoord);
@@ -258,7 +272,7 @@ Shader "Custom/FogOfWarNoise"
                         
                         // Применяем шум к SDF: если SDF + offset < 0, пиксель видим
                         // Если SDF + offset >= 0, пиксель обрезаем (альфа = 0)
-                        float modifiedSDF = hexSDFValue + noiseOffset;
+                        modifiedSDF = hexSDFValue + noiseOffset;
                         
                         // Если модифицированный SDF положительный (снаружи с учетом шума), обрезаем пиксель
                         if (modifiedSDF > 0.0)
@@ -269,10 +283,45 @@ Shader "Custom/FogOfWarNoise"
                         {
                             // Плавный переход на краю для более мягкого обрезания
                             // Используем smoothstep для создания плавного перехода
-                            float edgeFade = smoothstep(0.0, -_RaggedEdgesIntensity * _HexRadius * 0.5, modifiedSDF);
+                            edgeFade = smoothstep(0.0, -_RaggedEdgesIntensity * _HexRadius * 0.5, modifiedSDF);
                             col.a *= edgeFade;
                         }
                     }
+                }
+                
+                // Применяем эффект тления вдоль рваного края
+                // Эффект работает только если неровные края включены и пиксель видим
+                if (_RaggedEdgesEnabled > 0.5 && isRaggedEdgeActive && col.a > 0.001)
+                {
+                    // Определяем расстояние до модифицированного края (modifiedSDF)
+                    // Используем отрицательное значение modifiedSDF (внутри гекса с учетом шума) для определения близости к неровному краю
+                    float distToRaggedEdge = -modifiedSDF; // Расстояние от неровного края внутрь (положительное значение)
+                    
+                    // Нормализуем расстояние: 0 на неровном краю (где modifiedSDF = 0), увеличивается внутрь
+                    // Используем _GlowWidth для определения зоны тления
+                    float glowZone = _GlowWidth * _HexRadius;
+                    
+                    // Вычисляем фактор тления: максимален на неровном краю, затухает внутрь
+                    // Используем smoothstep для более плавного перехода
+                    float glowFactor = smoothstep(glowZone, 0.0, distToRaggedEdge);
+                    
+                    // Добавляем мерцание на основе времени и шума
+                    // Используем те же координаты шума, что и для неровных краев, чтобы мерцание синхронизировалось
+                    float2 flickerCoord = i.worldPos.xy * _RaggedEdgesScale + _Time.y * _GlowFlickerSpeed;
+                    float flickerNoise = smoothNoise2D(flickerCoord);
+                    
+                    // Мерцание: плавное колебание от 0.7 до 1.0
+                    float flicker = lerp(0.7, 1.0, flickerNoise);
+                    
+                    // Добавляем дополнительное мерцание на основе времени
+                    float timeFlicker = sin(_Time.y * _GlowFlickerSpeed * 2.0) * 0.15 + 0.85;
+                    flicker *= timeFlicker;
+                    
+                    // Применяем эффект тления с плавным затуханием
+                    float glowStrength = glowFactor * _GlowIntensity * flicker;
+                    
+                    // Смешиваем цвет тления с основным цветом (аддитивное смешивание)
+                    col.rgb += _GlowColor.rgb * glowStrength;
                 }
                 
                 return col;
