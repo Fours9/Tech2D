@@ -7,6 +7,8 @@ Shader "Custom/FogOfWarNoise"
         _TextureScale ("Texture Scale", Float) = 1.0
         _OriginalPosition ("Original Position", Vector) = (0,0,0,0)
         // _HexRadius устанавливается автоматически через код, не отображается в инспекторе
+        [Header(Vignette)]
+        [Range(0.0, 1.0)] _VignetteHexRadius ("Vignette Hex Radius", Float) = 1.0
         [Range(0.0, 1.0)] _EdgeRadius ("Edge Radius", Float) = 0.7
         [Range(0.0, 1.0)] _EdgeDarkening ("Edge Darkening", Float) = 0.4
         [Header(Ragged Edges)]
@@ -55,7 +57,8 @@ Shader "Custom/FogOfWarNoise"
             fixed4 _Color;
             float _TextureScale;
             float4 _OriginalPosition; // Изначальная позиция клетки (x, y, z, w)
-            float _HexRadius; // Радиус гексагона для расчета виньетки
+            float _HexRadius; // Радиус гексагона для расчета неровных краев (устанавливается автоматически)
+            float _VignetteHexRadius; // Множитель радиуса для виньетки (0-1, умножается на _HexRadius)
             float _EdgeRadius; // От какого расстояния от центра начинать затемнение (0-1)
             float _EdgeDarkening; // Насколько сильно затемнять у самого края (0-1)
             float _VignetteEnabled; // Включена ли виньетка (0 или 1)
@@ -193,14 +196,16 @@ Shader "Custom/FogOfWarNoise"
                 // Применяем только если виньетка включена
                 if (_VignetteEnabled > 0.5)
                 {
-                    // _HexRadius - расстояние от центра до вершины
-                    float hexSDFValue = hexSDF(i.localPos, _HexRadius);
+                    // Используем отдельный радиус для виньетки: _VignetteHexRadius * _HexRadius
+                    // _VignetteHexRadius - множитель от 0 до 1, _HexRadius - базовый радиус из mesh
+                    float vignetteRadius = _VignetteHexRadius * _HexRadius;
+                    float hexSDFValue = hexSDF(i.localPos, vignetteRadius);
                     
                     // Нормализуем: 0 в центре, 1 на границе
                     // В центре hexSDF отрицательное (для pointy-top hex в центре SDF = -r*sqrt(3)/2 до плоской стороны)
                     // На границе hexSDF = 0
                     // Для pointy-top hex минимальное значение в центре = -r*sqrt(3)/2 (до плоской стороны)
-                    float minSDF = -_HexRadius * sqrt(3.0) * 0.5; // Минимальное значение в центре
+                    float minSDF = -vignetteRadius * sqrt(3.0) * 0.5; // Минимальное значение в центре
                     
                     // Нормализуем: (sdf - minSDF) / (0 - minSDF)
                     // При sdf = minSDF (центр) → 0

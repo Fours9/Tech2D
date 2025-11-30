@@ -376,15 +376,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
   fogOfWarEnabled: 1
-  fogOfWarVignetteEnabled: 0
+  fogOfWarVignetteEnabled: 1
   worldSpaceTextureVignetteEnabled: 1
+  vignetteHexRadius: 1
   raggedEdgesEnabled: 1
-  raggedEdgeTop: 0
-  raggedEdgeTopRight: 1
-  raggedEdgeBottomRight: 1
-  raggedEdgeBottom: 1
-  raggedEdgeBottomLeft: 1
   raggedEdgeTopLeft: 1
+  raggedEdgeFlatLeft: 1
+  raggedEdgeBottomLeft: 1
+  raggedEdgeBottomRight: 1
+  raggedEdgeFlatRight: 1
+  raggedEdgeTopRight: 1
   fogUnseenMaterial: {fileID: 2100000, guid: abb2da62ef9a6f5478f34f4574ca4ede, type: 2}
   fogExploredMaterial: {fileID: 2100000, guid: 1e49d6f8224044d429a2d8534a7ee258, type: 2}
   grid: {fileID: 141372080}

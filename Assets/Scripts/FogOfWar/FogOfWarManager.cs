@@ -20,6 +20,9 @@ public class FogOfWarManager : MonoBehaviour
     [SerializeField] private bool fogOfWarVignetteEnabled = true;
     [Tooltip("Включена ли виньетка для текстур клеток (WorldSpaceTexture шейдер)")]
     [SerializeField] private bool worldSpaceTextureVignetteEnabled = true;
+    [Tooltip("Множитель радиуса для виньетки (0-1, где 1 = полный радиус из mesh)")]
+    [Range(0.0f, 1.0f)]
+    [SerializeField] private float vignetteHexRadius = 1.0f;
     
     [Header("Настройки неровных краев")]
     [Tooltip("Включены ли неровные края для тумана войны (FogOfWarNoise шейдер)")]
@@ -143,10 +146,11 @@ public class FogOfWarManager : MonoBehaviour
         Debug.Log($"[FogOfWarManager] mesh.bounds.size: {meshBounds.size}");
         Debug.Log($"[FogOfWarManager] meshFilter.transform.localScale: {meshFilter.transform.localScale}");
         
-        // Устанавливаем _HexRadius, _VignetteEnabled, _RaggedEdgesEnabled и параметры граней в материалы тумана
+        // Устанавливаем _HexRadius, _VignetteHexRadius, _VignetteEnabled, _RaggedEdgesEnabled и параметры граней в материалы тумана
         if (fogUnseenMaterial != null)
         {
             fogUnseenMaterial.SetFloat("_HexRadius", hexRadius);
+            fogUnseenMaterial.SetFloat("_VignetteHexRadius", vignetteHexRadius);
             fogUnseenMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesEnabled ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgeTopRight", raggedEdgeTopRight ? 1.0f : 0.0f);
@@ -161,6 +165,7 @@ public class FogOfWarManager : MonoBehaviour
         if (fogExploredMaterial != null)
         {
             fogExploredMaterial.SetFloat("_HexRadius", hexRadius);
+            fogExploredMaterial.SetFloat("_VignetteHexRadius", vignetteHexRadius);
             fogExploredMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesEnabled ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgeTopRight", raggedEdgeTopRight ? 1.0f : 0.0f);
@@ -557,6 +562,51 @@ public class FogOfWarManager : MonoBehaviour
     public bool IsWorldSpaceTextureVignetteEnabled()
     {
         return worldSpaceTextureVignetteEnabled;
+    }
+    
+    /// <summary>
+    /// Устанавливает множитель радиуса для виньетки (0-1)
+    /// </summary>
+    public void SetVignetteHexRadius(float radius)
+    {
+        vignetteHexRadius = Mathf.Clamp01(radius);
+        UpdateVignetteHexRadius();
+    }
+    
+    /// <summary>
+    /// Получает текущий множитель радиуса для виньетки
+    /// </summary>
+    public float GetVignetteHexRadius()
+    {
+        return vignetteHexRadius;
+    }
+    
+    /// <summary>
+    /// Обновляет _VignetteHexRadius в материалах тумана
+    /// </summary>
+    private void UpdateVignetteHexRadius()
+    {
+        if (fogUnseenMaterial != null)
+        {
+            fogUnseenMaterial.SetFloat("_VignetteHexRadius", vignetteHexRadius);
+        }
+        
+        if (fogExploredMaterial != null)
+        {
+            fogExploredMaterial.SetFloat("_VignetteHexRadius", vignetteHexRadius);
+        }
+    }
+    
+    /// <summary>
+    /// Вызывается при изменении значений в инспекторе
+    /// </summary>
+    private void OnValidate()
+    {
+        // Обновляем _VignetteHexRadius при изменении значения в инспекторе
+        if (Application.isPlaying)
+        {
+            UpdateVignetteHexRadius();
+        }
     }
     
     /// <summary>
