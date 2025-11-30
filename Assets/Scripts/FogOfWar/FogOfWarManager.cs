@@ -59,6 +59,9 @@ public class FogOfWarManager : MonoBehaviour
             cityManager = FindFirstObjectByType<CityManager>();
         }
         
+        // Инициализируем _HexRadius в материалах на основе mesh
+        InitializeHexRadius();
+        
         // Инициализируем туман войны или делаем все клетки видимыми
         if (fogOfWarEnabled)
         {
@@ -68,6 +71,65 @@ public class FogOfWarManager : MonoBehaviour
         {
             // Если туман войны отключен при старте, делаем все клетки видимыми
             MakeAllCellsVisible();
+        }
+    }
+    
+    /// <summary>
+    /// Инициализирует _HexRadius в материалах тумана на основе mesh.bounds.extents.y
+    /// </summary>
+    private void InitializeHexRadius()
+    {
+        if (grid == null)
+            return;
+        
+        // Находим первую клетку для получения mesh из fogOfWarRenderer
+        int gridWidth = grid.GetGridWidth();
+        int gridHeight = grid.GetGridHeight();
+        
+        MeshFilter meshFilter = null;
+        for (int x = 0; x < gridWidth && meshFilter == null; x++)
+        {
+            for (int y = 0; y < gridHeight && meshFilter == null; y++)
+            {
+                CellInfo cell = grid.GetCellInfoAt(x, y);
+                if (cell != null)
+                {
+                    // Ищем MeshFilter в дочерних объектах клетки (где находится fogOfWarRenderer)
+                    meshFilter = cell.GetComponentInChildren<MeshFilter>();
+                }
+            }
+        }
+        
+        if (meshFilter == null || meshFilter.sharedMesh == null)
+        {
+            Debug.LogWarning("[FogOfWarManager] MeshFilter или sharedMesh не найдены для инициализации _HexRadius");
+            return;
+        }
+        
+        // Получаем hexRadius из bounds.extents.y
+        // ВАЖНО: берем напрямую из mesh.bounds.extents.y, БЕЗ умножения на scale
+        // mesh.bounds - это локальные границы mesh (до применения scale)
+        // В шейдере v.vertex.xy - это локальные координаты вершины, которые уже учитывают scale transform
+        Bounds meshBounds = meshFilter.sharedMesh.bounds;
+        float hexRadius = meshBounds.extents.y;
+        
+        // Логируем для проверки
+        Debug.Log($"[FogOfWarManager] mesh.bounds.extents.x = {meshBounds.extents.x}, extents.y = {meshBounds.extents.y}");
+        Debug.Log($"[FogOfWarManager] hexRadius = {hexRadius}");
+        Debug.Log($"[FogOfWarManager] mesh.bounds.size: {meshBounds.size}");
+        Debug.Log($"[FogOfWarManager] meshFilter.transform.localScale: {meshFilter.transform.localScale}");
+        
+        // Устанавливаем _HexRadius в материалы тумана
+        if (fogUnseenMaterial != null)
+        {
+            fogUnseenMaterial.SetFloat("_HexRadius", hexRadius);
+            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius} в fogUnseenMaterial");
+        }
+        
+        if (fogExploredMaterial != null)
+        {
+            fogExploredMaterial.SetFloat("_HexRadius", hexRadius);
+            Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius} в fogExploredMaterial");
         }
     }
     
