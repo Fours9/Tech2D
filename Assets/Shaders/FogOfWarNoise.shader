@@ -20,6 +20,13 @@ Shader "Custom/FogOfWarNoise"
         [Range(0.1, 10.0)] _CloudsScale ("Clouds Scale", Float) = 1.5
         [Range(0.0, 1.0)] _CloudsIntensity ("Clouds Intensity", Float) = 0.4
         [Range(0.0, 5.0)] _CloudsSpeed ("Clouds Speed", Float) = 0.3
+        [Header(Burnt Edge)]
+        [Toggle] _BurntEnabled ("Burnt Enabled", Float) = 0.0
+        _BurntColor ("Burnt Color", Color) = (0.15, 0.07, 0.02, 1.0)
+        [Range(0.0, 0.5)] _BurntWidth ("Burnt Width (rel to radius)", Float) = 0.1
+        [Range(0.0, 1.0)] _BurntIntensity ("Burnt Intensity", Float) = 0.6
+        [Range(0.1, 10.0)] _BurntNoiseScale ("Burnt Noise Scale", Float) = 3.0
+        [Range(0.0, 1.0)] _BurntNoiseStrength ("Burnt Noise Strength", Float) = 0.5
         [Header(Glowing Edge)]
         _GlowColor ("Glow Color", Color) = (1.0, 0.7, 0.4, 1.0)
         [Range(0.0, 1.0)] _GlowIntensity ("Glow Intensity", Float) = 0.6
@@ -82,6 +89,12 @@ Shader "Custom/FogOfWarNoise"
             float _CloudsScale;   // Масштаб шума для облаков
             float _CloudsIntensity; // Интенсивность облаков (0-1)
             float _CloudsSpeed;   // Скорость движения облаков
+            float _BurntEnabled; // Включен ли обугленный край (0 или 1)
+            fixed4 _BurntColor;  // Цвет обугленности
+            float _BurntWidth;   // Ширина обугленного пояса (доля от _HexRadius)
+            float _BurntIntensity; // Интенсивность обугленности (0-1)
+            float _BurntNoiseScale; // Масштаб шума для обугленности
+            float _BurntNoiseStrength; // Влияние шума на обугленность (0-1)
             float _RaggedEdgesEnabled; // Включены ли неровные края (0 или 1)
             float _RaggedEdgeTopRight; // Включена ли неровность для Top Right (330-30°) (0 или 1)
             float _RaggedEdgeTopLeft; // Включена ли неровность для Top Left (30-90°) (0 или 1)
@@ -285,7 +298,7 @@ Shader "Custom/FogOfWarNoise"
                     col.rgb = lerp(col.rgb, foggedColor, cloudsStrength);
                 }
                 
-                // Вычисляем SDF для определения расстояния до края (нужно для тления)
+                // Вычисляем SDF для определения расстояния до края (нужно для рваных краёв и тления)
                 float hexSDFValue = hexSDF(i.localPos, _HexRadius);
                 float modifiedSDF = hexSDFValue;
                 float edgeFade = 1.0;
@@ -333,6 +346,36 @@ Shader "Custom/FogOfWarNoise"
                             col.a *= edgeFade;
                         }
                     }
+                }
+                
+                // Обугленный пояс по краю гекса (чаще всего для Hidden-материала).
+                // Считается так же через hexSDF, как и рваный край, но:
+                // - активен только там, где активна рваная грань (isRaggedEdgeActive),
+                // - НЕ использует шум модификации границы (modifiedSDF),
+                //   поэтому внутренняя форма пояса не повторяет рваный край.
+                if (_BurntEnabled > 0.5 && _RaggedEdgesEnabled > 0.5 && isRaggedEdgeActive && col.a > 0.001)
+                {
+                    // Чистый SDF по идеальному гексу: 0 на границе, отрицательный внутри
+                    float edgeSDF = hexSDFValue;
+                    
+                    // Определяем внутреннюю границу обугленного пояса.
+                    // При edgeSDF = 0 — самый край, при edgeSDF = innerLimit — конец пояса внутрь.
+                    float innerLimit = -_BurntWidth * _HexRadius;
+                    
+                    // Нормализуем расстояние в диапазон [0,1] вдоль пояса:
+                    // 0 — глубоко внутри, 1 — на самом краю.
+                    float edgeFactor = saturate((edgeSDF - innerLimit) / (0.0 - innerLimit));
+                    
+                    // Добавляем собственный шум, не связанный с рваным краем,
+                    // чтобы обугленность имела свою структуру, но шла вдоль чистого гекса.
+                    float2 burnCoord = (_OriginalPosition.xy + i.worldOffset) * _BurntNoiseScale;
+                    float burnNoise = smoothNoise2D(burnCoord);
+                    float noiseMask = lerp(1.0 - _BurntNoiseStrength, 1.0, burnNoise);
+                    
+                    float burntStrength = edgeFactor * _BurntIntensity * noiseMask;
+                    
+                    // Подмешиваем обугленный цвет к текущему
+                    col.rgb = lerp(col.rgb, _BurntColor.rgb, burntStrength);
                 }
                 
                 // Применяем эффект тления вдоль рваного края
