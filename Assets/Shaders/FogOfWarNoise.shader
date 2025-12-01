@@ -8,6 +8,7 @@ Shader "Custom/FogOfWarNoise"
         _OriginalPosition ("Original Position", Vector) = (0,0,0,0)
         // _HexRadius устанавливается автоматически через код, не отображается в инспекторе
         [Header(Vignette)]
+        [Toggle] _VignetteEnabled ("Vignette Enabled", Float) = 1.0
         [Range(0.0, 1.0)] _VignetteHexRadius ("Vignette Hex Radius", Float) = 1.0
         [Range(0.0, 1.0)] _EdgeRadius ("Edge Radius", Float) = 0.7
         [Range(0.0, 1.0)] _EdgeDarkening ("Edge Darkening", Float) = 0.4

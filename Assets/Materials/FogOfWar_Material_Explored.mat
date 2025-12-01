@@ -55,11 +55,11 @@ Material:
     - _EdgeSoftness: 0.3
     - _GlowFlickerSpeed: 1.5
     - _GlowInnerRadius: 0.75
-    - _GlowIntensity: 0.6
+    - _GlowIntensity: 0.9
     - _GlowIntensityExplored: 0.4
     - _GlowIntensityUnseen: 0.3
     - _GlowOuterRadius: 0.95
-    - _GlowWidth: 0.05
+    - _GlowWidth: 0.3
     - _HexRadius: 0.01
     - _NoiseIntensity: 0.5
     - _NoiseScale: 10
@@ -80,12 +80,13 @@ Material:
     - _SecondaryNoise: 0.3
     - _SparkIntensity: 0.4
     - _TextureScale: 0.02
+    - _VignetteEnabled: 0
     - _VignetteHexRadius: 1
     m_Colors:
     - _BurnColor: {r: 0.14999998, g: 0.049999982, b: 0.02, a: 1}
-    - _Color: {r: 0.8207547, g: 0.7859113, b: 0.7859113, a: 0.34509805}
+    - _Color: {r: 0.7735849, g: 0.762638, b: 0.762638, a: 0.43137255}
     - _ExploredTint: {r: 0.6132076, g: 0.49652335, b: 0.38470098, a: 0.6}
-    - _GlowColor: {r: 1, g: 0.7, b: 0.4, a: 1}
+    - _GlowColor: {r: 1, g: 1, b: 1, a: 1}
     - _OriginalPosition: {r: 0, g: 0, b: 0, a: 0}
     - _SparkColor: {r: 1, g: 0.6, b: 0.19999996, a: 1}
     - _UnseenTint: {r: 0.49056602, g: 0.39328822, b: 0.2985048, a: 0.9019608}

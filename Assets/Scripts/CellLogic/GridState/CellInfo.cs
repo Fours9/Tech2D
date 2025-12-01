@@ -1091,7 +1091,9 @@ namespace CellNameSpace
         /// <summary>
         /// Определяет, для каких граней текущей клетки включать неровные края,
         /// исходя из состояний тумана у соседних клеток.
-        /// Неровный край включается только там, где у нас есть сосед с состоянием Visible или Explored.
+        /// Логика:
+        /// - для Hidden-клеток рвём край, если сосед Visible ИЛИ Explored;
+        /// - для Explored-клеток рвём край только если сосед Visible (Explored не рвёт).
         /// Если сосед Hidden или отсутствует, неровный край для соответствующей грани отключается.
         /// </summary>
         private void UpdateRaggedEdgesPerCell(MaterialPropertyBlock propertyBlock)
@@ -1125,9 +1127,22 @@ namespace CellNameSpace
                     continue;
 
                 FogOfWarState neighborState = neighbor.GetFogOfWarState();
+                
+                // Определяем, должен ли этот сосед рвать край в зависимости от нашего состояния
+                bool neighborTriggersEdge = false;
+                if (fogState == FogOfWarState.Hidden)
+                {
+                    // Для Hidden нас рвёт всё, что не Hidden: Visible или Explored
+                    neighborTriggersEdge = (neighborState == FogOfWarState.Visible ||
+                                            neighborState == FogOfWarState.Explored);
+                }
+                else if (fogState == FogOfWarState.Explored)
+                {
+                    // Для Explored нас рвут только реально видимые соседи
+                    neighborTriggersEdge = (neighborState == FogOfWarState.Visible);
+                }
 
-                // Неровный край включаем только там, где сосед Visible или Explored
-                if (neighborState != FogOfWarState.Visible && neighborState != FogOfWarState.Explored)
+                if (!neighborTriggersEdge)
                     continue;
 
                 // Берём направление до соседа в ЛОКАЛЬНОЙ системе координат меша тумана,

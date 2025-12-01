@@ -154,12 +154,12 @@ public class FogOfWarManager : MonoBehaviour
         Debug.Log($"[FogOfWarManager] mesh.bounds.size: {meshBounds.size}");
         Debug.Log($"[FogOfWarManager] meshFilter.transform.localScale: {meshFilter.transform.localScale}");
         
-        // Устанавливаем _HexRadius, _VignetteHexRadius, _VignetteEnabled, _RaggedEdgesEnabled и параметры граней в материалы тумана
+        // Устанавливаем _HexRadius, _RaggedEdgesEnabled и параметры граней в материалы тумана.
+        // Виньетку (_VignetteEnabled, _VignetteHexRadius) настраиваем отдельно на каждом материале,
+        // чтобы Hidden и Explored могли иметь разные значения.
         if (fogUnseenMaterial != null)
         {
             fogUnseenMaterial.SetFloat("_HexRadius", hexRadius);
-            fogUnseenMaterial.SetFloat("_VignetteHexRadius", vignetteHexRadius);
-            fogUnseenMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesEnabled ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgeTopRight", raggedEdgeTopRight ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgeTopLeft", raggedEdgeTopLeft ? 1.0f : 0.0f);
@@ -173,8 +173,6 @@ public class FogOfWarManager : MonoBehaviour
         if (fogExploredMaterial != null)
         {
             fogExploredMaterial.SetFloat("_HexRadius", hexRadius);
-            fogExploredMaterial.SetFloat("_VignetteHexRadius", vignetteHexRadius);
-            fogExploredMaterial.SetFloat("_VignetteEnabled", fogOfWarVignetteEnabled ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgesEnabled", raggedEdgesEnabled ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgeTopRight", raggedEdgeTopRight ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgeTopLeft", raggedEdgeTopLeft ? 1.0f : 0.0f);
@@ -526,24 +524,15 @@ public class FogOfWarManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Включает или выключает виньетку для тумана войны (FogOfWarNoise шейдер)
+    /// Включает или выключает виньетку для тумана войны (FogOfWarNoise шейдер).
+    /// Оставлено для совместимости, но сами материалы тумана больше не перезаписываются,
+    /// чтобы Hidden и Explored могли иметь независимые настройки виньетки.
     /// </summary>
     public void SetFogOfWarVignetteEnabled(bool enabled)
     {
         fogOfWarVignetteEnabled = enabled;
-        
-        // Обновляем _VignetteEnabled в материалах тумана
-        float vignetteValue = enabled ? 1.0f : 0.0f;
-        
-        if (fogUnseenMaterial != null)
-        {
-            fogUnseenMaterial.SetFloat("_VignetteEnabled", vignetteValue);
-        }
-        
-        if (fogExploredMaterial != null)
-        {
-            fogExploredMaterial.SetFloat("_VignetteEnabled", vignetteValue);
-        }
+        // Настройки _VignetteEnabled для материалов FogOfWarNoise
+        // теперь задаются непосредственно на самих материалах.
     }
     
     /// <summary>
@@ -604,19 +593,11 @@ public class FogOfWarManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Обновляет _VignetteHexRadius в материалах тумана
+    /// Ранее обновлял _VignetteHexRadius в материалах тумана.
+    /// Сейчас оставлен пустым, так как виньетка настраивается отдельно на каждом материале.
     /// </summary>
     private void UpdateVignetteHexRadius()
     {
-        if (fogUnseenMaterial != null)
-        {
-            fogUnseenMaterial.SetFloat("_VignetteHexRadius", vignetteHexRadius);
-        }
-        
-        if (fogExploredMaterial != null)
-        {
-            fogExploredMaterial.SetFloat("_VignetteHexRadius", vignetteHexRadius);
-        }
     }
     
     /// <summary>
