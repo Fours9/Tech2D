@@ -1068,8 +1068,137 @@ namespace CellNameSpace
             // Пользователь может управлять альфой напрямую через Inspector материала
             // Альфа из материала будет использована напрямую в шейдере
             
+            // Обновляем параметры неровных краев для этой конкретной клетки
+            UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock);
+            
             // Применяем MaterialPropertyBlock к рендереру
             fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
+        }
+
+        /// <summary>
+        /// Публичный метод для обновления неровных краев тумана для данной клетки
+        /// (вызывается менеджером тумана после пересчета видимости).
+        /// </summary>
+        public void RefreshFogOfWarRaggedEdges()
+        {
+            // Имеет смысл только для состояний, где рендерится туман (Hidden/Explored)
+            if (fogState == FogOfWarState.Hidden || fogState == FogOfWarState.Explored)
+            {
+                UpdateFogOfWarAlpha();
+            }
+        }
+
+        /// <summary>
+        /// Определяет, для каких граней текущей клетки включать неровные края,
+        /// исходя из состояний тумана у соседних клеток.
+        /// Неровный край включается только там, где у нас есть сосед с состоянием Visible или Explored.
+        /// Если сосед Hidden или отсутствует, неровный край для соответствующей грани отключается.
+        /// </summary>
+        private void UpdateRaggedEdgesPerCell(MaterialPropertyBlock propertyBlock)
+        {
+            // Если нет менеджера тумана или эффект неровных краев глобально отключен — выходим
+            if (FogOfWarManager.Instance == null || !FogOfWarManager.Instance.IsRaggedEdgesEnabled())
+            {
+                return;
+            }
+
+            CellNameSpace.Grid grid = FogOfWarManager.Instance.GetGrid();
+            if (grid == null)
+            {
+                return;
+            }
+
+            int gridWidth = grid.GetGridWidth();
+            int gridHeight = grid.GetGridHeight();
+
+            // Маска активных граней: 0 = Flat Left, 1 = Top Right, 2 = Bottom Right,
+            // 3 = Flat Right, 4 = Bottom Left, 5 = Top Left
+            bool[] faceActive = new bool[6];
+
+            // Получаем соседей по координатам сетки
+            var neighbors = HexagonalGridHelper.GetNeighbors(gridX, gridY, gridWidth, gridHeight);
+
+            foreach (var pos in neighbors)
+            {
+                CellInfo neighbor = grid.GetCellInfoAt(pos.x, pos.y);
+                if (neighbor == null)
+                    continue;
+
+                FogOfWarState neighborState = neighbor.GetFogOfWarState();
+
+                // Неровный край включаем только там, где сосед Visible или Explored
+                if (neighborState != FogOfWarState.Visible && neighborState != FogOfWarState.Explored)
+                    continue;
+
+                // Берём направление до соседа в ЛОКАЛЬНОЙ системе координат меша тумана,
+                // чтобы совпасть с тем, как шейдер видит вершины (v.vertex.xy).
+                Vector3 neighborWorldPos3 = neighbor.GetOriginalPosition();
+                Vector3 neighborLocalPos3 = fogOfWarRenderer.transform.InverseTransformPoint(neighborWorldPos3);
+                Vector2 dir = new Vector2(neighborLocalPos3.x, neighborLocalPos3.y);
+
+                if (dir.sqrMagnitude < 0.0001f)
+                    continue;
+
+                int faceIndex = GetClosestFaceIndexForDirection(dir);
+                if (faceIndex >= 0 && faceIndex < faceActive.Length)
+                {
+                    faceActive[faceIndex] = true;
+                }
+            }
+
+            // Применяем маску к шейдерным параметрам граней
+            // Соответствие индексов faceActive к параметрам шейдера:
+            // 0 -> _RaggedEdgeFlatLeft   (Flat Left, 90-150°)
+            // 1 -> _RaggedEdgeTopRight   (Top Right, 330-30°)
+            // 2 -> _RaggedEdgeBottomRight (Bottom Right, 210-270°)
+            // 3 -> _RaggedEdgeFlatRight  (Flat Right, 270-330°)
+            // 4 -> _RaggedEdgeBottomLeft (Bottom Left, 150-210°)
+            // 5 -> _RaggedEdgeTopLeft    (Top Left, 30-90°)
+            propertyBlock.SetFloat("_RaggedEdgeFlatLeft", faceActive[0] ? 1f : 0f);
+            propertyBlock.SetFloat("_RaggedEdgeTopRight", faceActive[1] ? 1f : 0f);
+            propertyBlock.SetFloat("_RaggedEdgeBottomRight", faceActive[2] ? 1f : 0f);
+            propertyBlock.SetFloat("_RaggedEdgeFlatRight", faceActive[3] ? 1f : 0f);
+            propertyBlock.SetFloat("_RaggedEdgeBottomLeft", faceActive[4] ? 1f : 0f);
+            propertyBlock.SetFloat("_RaggedEdgeTopLeft", faceActive[5] ? 1f : 0f);
+        }
+
+        /// <summary>
+        /// Возвращает индекс ближайшей грани для направления dir
+        /// (аналог функции getClosestFace из шейдера, работает только по направлению).
+        /// </summary>
+        private int GetClosestFaceIndexForDirection(Vector2 dir)
+        {
+            float angle = Mathf.Atan2(dir.y, dir.x); // Угол в радианах от -PI до PI
+
+            // Нормализуем угол к диапазону [0, 2*PI]
+            if (angle < 0f)
+                angle += 2f * Mathf.PI;
+
+            const float pi_6 = Mathf.PI / 6f;       // 30°
+            const float pi_2 = Mathf.PI / 2f;       // 90°
+            const float pi_5_6 = 5f * Mathf.PI / 6f; // 150°
+            const float pi_7_6 = 7f * Mathf.PI / 6f; // 210°
+            const float pi_3_2 = 3f * Mathf.PI / 2f; // 270°
+            const float pi_11_6 = 11f * Mathf.PI / 6f; // 330°
+
+            // Логика полностью повторяет getClosestFace() из шейдера:
+            // if (angle >= 330° || angle < 30°)  -> 1 (Top-Right)
+            // else if (angle < 90°)              -> 5 (Top-Left)
+            // else if (angle < 150°)             -> 0 (Flat Left)
+            // else if (angle < 210°)             -> 4 (Bottom-Left)
+            // else if (angle < 270°)             -> 2 (Bottom-Right)
+            // else                                -> 3 (Flat Right)
+            if (angle >= pi_11_6 || angle < pi_6)
+                return 1; // Top-Right
+            if (angle < pi_2)
+                return 5; // Top-Left
+            if (angle < pi_5_6)
+                return 0; // Flat Left
+            if (angle < pi_7_6)
+                return 4; // Bottom-Left
+            if (angle < pi_3_2)
+                return 2; // Bottom-Right
+            return 3; // Flat Right
         }
         
         /// <summary>

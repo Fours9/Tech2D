@@ -115,6 +115,14 @@ public class FogOfWarManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Возвращает ссылку на текущую сетку
+    /// </summary>
+    public CellNameSpace.Grid GetGrid()
+    {
+        return grid;
+    }
+    
+    /// <summary>
     /// Инициализирует _HexRadius в материалах тумана на основе mesh.bounds.extents.y
     /// </summary>
     private void InitializeHexRadius()
@@ -376,6 +384,20 @@ public class FogOfWarManager : MonoBehaviour
                     }
                     // Если клетка уже была Hidden или Explored, оставляем как есть
                 }
+            }
+        }
+        
+        // После того как все состояния обновлены, пересчитываем неровные края
+        // для всех клеток, чтобы оборванные края соответствовали текущим соседям.
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                CellInfo cell = grid.GetCellInfoAt(x, y);
+                if (cell == null)
+                    continue;
+                
+                cell.RefreshFogOfWarRaggedEdges();
             }
         }
         

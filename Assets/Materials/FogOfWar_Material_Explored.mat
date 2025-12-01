@@ -16,6 +16,8 @@ Material:
   - _RAGGEDEDGEBOTTOMLEFT_ON
   - _RAGGEDEDGEBOTTOMRIGHT_ON
   - _RAGGEDEDGEBOTTOM_ON
+  - _RAGGEDEDGEFLATLEFT_ON
+  - _RAGGEDEDGEFLATRIGHT_ON
   - _RAGGEDEDGETOPLEFT_ON
   - _RAGGEDEDGETOPRIGHT_ON
   m_LightmapFlags: 4
@@ -51,13 +53,13 @@ Material:
     - _EdgeDarkening: 0.5
     - _EdgeRadius: 0.7
     - _EdgeSoftness: 0.3
-    - _GlowFlickerSpeed: 1
+    - _GlowFlickerSpeed: 1.5
     - _GlowInnerRadius: 0.75
-    - _GlowIntensity: 0.3
+    - _GlowIntensity: 0.6
     - _GlowIntensityExplored: 0.4
     - _GlowIntensityUnseen: 0.3
     - _GlowOuterRadius: 0.95
-    - _GlowWidth: 0.02
+    - _GlowWidth: 0.05
     - _HexRadius: 0.01
     - _NoiseIntensity: 0.5
     - _NoiseScale: 10
@@ -83,7 +85,7 @@ Material:
     - _BurnColor: {r: 0.14999998, g: 0.049999982, b: 0.02, a: 1}
     - _Color: {r: 0.8207547, g: 0.7859113, b: 0.7859113, a: 0.34509805}
     - _ExploredTint: {r: 0.6132076, g: 0.49652335, b: 0.38470098, a: 0.6}
-    - _GlowColor: {r: 1, g: 0.8, b: 0.6, a: 1}
+    - _GlowColor: {r: 1, g: 0.7, b: 0.4, a: 1}
     - _OriginalPosition: {r: 0, g: 0, b: 0, a: 0}
     - _SparkColor: {r: 1, g: 0.6, b: 0.19999996, a: 1}
     - _UnseenTint: {r: 0.49056602, g: 0.39328822, b: 0.2985048, a: 0.9019608}
