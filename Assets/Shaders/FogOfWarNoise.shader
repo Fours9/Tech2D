@@ -55,6 +55,9 @@ Shader "Custom/FogOfWarNoise"
                 float4 vertex : SV_POSITION;
                 float3 worldPos : TEXCOORD1;
                 float2 localPos : TEXCOORD2;
+                // Смещение вершины в мировых координатах (только поворот+масштаб, без переноса),
+                // чтобы использовать его вместе с _OriginalPosition так же, как для основной текстуры.
+                float2 worldOffset : TEXCOORD3;
             };
             
             sampler2D _MainTex;
@@ -186,6 +189,8 @@ Shader "Custom/FogOfWarNoise"
                 float3 worldOffset = mul(objectToWorldRotationScale, localVertex); // Смещение в мировых координатах
                 // Используем originalPosition как базовую точку и добавляем мировое смещение
                 o.uv = (_OriginalPosition.xy + worldOffset.xy) * _TextureScale;
+                // Сохраняем worldOffset отдельно, чтобы использовать те же координаты для шума неровных краёв и огня
+                o.worldOffset = worldOffset.xy;
                 // Сохраняем локальную позицию для расчета виньетки
                 o.localPos = v.vertex.xy;
                 return o;
@@ -262,8 +267,11 @@ Shader "Custom/FogOfWarNoise"
                     {
                         isRaggedEdgeActive = true;
                         
-                        // Генерируем шум на основе мировых координат для стабильности
-                        float2 noiseCoord = i.worldPos.xy * _RaggedEdgesScale;
+                        // Генерируем шум на основе тех же координат, что и основная текстура:
+                        // _OriginalPosition + worldOffset (без tiling/frac), чтобы рисунок рваных краёв
+                        // и огня был привязан к карте так же, как бумага.
+                        float2 baseCoord = (_OriginalPosition.xy + i.worldOffset) * _RaggedEdgesScale;
+                        float2 noiseCoord = baseCoord;
                         float noiseValue = smoothNoise2D(noiseCoord);
                         
                         // Преобразуем шум из [0, 1] в [-intensity, +intensity]
@@ -306,8 +314,10 @@ Shader "Custom/FogOfWarNoise"
                     float glowFactor = smoothstep(glowZone, 0.0, distToRaggedEdge);
                     
                     // Добавляем мерцание на основе времени и шума
-                    // Используем те же координаты шума, что и для неровных краев, чтобы мерцание синхронизировалось
-                    float2 flickerCoord = i.worldPos.xy * _RaggedEdgesScale + _Time.y * _GlowFlickerSpeed;
+                    // Используем те же базовые координаты, что и для неровных краёв / основной текстуры,
+                    // чтобы огонь был привязан к оригинальным координатам клетки.
+                    float2 baseCoord = (_OriginalPosition.xy + i.worldOffset) * _RaggedEdgesScale;
+                    float2 flickerCoord = baseCoord + _Time.y * _GlowFlickerSpeed;
                     float flickerNoise = smoothNoise2D(flickerCoord);
                     
                     // Мерцание: плавное колебание от 0.7 до 1.0
