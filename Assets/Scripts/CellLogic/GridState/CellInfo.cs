@@ -36,6 +36,9 @@ namespace CellNameSpace
         private bool originalPositionSet = false; // Флаг, что изначальная позиция уже установлена
         private MaterialPropertyBlock materialPropertyBlock = null; // MaterialPropertyBlock для передачи параметров в шейдер
         private MaterialPropertyBlock fogOfWarPropertyBlock = null; // MaterialPropertyBlock для тумана войны
+        // Локальный радиус гекса для этой клетки (из sharedMesh.bounds.extents.y),
+        // кэшируется один раз и может использоваться для любых эффектов вокруг клетки.
+        private float hexRadiusForCell = 0f;
         
         void Awake()
         {
@@ -47,6 +50,9 @@ namespace CellNameSpace
                 originalPosition = transform.position;
                 originalPositionSet = true;
             }
+
+            // Инициализируем локальный радиус гекса для этой клетки
+            InitializeHexRadiusForCell();
         }
         
         void Start()
@@ -68,6 +74,45 @@ namespace CellNameSpace
                 outlineOverlay.enabled = false;
             }
             outlineEnabled = false;
+        }
+
+        /// <summary>
+        /// Инициализирует локальный радиус гекса для этой клетки на основе sharedMesh.bounds.extents.y.
+        /// Используется для локальных эффектов вокруг клетки.
+        /// </summary>
+        private void InitializeHexRadiusForCell()
+        {
+            // Если уже инициализировано, повторно не считаем
+            if (hexRadiusForCell > 0f)
+                return;
+
+            // Пытаемся найти MeshFilter: сначала на самой клетке, затем в дочерних (как у FogOfWarRenderer)
+            MeshFilter meshFilter = GetComponent<MeshFilter>();
+            if (meshFilter == null)
+            {
+                meshFilter = GetComponentInChildren<MeshFilter>();
+            }
+
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+                return;
+
+            // Берём локальные границы меша (до применения масштаба),
+            // так же, как это делает FogOfWarManager.
+            Bounds meshBounds = meshFilter.sharedMesh.bounds;
+            hexRadiusForCell = meshBounds.extents.y;
+        }
+
+        /// <summary>
+        /// Возвращает локальный радиус гекса для этой клетки (из sharedMesh.bounds.extents.y).
+        /// Если радиус ещё не инициализирован, попытка инициализации будет выполнена лениво.
+        /// </summary>
+        public float GetHexRadiusForCell()
+        {
+            if (hexRadiusForCell <= 0f)
+            {
+                InitializeHexRadiusForCell();
+            }
+            return hexRadiusForCell;
         }
         
         /// <summary>
