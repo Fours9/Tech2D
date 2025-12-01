@@ -21,6 +21,7 @@ Material:
   - _RAGGEDEDGEFLATRIGHT_ON
   - _RAGGEDEDGETOPLEFT_ON
   - _RAGGEDEDGETOPRIGHT_ON
+  - _TRANSITIONSENABLED_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -51,6 +52,11 @@ Material:
     - _BurnNoiseStrength: 0.3
     - _BurnStart: 0.85
     - _BurnWidth: 0.1
+    - _BurntEnabled: 0
+    - _BurntIntensity: 0.6
+    - _BurntNoiseScale: 3
+    - _BurntNoiseStrength: 0.5
+    - _BurntWidth: 0.1
     - _CloudsEnabled: 1
     - _CloudsIntensity: 0.9
     - _CloudsScale: 1
@@ -58,6 +64,7 @@ Material:
     - _EdgeDarkening: 0.5
     - _EdgeRadius: 0.7
     - _EdgeSoftness: 0.3
+    - _ExploredToVisibleDuration: 1
     - _GlowFlickerSpeed: 1.5
     - _GlowInnerRadius: 0.75
     - _GlowIntensity: 0.9
@@ -66,6 +73,7 @@ Material:
     - _GlowOuterRadius: 0.95
     - _GlowWidth: 0.3
     - _HexRadius: 0.01
+    - _HiddenToVisibleDuration: 1
     - _NoiseIntensity: 0.5
     - _NoiseScale: 10
     - _NoiseStrength: 0.3
@@ -85,10 +93,15 @@ Material:
     - _SecondaryNoise: 0.3
     - _SparkIntensity: 0.4
     - _TextureScale: 0.1
+    - _TransitionProgress: 0
+    - _TransitionType: 0
+    - _TransitionsEnabled: 1
     - _VignetteEnabled: 0
     - _VignetteHexRadius: 1
+    - _VisibleToExploredDuration: 1
     m_Colors:
     - _BurnColor: {r: 0.14999998, g: 0.049999982, b: 0.02, a: 1}
+    - _BurntColor: {r: 0.14999998, g: 0.06999998, b: 0.02, a: 1}
     - _Color: {r: 0.57547164, g: 0.5727571, b: 0.5727571, a: 0.53333336}
     - _ExploredTint: {r: 0.6132076, g: 0.49652335, b: 0.38470098, a: 0.6}
     - _GlowColor: {r: 1, g: 1, b: 1, a: 1}

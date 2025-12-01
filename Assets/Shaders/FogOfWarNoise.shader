@@ -39,6 +39,13 @@ Shader "Custom/FogOfWarNoise"
         [Toggle] _RaggedEdgeBottomRight ("Bottom Right", Float) = 1.0
         [Toggle] _RaggedEdgeFlatRight ("Bottom Left", Float) = 1.0
         [Toggle] _RaggedEdgeTopRight ("Flat Left", Float) = 1.0
+        [Header(Transition Animation)]
+        [Range(0.0, 1.0)] _TransitionProgress ("Transition Progress", Float) = 0.0
+        [Range(0.0, 3.0)] _TransitionType ("Transition Type (0=none, 1=burn, 2=fade out, 3=fade in)", Float) = 0.0
+        [Range(0.1, 5.0)] _HiddenToVisibleDuration ("Hidden→Visible Duration", Float) = 1.0
+        [Range(0.1, 5.0)] _ExploredToVisibleDuration ("Explored→Visible Duration", Float) = 0.5
+        [Range(0.1, 5.0)] _VisibleToExploredDuration ("Visible→Explored Duration", Float) = 0.5
+        [Toggle] _TransitionsEnabled ("Transitions Enabled", Float) = 1.0
     }
     
     SubShader
@@ -106,6 +113,12 @@ Shader "Custom/FogOfWarNoise"
             float _GlowIntensity; // Интенсивность тления (0-1)
             float _GlowWidth; // Ширина зоны тления (0-0.1)
             float _GlowFlickerSpeed; // Скорость мерцания (0-5)
+            float _TransitionProgress; // Прогресс анимации перехода (0-1)
+            float _TransitionType; // Тип перехода: 0=нет, 1=сгорание, 2=fade out, 3=fade in
+            float _HiddenToVisibleDuration; // Длительность анимации Hidden→Visible/Explored (секунды)
+            float _ExploredToVisibleDuration; // Длительность анимации Explored→Visible (секунды)
+            float _VisibleToExploredDuration; // Длительность анимации Visible→Explored (секунды)
+            float _TransitionsEnabled; // Включены ли анимации переходов (0 или 1)
             
             // Полная SDF для pointy-top шестиугольника
             // r - расстояние от центра до вершины (_HexRadius)
@@ -304,6 +317,9 @@ Shader "Custom/FogOfWarNoise"
                 float edgeFade = 1.0;
                 bool isRaggedEdgeActive = false;
                 
+                // Проверяем, активна ли анимация сгорания (тип 1)
+                bool isBurnAnimationActive = (_TransitionType > 0.5 && _TransitionType < 1.5);
+                
                 // Применяем неровные края, если эффект включен
                 if (_RaggedEdgesEnabled > 0.5)
                 {
@@ -332,19 +348,42 @@ Shader "Custom/FogOfWarNoise"
                         // Применяем шум к SDF: если SDF + offset < 0, пиксель видим
                         // Если SDF + offset >= 0, пиксель обрезаем (альфа = 0)
                         modifiedSDF = hexSDFValue + noiseOffset;
-                        
-                        // Если модифицированный SDF положительный (снаружи с учетом шума), обрезаем пиксель
-                        if (modifiedSDF > 0.0)
-                        {
-                            col.a = 0.0;
-                        }
-                        else
-                        {
-                            // Плавный переход на краю для более мягкого обрезания
-                            // Используем smoothstep для создания плавного перехода
-                            edgeFade = smoothstep(0.0, -_RaggedEdgesIntensity * _HexRadius * 0.5, modifiedSDF);
-                            col.a *= edgeFade;
-                        }
+                    }
+                }
+                // Если рваные края не включены, но активна анимация сгорания, используем чистый SDF
+                else if (isBurnAnimationActive)
+                {
+                    // Для анимации сгорания используем чистый SDF без шума
+                    modifiedSDF = hexSDFValue;
+                    isRaggedEdgeActive = true; // Помечаем как активную для эффекта обугленности
+                }
+                
+                // Если активна анимация сгорания, вычисляем глубину сгорания
+                float burnDepth = 0.0;
+                if (isBurnAnimationActive)
+                {
+                    // Максимальная глубина от края до центра = _HexRadius * sqrt(3) / 2
+                    float maxDepth = _HexRadius * sqrt(3.0) * 0.5;
+                    burnDepth = _TransitionProgress * maxDepth;
+                }
+                
+                // Применяем обрезание на основе модифицированного SDF и глубины сгорания
+                if (isRaggedEdgeActive || isBurnAnimationActive)
+                {
+                    float burnThreshold = -burnDepth;
+                    if (modifiedSDF > burnThreshold)
+                    {
+                        col.a = 0.0;
+                    }
+                    else
+                    {
+                        // Плавный переход на краю для более мягкого обрезания
+                        // Используем smoothstep для создания плавного перехода
+                        float fadeRange = _RaggedEdgesEnabled > 0.5 ? 
+                            (_RaggedEdgesIntensity * _HexRadius * 0.5) : 
+                            (_HexRadius * 0.1); // Меньший диапазон для чистого SDF
+                        edgeFade = smoothstep(burnThreshold, burnThreshold - fadeRange, modifiedSDF);
+                        col.a *= edgeFade;
                     }
                 }
                 
@@ -413,6 +452,21 @@ Shader "Custom/FogOfWarNoise"
                     
                     // Смешиваем цвет тления с основным цветом (аддитивное смешивание)
                     col.rgb += _GlowColor.rgb * glowStrength;
+                }
+                
+                // Применяем fade in/out эффекты для переходов
+                if (_TransitionType > 1.5) // Тип 2 или 3
+                {
+                    if (_TransitionType > 2.5 && _TransitionType < 3.5) // Тип 3 = fade in
+                    {
+                        // Плавное появление: умножаем альфу на прогресс
+                        col.a *= _TransitionProgress;
+                    }
+                    else if (_TransitionType > 1.5 && _TransitionType < 2.5) // Тип 2 = fade out
+                    {
+                        // Плавное исчезновение: умножаем альфу на (1 - прогресс)
+                        col.a *= (1.0 - _TransitionProgress);
+                    }
                 }
                 
                 return col;

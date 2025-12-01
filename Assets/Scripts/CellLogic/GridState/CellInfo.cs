@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Reflection;
 using FogOfWar;
 
@@ -39,6 +40,9 @@ namespace CellNameSpace
         // Локальный радиус гекса для этой клетки (из sharedMesh.bounds.extents.y),
         // кэшируется один раз и может использоваться для любых эффектов вокруг клетки.
         private float hexRadiusForCell = 0f;
+        // Анимация переходов тумана войны
+        private Coroutine transitionCoroutine = null; // Ссылка на текущую корутину анимации
+        private FogOfWarState previousState = FogOfWarState.Hidden; // Предыдущее состояние для определения типа перехода
         
         void Awake()
         {
@@ -1058,6 +1062,23 @@ namespace CellNameSpace
                 return;
             }
             
+            // Сохраняем предыдущее состояние перед изменением
+            FogOfWarState oldState = fogState;
+            previousState = oldState;
+            
+            // Если состояние не изменилось и анимация не идет, ничего не делаем
+            if (oldState == state && transitionCoroutine == null)
+            {
+                return;
+            }
+            
+            // Если анимация уже идет, не меняем состояние и не обновляем визуализацию
+            // Это предотвращает прерывание анимации при повторных вызовах UpdateVisibility()
+            if (transitionCoroutine != null)
+            {
+                return;
+            }
+            
             fogState = state;
             
             // Если клетка стала видимой, отмечаем её как исследованную
@@ -1066,8 +1087,54 @@ namespace CellNameSpace
                 hasBeenExplored = true;
             }
             
-            // Обновляем визуальное отображение тумана
-            UpdateFogOfWarVisual();
+            // Проверяем, нужна ли анимация перехода
+            if (FogOfWarManager.Instance != null && oldState != state)
+            {
+                
+                // Получаем материал для проверки настроек анимации
+                Material currentMaterial = null;
+                if (fogOfWarRenderer != null && fogOfWarRenderer.sharedMaterial != null)
+                {
+                    currentMaterial = fogOfWarRenderer.sharedMaterial;
+                }
+                else
+                {
+                    // Определяем материал на основе состояния
+                    if (oldState == FogOfWarState.Hidden)
+                    {
+                        currentMaterial = FogOfWarManager.Instance.GetFogUnseenMaterial();
+                    }
+                    else if (oldState == FogOfWarState.Explored || state == FogOfWarState.Explored)
+                    {
+                        currentMaterial = FogOfWarManager.Instance.GetFogExploredMaterial();
+                    }
+                }
+                
+                if (FogOfWarManager.Instance.AreTransitionsEnabled(currentMaterial))
+                {
+                    float duration = FogOfWarManager.Instance.GetTransitionDuration(oldState, state, currentMaterial);
+                    if (duration > 0f)
+                    {
+                        // Запускаем анимацию перехода
+                        StartTransitionAnimation(oldState, state, duration);
+                    }
+                    else
+                    {
+                        // Нет анимации для этого перехода, обновляем визуализацию сразу
+                        UpdateFogOfWarVisual();
+                    }
+                }
+                else
+                {
+                    // Анимации отключены, обновляем визуализацию сразу
+                    UpdateFogOfWarVisual();
+                }
+            }
+            else
+            {
+                // Это не переход, обновляем визуализацию сразу
+                UpdateFogOfWarVisual();
+            }
         }
         
         /// <summary>
@@ -1113,8 +1180,19 @@ namespace CellNameSpace
             // Пользователь может управлять альфой напрямую через Inspector материала
             // Альфа из материала будет использована напрямую в шейдере
             
-            // Обновляем параметры неровных краев для этой конкретной клетки
-            UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock);
+            // Устанавливаем параметры анимации перехода
+            // Если корутина активна, она сама управляет этими параметрами, поэтому не трогаем их здесь
+            // Если корутина не активна, сбрасываем параметры в 0
+            if (transitionCoroutine == null)
+            {
+                fogOfWarPropertyBlock.SetFloat("_TransitionType", 0f);
+                fogOfWarPropertyBlock.SetFloat("_TransitionProgress", 0f);
+                
+                // Обновляем параметры неровных краев для этой конкретной клетки
+                // (только если корутина не активна, чтобы не перезаписать параметры анимации)
+                UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock);
+            }
+            // Если корутина активна, параметры уже установлены корутиной, не перезаписываем их
             
             // Применяем MaterialPropertyBlock к рендереру
             fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
@@ -1126,6 +1204,12 @@ namespace CellNameSpace
         /// </summary>
         public void RefreshFogOfWarRaggedEdges()
         {
+            // Если идет анимация, не обновляем рваные края, чтобы не прервать анимацию
+            if (transitionCoroutine != null)
+            {
+                return;
+            }
+            
             // Имеет смысл только для состояний, где рендерится туман (Hidden/Explored)
             if (fogState == FogOfWarState.Hidden || fogState == FogOfWarState.Explored)
             {
@@ -1141,7 +1225,9 @@ namespace CellNameSpace
         /// - для Explored-клеток рвём край только если сосед Visible (Explored не рвёт).
         /// Если сосед Hidden или отсутствует, неровный край для соответствующей грани отключается.
         /// </summary>
-        private void UpdateRaggedEdgesPerCell(MaterialPropertyBlock propertyBlock)
+        /// <param name="propertyBlock">MaterialPropertyBlock для установки параметров</param>
+        /// <param name="forceAllEdges">Если true, включает все рваные края независимо от соседей</param>
+        private void UpdateRaggedEdgesPerCell(MaterialPropertyBlock propertyBlock, bool forceAllEdges = false)
         {
             // Если нет менеджера тумана или эффект неровных краев глобально отключен — выходим
             if (FogOfWarManager.Instance == null || !FogOfWarManager.Instance.IsRaggedEdgesEnabled())
@@ -1269,15 +1355,45 @@ namespace CellNameSpace
             if (fogOfWarRenderer == null)
                 return;
             
+            // Если идет анимация, не меняем материал и видимость рендерера, чтобы не прервать анимацию
+            // Материал и видимость уже установлены корутиной
+            if (transitionCoroutine != null)
+            {
+                // Только обновляем видимость оверлеев, если нужно
+                switch (fogState)
+                {
+                    case FogOfWarState.Hidden:
+                        SetOverlaysVisibility(false);
+                        break;
+                    case FogOfWarState.Explored:
+                    case FogOfWarState.Visible:
+                        SetOverlaysVisibility(true);
+                        break;
+                }
+                return;
+            }
+            
             // Управляем видимостью рендерера и выбором материала
             switch (fogState)
             {
                 case FogOfWarState.Hidden:
                     // Неразведено: показываем туман с материалом Fog_Unseen
                     fogOfWarRenderer.enabled = true;
-                    if (FogOfWarManager.Instance != null && FogOfWarManager.Instance.GetFogUnseenMaterial() != null)
+                    Material unseenMaterial = FogOfWarManager.Instance != null ? 
+                        FogOfWarManager.Instance.GetFogUnseenMaterial() : null;
+                    if (unseenMaterial != null && fogOfWarRenderer.sharedMaterial != unseenMaterial)
                     {
-                        fogOfWarRenderer.sharedMaterial = FogOfWarManager.Instance.GetFogUnseenMaterial();
+                        // Сохраняем текущий MaterialPropertyBlock перед сменой материала
+                        if (fogOfWarPropertyBlock == null)
+                        {
+                            fogOfWarPropertyBlock = new MaterialPropertyBlock();
+                        }
+                        fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+                        
+                        fogOfWarRenderer.sharedMaterial = unseenMaterial;
+                        
+                        // Восстанавливаем MaterialPropertyBlock после смены материала
+                        fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
                     }
                     // Устанавливаем alpha тумана
                     UpdateFogOfWarAlpha();
@@ -1288,9 +1404,21 @@ namespace CellNameSpace
                 case FogOfWarState.Explored:
                     // Разведено, но не видно: показываем туман с материалом Fog_Explored
                     fogOfWarRenderer.enabled = true;
-                    if (FogOfWarManager.Instance != null && FogOfWarManager.Instance.GetFogExploredMaterial() != null)
+                    Material exploredMaterial = FogOfWarManager.Instance != null ? 
+                        FogOfWarManager.Instance.GetFogExploredMaterial() : null;
+                    if (exploredMaterial != null && fogOfWarRenderer.sharedMaterial != exploredMaterial)
                     {
-                        fogOfWarRenderer.sharedMaterial = FogOfWarManager.Instance.GetFogExploredMaterial();
+                        // Сохраняем текущий MaterialPropertyBlock перед сменой материала
+                        if (fogOfWarPropertyBlock == null)
+                        {
+                            fogOfWarPropertyBlock = new MaterialPropertyBlock();
+                        }
+                        fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+                        
+                        fogOfWarRenderer.sharedMaterial = exploredMaterial;
+                        
+                        // Восстанавливаем MaterialPropertyBlock после смены материала
+                        fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
                     }
                     // Устанавливаем alpha тумана
                     UpdateFogOfWarAlpha();
@@ -1361,6 +1489,193 @@ namespace CellNameSpace
             
             // Устанавливаем цвета тумана (если они не заданы в материале, используем значения по умолчанию)
             materialPropertyBlock.SetColor("_FogColor", new Color(0f, 0f, 0f, 1f)); // Черный туман
+        }
+        
+        /// <summary>
+        /// Запускает анимацию перехода между состояниями тумана войны
+        /// </summary>
+        /// <param name="fromState">Исходное состояние</param>
+        /// <param name="toState">Целевое состояние</param>
+        /// <param name="duration">Длительность анимации в секундах</param>
+        private void StartTransitionAnimation(FogOfWarState fromState, FogOfWarState toState, float duration)
+        {
+            // Если анимация уже идет, не прерываем её
+            if (transitionCoroutine != null)
+            {
+                return;
+            }
+            
+            // Запускаем новую корутину
+            transitionCoroutine = StartCoroutine(TransitionCoroutine(fromState, toState, duration));
+        }
+        
+        /// <summary>
+        /// Корутина для анимации перехода между состояниями тумана войны
+        /// </summary>
+        /// <param name="fromState">Исходное состояние</param>
+        /// <param name="toState">Целевое состояние</param>
+        /// <param name="duration">Длительность анимации в секундах</param>
+        private IEnumerator TransitionCoroutine(FogOfWarState fromState, FogOfWarState toState, float duration)
+        {
+            // Определяем тип перехода
+            float transitionType = 0f;
+            if (fromState == FogOfWarState.Hidden && 
+                (toState == FogOfWarState.Visible || toState == FogOfWarState.Explored))
+            {
+                transitionType = 1f; // Сгорание
+            }
+            else if (fromState == FogOfWarState.Explored && toState == FogOfWarState.Visible)
+            {
+                transitionType = 2f; // Fade out
+            }
+            else if (fromState == FogOfWarState.Visible && toState == FogOfWarState.Explored)
+            {
+                transitionType = 3f; // Fade in
+            }
+            
+            // Если тип перехода не определен, завершаем корутину
+            if (transitionType < 0.5f)
+            {
+                transitionCoroutine = null;
+                yield break;
+            }
+            
+            // Определяем, является ли это анимацией сгорания
+            bool isBurnAnimationActive = (transitionType > 0.5f && transitionType < 1.5f);
+            
+            // Для анимации нужно правильно настроить материал и видимость рендерера
+            // В зависимости от типа перехода используем разные материалы
+            Material animationMaterial = null;
+            bool shouldShowRenderer = true;
+            
+            if (isBurnAnimationActive) // Тип 1 = сгорание (Hidden→Visible/Explored)
+            {
+                // Для сгорания используем материал Hidden (fogUnseenMaterial)
+                animationMaterial = FogOfWarManager.Instance != null ? 
+                    FogOfWarManager.Instance.GetFogUnseenMaterial() : null;
+                shouldShowRenderer = true;
+            }
+            else if (transitionType > 1.5f && transitionType < 2.5f) // Тип 2 = fade out (Explored→Visible)
+            {
+                // Для fade out используем материал Explored
+                animationMaterial = FogOfWarManager.Instance != null ? 
+                    FogOfWarManager.Instance.GetFogExploredMaterial() : null;
+                shouldShowRenderer = true; // Оставляем рендерер включенным для анимации
+            }
+            else if (transitionType > 2.5f && transitionType < 3.5f) // Тип 3 = fade in (Visible→Explored)
+            {
+                // Для fade in используем материал Explored
+                animationMaterial = FogOfWarManager.Instance != null ? 
+                    FogOfWarManager.Instance.GetFogExploredMaterial() : null;
+                shouldShowRenderer = true;
+            }
+            
+            // Устанавливаем материал и видимость рендерера для анимации
+            if (fogOfWarRenderer != null)
+            {
+                // Сначала получаем текущий MaterialPropertyBlock, чтобы сохранить параметры
+                if (fogOfWarPropertyBlock == null)
+                {
+                    fogOfWarPropertyBlock = new MaterialPropertyBlock();
+                }
+                fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+                
+                // Сохраняем _OriginalPosition из текущего блока
+                Vector4 savedOriginalPos = fogOfWarPropertyBlock.GetVector("_OriginalPosition");
+                
+                // Меняем материал
+                if (animationMaterial != null)
+                {
+                    fogOfWarRenderer.sharedMaterial = animationMaterial;
+                }
+                fogOfWarRenderer.enabled = shouldShowRenderer;
+                
+                // Восстанавливаем MaterialPropertyBlock после смены материала
+                // Это важно, так как смена материала может сбросить блок
+                fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+                
+                // Восстанавливаем _OriginalPosition
+                if (savedOriginalPos != Vector4.zero)
+                {
+                    fogOfWarPropertyBlock.SetVector("_OriginalPosition", savedOriginalPos);
+                }
+                else
+                {
+                    // Если не было сохранено, устанавливаем заново
+                    Vector4 originalPos = new Vector4(originalPosition.x, originalPosition.y, originalPosition.z, 0f);
+                    fogOfWarPropertyBlock.SetVector("_OriginalPosition", originalPos);
+                }
+            }
+            
+            // Обновляем параметры неровных краев (важно для эффекта сгорания)
+            // Для анимации сгорания принудительно включаем все рваные края
+            UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock, isBurnAnimationActive);
+            
+            // Устанавливаем параметры анимации
+            fogOfWarPropertyBlock.SetFloat("_TransitionType", transitionType);
+            fogOfWarPropertyBlock.SetFloat("_TransitionProgress", 0f);
+            
+            // Применяем MaterialPropertyBlock
+            fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
+            
+            float elapsedTime = 0f;
+            
+            while (elapsedTime < duration)
+            {
+                elapsedTime += Time.deltaTime;
+                float progress = Mathf.Clamp01(elapsedTime / duration);
+                
+                // Применяем easing для более плавного движения
+                progress = Mathf.SmoothStep(0f, 1f, progress);
+                
+                // Обновляем параметры анимации в MaterialPropertyBlock
+                // Важно: получаем текущий блок, чтобы сохранить все параметры (включая _OriginalPosition)
+                if (fogOfWarPropertyBlock == null)
+                {
+                    fogOfWarPropertyBlock = new MaterialPropertyBlock();
+                }
+                
+                fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+                
+                // Убеждаемся, что _OriginalPosition установлен (на случай, если материал был изменен извне)
+                Vector4 currentOriginalPos = fogOfWarPropertyBlock.GetVector("_OriginalPosition");
+                if (currentOriginalPos == Vector4.zero)
+                {
+                    Vector4 originalPos = new Vector4(originalPosition.x, originalPosition.y, originalPosition.z, 0f);
+                    fogOfWarPropertyBlock.SetVector("_OriginalPosition", originalPos);
+                }
+                
+                // Обновляем параметры анимации
+                fogOfWarPropertyBlock.SetFloat("_TransitionType", transitionType);
+                fogOfWarPropertyBlock.SetFloat("_TransitionProgress", progress);
+                
+                // Обновляем параметры неровных краев (важно для эффекта сгорания)
+                // Для анимации сгорания принудительно включаем все рваные края
+                UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock, isBurnAnimationActive);
+                
+                fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
+                
+                yield return null;
+            }
+            
+            // Завершаем анимацию: сбрасываем ссылку на корутину ПЕРЕД вызовом UpdateFogOfWarVisual
+            // Это нужно, чтобы UpdateFogOfWarVisual мог правильно установить материал
+            transitionCoroutine = null;
+            
+            // Сбрасываем параметры анимации
+            if (fogOfWarPropertyBlock == null)
+            {
+                fogOfWarPropertyBlock = new MaterialPropertyBlock();
+            }
+            
+            fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+            fogOfWarPropertyBlock.SetFloat("_TransitionType", 0f);
+            fogOfWarPropertyBlock.SetFloat("_TransitionProgress", 0f);
+            fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
+            
+            // Применяем финальное состояние после завершения анимации
+            // Теперь UpdateFogOfWarVisual сможет правильно установить материал, так как корутина уже сброшена
+            UpdateFogOfWarVisual();
         }
         
         /// <summary>

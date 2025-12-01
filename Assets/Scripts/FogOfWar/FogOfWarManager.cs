@@ -524,6 +524,98 @@ public class FogOfWarManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Проверяет, включены ли анимации переходов для указанного материала
+    /// </summary>
+    /// <param name="material">Материал тумана войны</param>
+    /// <returns>True если анимации включены</returns>
+    public bool AreTransitionsEnabled(Material material = null)
+    {
+        if (material == null)
+        {
+            // Если материал не указан, проверяем оба материала
+            bool unseenEnabled = fogUnseenMaterial != null && 
+                fogUnseenMaterial.HasProperty("_TransitionsEnabled") &&
+                fogUnseenMaterial.GetFloat("_TransitionsEnabled") > 0.5f;
+            bool exploredEnabled = fogExploredMaterial != null && 
+                fogExploredMaterial.HasProperty("_TransitionsEnabled") &&
+                fogExploredMaterial.GetFloat("_TransitionsEnabled") > 0.5f;
+            return unseenEnabled || exploredEnabled;
+        }
+        
+        return material != null && 
+               material.HasProperty("_TransitionsEnabled") &&
+               material.GetFloat("_TransitionsEnabled") > 0.5f;
+    }
+    
+    /// <summary>
+    /// Возвращает длительность анимации для указанного типа перехода из материала
+    /// </summary>
+    /// <param name="fromState">Исходное состояние</param>
+    /// <param name="toState">Целевое состояние</param>
+    /// <param name="material">Материал тумана войны (опционально, определяется автоматически)</param>
+    /// <returns>Длительность анимации в секундах, или 0 если анимация не требуется</returns>
+    public float GetTransitionDuration(FogOfWarState fromState, FogOfWarState toState, Material material = null)
+    {
+        // Определяем материал, если не указан
+        if (material == null)
+        {
+            if (fromState == FogOfWarState.Hidden)
+            {
+                material = fogUnseenMaterial;
+            }
+            else if (fromState == FogOfWarState.Explored || toState == FogOfWarState.Explored)
+            {
+                material = fogExploredMaterial;
+            }
+            else
+            {
+                material = fogUnseenMaterial; // По умолчанию
+            }
+        }
+        
+        if (material == null || !material.HasProperty("_TransitionsEnabled"))
+            return 0f;
+        
+        // Проверяем, включены ли анимации
+        if (material.GetFloat("_TransitionsEnabled") < 0.5f)
+            return 0f;
+        
+        // Hidden → Visible или Explored: сгорание (из материала Hidden)
+        if (fromState == FogOfWarState.Hidden && 
+            (toState == FogOfWarState.Visible || toState == FogOfWarState.Explored))
+        {
+            if (fogUnseenMaterial != null && fogUnseenMaterial.HasProperty("_HiddenToVisibleDuration"))
+            {
+                return fogUnseenMaterial.GetFloat("_HiddenToVisibleDuration");
+            }
+            return 1.0f; // Значение по умолчанию
+        }
+        
+        // Explored → Visible: fade out (из материала Explored)
+        if (fromState == FogOfWarState.Explored && toState == FogOfWarState.Visible)
+        {
+            if (fogExploredMaterial != null && fogExploredMaterial.HasProperty("_ExploredToVisibleDuration"))
+            {
+                return fogExploredMaterial.GetFloat("_ExploredToVisibleDuration");
+            }
+            return 0.5f; // Значение по умолчанию
+        }
+        
+        // Visible → Explored: fade in (из материала Explored)
+        if (fromState == FogOfWarState.Visible && toState == FogOfWarState.Explored)
+        {
+            if (fogExploredMaterial != null && fogExploredMaterial.HasProperty("_VisibleToExploredDuration"))
+            {
+                return fogExploredMaterial.GetFloat("_VisibleToExploredDuration");
+            }
+            return 0.5f; // Значение по умолчанию
+        }
+        
+        // Остальные переходы без анимации
+        return 0f;
+    }
+    
+    /// <summary>
     /// Включает или выключает виньетку для тумана войны (FogOfWarNoise шейдер).
     /// Оставлено для совместимости, но сами материалы тумана больше не перезаписываются,
     /// чтобы Hidden и Explored могли иметь независимые настройки виньетки.
