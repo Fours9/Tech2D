@@ -15,6 +15,11 @@ Shader "Custom/FogOfWarNoise"
         [Header(Ragged Edges)]
         [Range(0.0, 1.0)] _RaggedEdgesIntensity ("Ragged Edges Intensity", Float) = 0.1
         [Range(0.1, 10.0)] _RaggedEdgesScale ("Ragged Edges Scale", Float) = 2.0
+        [Header(Explored Clouds)]
+        [Toggle] _CloudsEnabled ("Clouds Enabled", Float) = 0.0
+        [Range(0.1, 10.0)] _CloudsScale ("Clouds Scale", Float) = 1.5
+        [Range(0.0, 1.0)] _CloudsIntensity ("Clouds Intensity", Float) = 0.4
+        [Range(0.0, 5.0)] _CloudsSpeed ("Clouds Speed", Float) = 0.3
         [Header(Glowing Edge)]
         _GlowColor ("Glow Color", Color) = (1.0, 0.7, 0.4, 1.0)
         [Range(0.0, 1.0)] _GlowIntensity ("Glow Intensity", Float) = 0.6
@@ -73,6 +78,10 @@ Shader "Custom/FogOfWarNoise"
             float _VignetteEnabled; // Включена ли виньетка (0 или 1)
             float _RaggedEdgesIntensity; // Интенсивность неровных краев (0-1)
             float _RaggedEdgesScale; // Масштаб шума для неровных краев
+            float _CloudsEnabled; // Включены ли облака (0 или 1)
+            float _CloudsScale;   // Масштаб шума для облаков
+            float _CloudsIntensity; // Интенсивность облаков (0-1)
+            float _CloudsSpeed;   // Скорость движения облаков
             float _RaggedEdgesEnabled; // Включены ли неровные края (0 или 1)
             float _RaggedEdgeTopRight; // Включена ли неровность для Top Right (330-30°) (0 или 1)
             float _RaggedEdgeTopLeft; // Включена ли неровность для Top Left (30-90°) (0 или 1)
@@ -246,6 +255,34 @@ Shader "Custom/FogOfWarNoise"
                     
                     // Применяем виньетку к цвету
                     col.rgb *= brightnessMultiplier;
+                }
+                
+                // Облачный туман (визуально больше подходит для Explored-материала,
+                // но управляется чисто параметрами материала)
+                if (_CloudsEnabled > 0.5)
+                {
+                    // Берём те же базовые координаты, что и для бумаги/рваных краёв,
+                    // без tiling через frac, чтобы облака "лежали" на карте стабильно.
+                    float2 baseCloudCoord = (_OriginalPosition.xy + i.worldOffset) * _CloudsScale;
+                    
+                    // Два слоя шума с разным масштабом и смещением по времени
+                    float t = _Time.y * _CloudsSpeed;
+                    float n1 = smoothNoise2D(baseCloudCoord + float2(0.0, t));
+                    float n2 = smoothNoise2D(baseCloudCoord * 2.0 + float2(t, 0.0));
+                    
+                    // Смешиваем слои в одно поле облаков
+                    float cloudsRaw = n1 * 0.6 + n2 * 0.4;
+                    
+                    // Выделяем "облачные" участки — порог + плавный переход
+                    // Чем ближе к 1, тем плотнее облако.
+                    float cloudsMask = saturate((cloudsRaw - 0.4) / 0.6);
+                    
+                    // Итоговая сила облака (маска * интенсивность)
+                    float cloudsStrength = _CloudsIntensity * cloudsMask;
+                    
+                    // Немного поднимаем "дымку": приглушаем исходный цвет и подмешиваем светлый туман
+                    float3 foggedColor = col.rgb * 0.6 + float3(1.0, 1.0, 1.0) * 0.4;
+                    col.rgb = lerp(col.rgb, foggedColor, cloudsStrength);
                 }
                 
                 // Вычисляем SDF для определения расстояния до края (нужно для тления)

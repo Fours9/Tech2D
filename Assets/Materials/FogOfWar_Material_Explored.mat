@@ -13,6 +13,7 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords:
+  - _CLOUDSENABLED_ON
   - _RAGGEDEDGEBOTTOMLEFT_ON
   - _RAGGEDEDGEBOTTOMRIGHT_ON
   - _RAGGEDEDGEBOTTOM_ON
@@ -34,7 +35,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: ccd7b6c55c59ebc408ac55e1126b9a39, type: 3}
+        m_Texture: {fileID: 2800000, guid: 423b3e6b5bf3528448086d8d56370945, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _PaperTexture:
@@ -50,6 +51,10 @@ Material:
     - _BurnNoiseStrength: 0.3
     - _BurnStart: 0.85
     - _BurnWidth: 0.1
+    - _CloudsEnabled: 1
+    - _CloudsIntensity: 0.9
+    - _CloudsScale: 1
+    - _CloudsSpeed: 0.6
     - _EdgeDarkening: 0.5
     - _EdgeRadius: 0.7
     - _EdgeSoftness: 0.3
@@ -79,12 +84,12 @@ Material:
     - _RaggedEdgesScale: 2
     - _SecondaryNoise: 0.3
     - _SparkIntensity: 0.4
-    - _TextureScale: 0.02
+    - _TextureScale: 0.1
     - _VignetteEnabled: 0
     - _VignetteHexRadius: 1
     m_Colors:
     - _BurnColor: {r: 0.14999998, g: 0.049999982, b: 0.02, a: 1}
-    - _Color: {r: 0.7735849, g: 0.762638, b: 0.762638, a: 0.43137255}
+    - _Color: {r: 0.57547164, g: 0.5727571, b: 0.5727571, a: 0.53333336}
     - _ExploredTint: {r: 0.6132076, g: 0.49652335, b: 0.38470098, a: 0.6}
     - _GlowColor: {r: 1, g: 1, b: 1, a: 1}
     - _OriginalPosition: {r: 0, g: 0, b: 0, a: 0}

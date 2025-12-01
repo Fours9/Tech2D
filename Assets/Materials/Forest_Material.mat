@@ -41,6 +41,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _EdgeDarkening: 1
+    - _EdgeRadius: 0.96
     - _EnableExternalAlpha: 0
     - _FogExploredDarkness: 0.5
     - _FogHiddenDarkness: 0.2
