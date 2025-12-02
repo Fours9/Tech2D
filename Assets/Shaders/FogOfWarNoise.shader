@@ -28,6 +28,10 @@ Shader "Custom/FogOfWarNoise"
         [Range(0.0, 1.0)] _BurntIntensity ("Burnt Intensity", Float) = 0.6
         [Range(0.1, 10.0)] _BurntNoiseScale ("Burnt Noise Scale", Float) = 3.0
         [Range(0.0, 1.0)] _BurntNoiseStrength ("Burnt Noise Strength", Float) = 0.5
+        [Header(Burn Animation Ragged Edges)]
+        [Range(0.0, 1.0)] _BurnRaggedIntensity ("Burn Ragged Intensity", Float) = 0.15
+        [Range(0.1, 10.0)] _BurnRaggedScale ("Burn Ragged Scale", Float) = 2.5
+        [Range(0.0, 5.0)] _BurnRaggedAnimSpeed ("Burn Ragged Animation Speed", Float) = 0.8
         [Header(Glowing Edge)]
         _GlowColor ("Glow Color", Color) = (1.0, 0.7, 0.4, 1.0)
         [Range(0.0, 1.0)] _GlowIntensity ("Glow Intensity", Float) = 0.6
@@ -122,6 +126,9 @@ Shader "Custom/FogOfWarNoise"
             float _VisibleToExploredDuration; // Длительность анимации Visible→Explored (секунды)
             float _TransitionsEnabled; // Включены ли анимации переходов (0 или 1)
             float _AnimatedHexRadius; // Анимированный радиус для эффекта сгорания (уменьшается от _HexRadius до 0)
+            float _BurnRaggedIntensity; // Интенсивность рваных краёв при анимации сгорания (0-1)
+            float _BurnRaggedScale; // Масштаб шума для рваных краёв при анимации сгорания
+            float _BurnRaggedAnimSpeed; // Скорость анимации рваных краёв при сгорании (0-5)
             
             // Полная SDF для pointy-top шестиугольника
             // r - расстояние от центра до вершины (_HexRadius)
@@ -343,6 +350,11 @@ Shader "Custom/FogOfWarNoise"
                     {
                         isRaggedEdgeActive = true;
                         
+                        // Выбираем параметры в зависимости от того, активна ли анимация сгорания
+                        float raggedIntensity = isBurnAnimationActive ? _BurnRaggedIntensity : _RaggedEdgesIntensity;
+                        float raggedScale = isBurnAnimationActive ? _BurnRaggedScale : _RaggedEdgesScale;
+                        float raggedAnimSpeed = isBurnAnimationActive ? _BurnRaggedAnimSpeed : _RaggedEdgesAnimationSpeed;
+                        
                         // Генерируем шум на основе тех же координат, что и основная текстура:
                         // _OriginalPosition + worldOffset (без tiling/frac), чтобы рисунок рваных краёв
                         // и огня был привязан к карте так же, как бумага.
@@ -350,16 +362,16 @@ Shader "Custom/FogOfWarNoise"
                         // чтобы рваные края "сжимались" вместе с радиусом
                         float radiusScale = isBurnAnimationActive && _HexRadius > 0.0 ? 
                             (currentHexRadius / _HexRadius) : 1.0;
-                        float2 baseCoord = (_OriginalPosition.xy + i.worldOffset) * _RaggedEdgesScale * radiusScale;
+                        float2 baseCoord = (_OriginalPosition.xy + i.worldOffset) * raggedScale * radiusScale;
                         
                         // Добавляем анимацию для эффекта "плавания" рваных краев
                         // Используем время для создания постоянного движения краев
-                        float2 animatedCoord = baseCoord + _Time.y * _RaggedEdgesAnimationSpeed * 0.3;
+                        float2 animatedCoord = baseCoord + _Time.y * raggedAnimSpeed * 0.3;
                         float noiseValue = smoothNoise2D(animatedCoord);
                         
                         // Преобразуем шум из [0, 1] в [-intensity, +intensity]
                         // Это создаст неровности, которые будут "вдавливать" и "выдавливать" края
-                        float noiseOffset = (noiseValue - 0.5) * 2.0 * _RaggedEdgesIntensity * currentHexRadius;
+                        float noiseOffset = (noiseValue - 0.5) * 2.0 * raggedIntensity * currentHexRadius;
                         
                         // Применяем шум к SDF: если SDF + offset < 0, пиксель видим
                         // Если SDF + offset >= 0, пиксель обрезаем (альфа = 0)
@@ -381,8 +393,10 @@ Shader "Custom/FogOfWarNoise"
                     {
                         // Плавный переход на краю для более мягкого обрезания
                         // Используем smoothstep для создания плавного перехода
-                        float fadeRange = _RaggedEdgesEnabled > 0.5 ? 
-                            (_RaggedEdgesIntensity * currentHexRadius * 0.5) : 
+                        // Для анимации сгорания используем параметры сгорания, иначе обычные
+                        float currentRaggedIntensity = isBurnAnimationActive ? _BurnRaggedIntensity : _RaggedEdgesIntensity;
+                        float fadeRange = _RaggedEdgesEnabled > 0.5 || isBurnAnimationActive ? 
+                            (currentRaggedIntensity * currentHexRadius * 0.5) : 
                             (currentHexRadius * 0.1); // Меньший диапазон для чистого SDF
                         edgeFade = smoothstep(0.0, -fadeRange, modifiedSDF);
                         col.a *= edgeFade;

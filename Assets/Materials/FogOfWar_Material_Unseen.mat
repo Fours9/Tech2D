@@ -51,6 +51,9 @@ Material:
     - _BurnDarken: 0.89
     - _BurnNoiseScale: 0.1
     - _BurnNoiseStrength: 0.1
+    - _BurnRaggedAnimSpeed: 0.6
+    - _BurnRaggedIntensity: 0.3
+    - _BurnRaggedScale: 5.5
     - _BurnStart: 0.7
     - _BurnWidth: 0.3
     - _BurntEnabled: 1
