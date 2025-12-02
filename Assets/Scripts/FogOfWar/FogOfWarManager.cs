@@ -349,6 +349,7 @@ public class FogOfWarManager : MonoBehaviour
                     
                     // Если клетка была видимой, но больше не видна, делаем её исследованной
                     if (currentState == FogOfWarState.Visible)
+
                     {
                         if (cell.HasBeenExplored())
                         {
@@ -413,7 +414,17 @@ public class FogOfWarManager : MonoBehaviour
         {
             var (currentCell, currentDistance) = queue.Dequeue();
             
-            // Если достигли максимального радиуса, не проверяем дальше
+            // Если достигли максимального радиуса, не добавляем эту клетку и не проверяем дальше
+            if (currentDistance > radius)
+                continue;
+            
+            // Добавляем текущую клетку в результат, если она в пределах радиуса
+            if (currentDistance <= radius && !bestDistance.ContainsKey(currentCell))
+            {
+                bestDistance[currentCell] = currentDistance;
+            }
+            
+            // Если достигли максимального радиуса, не проверяем соседей
             if (currentDistance >= radius)
                 continue;
             
@@ -445,15 +456,70 @@ public class FogOfWarManager : MonoBehaviour
         }
         
         // Добавляем все найденные клетки (включая стартовую) в список для возврата
+        // ВАЖНО: добавляем только клетки, которые находятся в пределах радиуса
         foreach (var kvp in bestDistance)
         {
-            if (kvp.Key != null)
+            if (kvp.Key != null && kvp.Value <= radius)
             {
                 cells.Add(kvp.Key);
+                
+                // Отладочный вывод для проверки
+                Debug.Log($"[FogOfWar] GetCellsInVisionRange: Клетка ({kvp.Key.GetGridX()}, {kvp.Key.GetGridY()}) " +
+                    $"на расстоянии {kvp.Value} от центра ({centerX}, {centerY}), радиус: {radius}");
             }
         }
+
+        // Убеждаемся, что стартовая клетка добавлена (если она в пределах радиуса)
+        if (!cells.Contains(startCell))
+        {
+            cells.Add(startCell);
+            Debug.Log($"[FogOfWar] GetCellsInVisionRange: Добавлена стартовая клетка ({centerX}, {centerY})");
+        }
+
+        // Фильтруем клетки по реальному расстоянию от центра
+        Vector2Int centerCoord = new Vector2Int(centerX, centerY);
+        List<CellInfo> filteredCells = new List<CellInfo>();
+
+        foreach (var cell in cells)
+        {
+            if (cell == null)
+                continue;
+            
+            Vector2Int cellCoord = new Vector2Int(cell.GetGridX(), cell.GetGridY());
+            int realDistance = GetHexDistance(centerCoord, cellCoord);
+            
+            if (realDistance <= radius)
+            {
+                filteredCells.Add(cell);
+                Debug.Log($"[FogOfWar] GetCellsInVisionRange: Клетка ({cellCoord.x}, {cellCoord.y}) " +
+                    $"BFS расстояние: {bestDistance[cell]}, реальное расстояние: {realDistance}, радиус: {radius}");
+            }
+            else
+            {
+                Debug.LogWarning($"[FogOfWar] GetCellsInVisionRange: Клетка ({cellCoord.x}, {cellCoord.y}) " +
+                    $"исключена - BFS расстояние: {bestDistance[cell]}, реальное расстояние: {realDistance} > радиус: {radius}");
+            }
+        }
+
+        return filteredCells;
+    }
+    
+    /// <summary>
+    /// Вычисляет расстояние между двумя точками на гексагональной сетке
+    /// </summary>
+    private static int GetHexDistance(Vector2Int a, Vector2Int b)
+    {
+        // Для гексагональной сетки используется более точная эвристика
+        int dx = Mathf.Abs(a.x - b.x);
+        int dy = Mathf.Abs(a.y - b.y);
         
-        return cells;
+        // Учитываем смещение для нечетных строк
+        if ((a.y % 2 == 1 && a.x > b.x) || (b.y % 2 == 1 && b.x > a.x))
+        {
+            dx = Mathf.Max(0, dx - 1);
+        }
+        
+        return Mathf.Max(dx, dy);
     }
     
     /// <summary>
@@ -813,5 +879,6 @@ public class FogOfWarManager : MonoBehaviour
         UpdateRaggedEdgesFaceParameters();
     }
 }
+
 
 

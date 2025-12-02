@@ -43,6 +43,7 @@ namespace CellNameSpace
         // Анимация переходов тумана войны
         private Coroutine transitionCoroutine = null; // Ссылка на текущую корутину анимации
         private FogOfWarState previousState = FogOfWarState.Hidden; // Предыдущее состояние для определения типа перехода
+        private FogOfWarState transitionTargetState = FogOfWarState.Hidden; // Целевое состояние для анимации перехода
         
         void Awake()
         {
@@ -1050,6 +1051,13 @@ namespace CellNameSpace
         /// </summary>
         public void SetFogOfWarState(FogOfWarState state)
         {
+            // Отладочный вывод для проверки
+            if (state == FogOfWarState.Visible)
+            {
+                Debug.Log($"[FogOfWar] SetFogOfWarState: Клетка ({gridX}, {gridY}) устанавливается в Visible. " +
+                    $"Текущее состояние: {fogState}, Анимация: {transitionCoroutine != null}");
+            }
+            
             // Если туман войны отключен, всегда оставляем клетку видимой и игнорируем изменения
             if (FogOfWarManager.Instance != null && !FogOfWarManager.Instance.IsFogOfWarEnabled())
             {
@@ -1076,21 +1084,31 @@ namespace CellNameSpace
             // Это предотвращает прерывание анимации при повторных вызовах UpdateVisibility()
             if (transitionCoroutine != null)
             {
+                // Если анимация уже идет к нужному состоянию, ничего не делаем
+                if (transitionTargetState == state)
+                {
+                    // Анимация уже идет к нужному состоянию, не нужно ничего делать
+                    return;
+                }
+                
+                // Если новое состояние отличается от целевого состояния анимации,
+                // но совпадает с текущим fogState, тоже ничего не делаем
+                if (fogState == state)
+                {
+                    return;
+                }
+                
+                // Отладочный вывод для понимания, почему состояние не меняется
+                Debug.LogWarning($"[FogOfWar] SetFogOfWarState: Клетка ({gridX}, {gridY}) не может перейти из {fogState} в {state}, " +
+                    $"потому что идет анимация к {transitionTargetState}. " +
+                    $"Текущее fogState: {fogState}");
                 return;
             }
             
-            fogState = state;
-            
-            // Если клетка стала видимой, отмечаем её как исследованную
-            if (state == FogOfWarState.Visible)
-            {
-                hasBeenExplored = true;
-            }
-            
             // Проверяем, нужна ли анимация перехода
+            bool willStartAnimation = false;
             if (FogOfWarManager.Instance != null && oldState != state)
             {
-                
                 // Получаем материал для проверки настроек анимации
                 Material currentMaterial = null;
                 if (fogOfWarRenderer != null && fogOfWarRenderer.sharedMaterial != null)
@@ -1116,25 +1134,28 @@ namespace CellNameSpace
                     if (duration > 0f)
                     {
                         // Запускаем анимацию перехода
+                        // НЕ устанавливаем fogState здесь - это сделает корутина в конце анимации
                         StartTransitionAnimation(oldState, state, duration);
+                        willStartAnimation = true;
                     }
-                    else
-                    {
-                        // Нет анимации для этого перехода, обновляем визуализацию сразу
-                        UpdateFogOfWarVisual();
-                    }
-                }
-                else
-                {
-                    // Анимации отключены, обновляем визуализацию сразу
-                    UpdateFogOfWarVisual();
                 }
             }
-            else
+            
+            // Если анимация НЕ запускается, устанавливаем состояние сразу
+            if (!willStartAnimation)
             {
-                // Это не переход, обновляем визуализацию сразу
+                fogState = state;
+                
+                // Если клетка стала видимой, отмечаем её как исследованную
+                if (state == FogOfWarState.Visible)
+                {
+                    hasBeenExplored = true;
+                }
+                
+                // Обновляем визуализацию сразу
                 UpdateFogOfWarVisual();
             }
+            // Если анимация запускается, fogState будет установлен в конце корутины
         }
         
         /// <summary>
@@ -1523,6 +1544,9 @@ namespace CellNameSpace
                 return;
             }
             
+            // Сохраняем целевое состояние анимации ПЕРЕД запуском корутины
+            transitionTargetState = toState;
+            
             // Запускаем новую корутину
             transitionCoroutine = StartCoroutine(TransitionCoroutine(fromState, toState, duration));
         }
@@ -1556,12 +1580,39 @@ namespace CellNameSpace
                 isBurnAnimation = false;
             }
             
-            // Если тип перехода не определен, завершаем корутину
+            // Если тип перехода не определен, устанавливаем состояние сразу и завершаем корутину
             if (transitionType < 0.5f)
             {
+                // Устанавливаем финальное состояние
+                fogState = toState;
+                
+                // Если клетка стала видимой, отмечаем её как исследованную
+                if (toState == FogOfWarState.Visible)
+                {
+                    hasBeenExplored = true;
+                }
+                
+                // Сбрасываем ссылку на корутину и целевое состояние
                 transitionCoroutine = null;
+                transitionTargetState = FogOfWarState.Hidden;
+                
+                // Обновляем визуализацию
+                UpdateFogOfWarVisual();
+                
                 yield break;
             }
+            
+            // Устанавливаем целевое состояние сразу после того, как запомнили его
+            // Это позволяет другим системам видеть правильное состояние во время анимации
+            fogState = toState;
+            
+            // Если клетка стала видимой, отмечаем её как исследованную
+            if (toState == FogOfWarState.Visible)
+            {
+                hasBeenExplored = true;
+            }
+
+            UpdateFogOfWarVisual();
             
             // Определяем, является ли это анимацией сгорания
             bool isBurnAnimationActive = isBurnAnimation;
@@ -1764,9 +1815,29 @@ namespace CellNameSpace
             
             fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
             
-            // Применяем финальное состояние после завершения анимации
+            // Устанавливаем финальное состояние после завершения анимации
+            // Используем toState (который уже сохранен в transitionTargetState)
+            fogState = toState;
+            
+            // Если клетка стала видимой, отмечаем её как исследованную
+            if (toState == FogOfWarState.Visible)
+            {
+                hasBeenExplored = true;
+            }
+            
+            // Сбрасываем целевое состояние анимации
+            transitionTargetState = FogOfWarState.Hidden;
+            
+            // Применяем финальное визуальное состояние
             // Теперь UpdateFogOfWarVisual сможет правильно установить материал, так как корутина уже сброшена
             UpdateFogOfWarVisual();
+            
+            // Дополнительно обновляем рендер после перехода в целевое состояние
+            // Это гарантирует, что все параметры (рваные края, альфа и т.д.) обновлены правильно
+            if (fogState == FogOfWarState.Hidden || fogState == FogOfWarState.Explored)
+            {
+                UpdateFogOfWarAlpha();
+            }
         }
         
         /// <summary>

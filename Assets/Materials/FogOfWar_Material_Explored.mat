@@ -45,6 +45,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AnimatedHexRadius: 0
     - _AnimationSpeed: 0
     - _BurnAlphaLoss: 0.5
     - _BurnDarken: 0.7
@@ -102,7 +103,7 @@ Material:
     m_Colors:
     - _BurnColor: {r: 0.14999998, g: 0.049999982, b: 0.02, a: 1}
     - _BurntColor: {r: 0.14999998, g: 0.06999998, b: 0.02, a: 1}
-    - _Color: {r: 0.57547164, g: 0.5727571, b: 0.5727571, a: 0.53333336}
+    - _Color: {r: 0.1981132, g: 0.1981132, b: 0.1981132, a: 0.3137255}
     - _ExploredTint: {r: 0.6132076, g: 0.49652335, b: 0.38470098, a: 0.6}
     - _GlowColor: {r: 1, g: 1, b: 1, a: 1}
     - _OriginalPosition: {r: 0, g: 0, b: 0, a: 0}
