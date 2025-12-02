@@ -366,7 +366,11 @@ public class FogOfWarManager : MonoBehaviour
         }
         
         // После того как все состояния обновлены, пересчитываем неровные края
-        // для всех клеток, чтобы оборванные края соответствовали текущим соседям.
+        // ТОЛЬКО для клеток, состояние которых изменилось, и их соседей
+        HashSet<CellInfo> cellsToRefresh = new HashSet<CellInfo>();
+        List<CellInfo> changedCells = new List<CellInfo>();
+        
+        // Сначала собираем все изменившиеся клетки
         for (int x = 0; x < gridWidth; x++)
         {
             for (int y = 0; y < gridHeight; y++)
@@ -375,8 +379,35 @@ public class FogOfWarManager : MonoBehaviour
                 if (cell == null)
                     continue;
                 
-                cell.RefreshFogOfWarRaggedEdges();
+                if (cell.HasFogStateChanged())
+                {
+                    changedCells.Add(cell);
+                    cellsToRefresh.Add(cell);
+                }
             }
+        }
+        
+        // Затем добавляем всех соседей изменившихся клеток
+        foreach (CellInfo changedCell in changedCells)
+        {
+            int x = changedCell.GetGridX();
+            int y = changedCell.GetGridY();
+            
+            var neighbors = HexagonalGridHelper.GetNeighbors(x, y, gridWidth, gridHeight);
+            foreach (var pos in neighbors)
+            {
+                CellInfo neighbor = grid.GetCellInfoAt(pos.x, pos.y);
+                if (neighbor != null)
+                {
+                    cellsToRefresh.Add(neighbor);
+                }
+            }
+        }
+        
+        // Обновляем только клетки, которым это необходимо
+        foreach (CellInfo cell in cellsToRefresh)
+        {
+            cell.RefreshFogOfWarRaggedEdges();
         }
         
         // Обновляем текущий список видимых клеток
@@ -456,16 +487,12 @@ public class FogOfWarManager : MonoBehaviour
         }
         
         // Добавляем все найденные клетки (включая стартовую) в список для возврата
-        // ВАЖНО: добавляем только клетки, которые находятся в пределах радиуса
+        // ВАЖНО: добавляем только клетки, которые находятся в пределах радиуса по BFS
         foreach (var kvp in bestDistance)
         {
             if (kvp.Key != null && kvp.Value <= radius)
             {
                 cells.Add(kvp.Key);
-                
-                // Отладочный вывод для проверки
-                Debug.Log($"[FogOfWar] GetCellsInVisionRange: Клетка ({kvp.Key.GetGridX()}, {kvp.Key.GetGridY()}) " +
-                    $"на расстоянии {kvp.Value} от центра ({centerX}, {centerY}), радиус: {radius}");
             }
         }
 
@@ -473,10 +500,10 @@ public class FogOfWarManager : MonoBehaviour
         if (!cells.Contains(startCell))
         {
             cells.Add(startCell);
-            Debug.Log($"[FogOfWar] GetCellsInVisionRange: Добавлена стартовая клетка ({centerX}, {centerY})");
         }
 
-        // Фильтруем клетки по реальному расстоянию от центра
+        // Фильтруем клетки по реальному гексагональному расстоянию от центра
+        // BFS-расстояние (количество шагов) не всегда совпадает с реальным расстоянием
         Vector2Int centerCoord = new Vector2Int(centerX, centerY);
         List<CellInfo> filteredCells = new List<CellInfo>();
 
@@ -491,13 +518,13 @@ public class FogOfWarManager : MonoBehaviour
             if (realDistance <= radius)
             {
                 filteredCells.Add(cell);
-                Debug.Log($"[FogOfWar] GetCellsInVisionRange: Клетка ({cellCoord.x}, {cellCoord.y}) " +
-                    $"BFS расстояние: {bestDistance[cell]}, реальное расстояние: {realDistance}, радиус: {radius}");
+                Debug.Log($"[FogOfWar] GetCellsInVisionRange: Клетка ({cellCoord.x}, {cellCoord.y}) включена - " +
+                    $"BFS: {bestDistance[cell]}, реальное: {realDistance}, радиус: {radius}");
             }
             else
             {
-                Debug.LogWarning($"[FogOfWar] GetCellsInVisionRange: Клетка ({cellCoord.x}, {cellCoord.y}) " +
-                    $"исключена - BFS расстояние: {bestDistance[cell]}, реальное расстояние: {realDistance} > радиус: {radius}");
+                Debug.LogWarning($"[FogOfWar] GetCellsInVisionRange: Клетка ({cellCoord.x}, {cellCoord.y}) ИСКЛЮЧЕНА - " +
+                    $"BFS: {bestDistance[cell]}, реальное: {realDistance} > радиус: {radius}");
             }
         }
 
@@ -505,21 +532,25 @@ public class FogOfWarManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Вычисляет расстояние между двумя точками на гексагональной сетке
+    /// Вычисляет расстояние между двумя точками на гексагональной сетке (even-offset layout)
+    /// Преобразует offset координаты в cube coordinates для корректного расчета
     /// </summary>
     private static int GetHexDistance(Vector2Int a, Vector2Int b)
     {
-        // Для гексагональной сетки используется более точная эвристика
-        int dx = Mathf.Abs(a.x - b.x);
-        int dy = Mathf.Abs(a.y - b.y);
+        // Преобразуем even-offset координаты в cube coordinates
+        // Для even-offset: четные строки смещены влево
+        int q1 = a.x - (a.y - (a.y & 1)) / 2;
+        int r1 = a.y;
         
-        // Учитываем смещение для нечетных строк
-        if ((a.y % 2 == 1 && a.x > b.x) || (b.y % 2 == 1 && b.x > a.x))
-        {
-            dx = Mathf.Max(0, dx - 1);
-        }
+        int q2 = b.x - (b.y - (b.y & 1)) / 2;
+        int r2 = b.y;
         
-        return Mathf.Max(dx, dy);
+        // Вычисляем расстояние в cube coordinates
+        int dq = Mathf.Abs(q1 - q2);
+        int dr = Mathf.Abs(r1 - r2);
+        int ds = Mathf.Abs((q1 + r1) - (q2 + r2));
+        
+        return Mathf.Max(Mathf.Max(dq, dr), ds);
     }
     
     /// <summary>

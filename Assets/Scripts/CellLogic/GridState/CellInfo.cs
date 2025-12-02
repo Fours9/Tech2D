@@ -45,6 +45,13 @@ namespace CellNameSpace
         private FogOfWarState previousState = FogOfWarState.Hidden; // Предыдущее состояние для определения типа перехода
         private FogOfWarState transitionTargetState = FogOfWarState.Hidden; // Целевое состояние для анимации перехода
         
+        // Кэш для состояния рваных краев - обновляется только при изменении состояния FOW
+        private bool[] cachedRaggedEdges = null;
+        private bool cachedForceAllEdges = false;
+        
+        // Флаг для отслеживания изменений состояния FOW (используется для batch-обновления)
+        private bool fogStateChanged = false;
+        
         void Awake()
         {
             // Кэшируем рендерер при создании объекта
@@ -1051,12 +1058,12 @@ namespace CellNameSpace
         /// </summary>
         public void SetFogOfWarState(FogOfWarState state)
         {
-            // Отладочный вывод для проверки
-            if (state == FogOfWarState.Visible)
-            {
-                Debug.Log($"[FogOfWar] SetFogOfWarState: Клетка ({gridX}, {gridY}) устанавливается в Visible. " +
-                    $"Текущее состояние: {fogState}, Анимация: {transitionCoroutine != null}");
-            }
+            // Отладочный вывод для проверки (закомментирован для оптимизации)
+            // if (state == FogOfWarState.Visible)
+            // {
+            //     Debug.Log($"[FogOfWar] SetFogOfWarState: Клетка ({gridX}, {gridY}) устанавливается в Visible. " +
+            //         $"Текущее состояние: {fogState}, Анимация: {transitionCoroutine != null}");
+            // }
             
             // Если туман войны отключен, всегда оставляем клетку видимой и игнорируем изменения
             if (FogOfWarManager.Instance != null && !FogOfWarManager.Instance.IsFogOfWarEnabled())
@@ -1065,6 +1072,10 @@ namespace CellNameSpace
                 {
                     fogState = FogOfWarState.Visible;
                     hasBeenExplored = true;
+                    
+                    // Инвалидируем кэш рваных краев при изменении состояния
+                    cachedRaggedEdges = null;
+                    
                     UpdateFogOfWarVisual();
                 }
                 return;
@@ -1074,14 +1085,20 @@ namespace CellNameSpace
             FogOfWarState oldState = fogState;
             previousState = oldState;
             
+            // Если состояние меняется, инвалидируем кэш рваных краев и помечаем изменение
+            if (oldState != state)
+            {
+                cachedRaggedEdges = null;
+                fogStateChanged = true;
+            }
+            
             // Если состояние не изменилось и анимация не идет, ничего не делаем
             if (oldState == state && transitionCoroutine == null)
             {
                 return;
             }
             
-            // Если анимация уже идет, не меняем состояние и не обновляем визуализацию
-            // Это предотвращает прерывание анимации при повторных вызовах UpdateVisibility()
+            // Если анимация уже идет, проверяем, нужно ли её прервать
             if (transitionCoroutine != null)
             {
                 // Если анимация уже идет к нужному состоянию, ничего не делаем
@@ -1092,17 +1109,33 @@ namespace CellNameSpace
                 }
                 
                 // Если новое состояние отличается от целевого состояния анимации,
-                // но совпадает с текущим fogState, тоже ничего не делаем
-                if (fogState == state)
+                // прерываем текущую анимацию и запускаем новую
+                Debug.Log($"[FogOfWar] SetFogOfWarState: Клетка ({gridX}, {gridY}) прерывает анимацию " +
+                    $"{previousState} → {transitionTargetState} для нового перехода {fogState} → {state}");
+                
+                // Останавливаем текущую корутину
+                StopCoroutine(transitionCoroutine);
+                transitionCoroutine = null;
+                
+                // Сбрасываем параметры анимации в шейдере
+                if (fogOfWarRenderer != null)
                 {
-                    return;
+                    if (fogOfWarPropertyBlock == null)
+                    {
+                        fogOfWarPropertyBlock = new MaterialPropertyBlock();
+                    }
+                    
+                    fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+                    fogOfWarPropertyBlock.SetFloat("_TransitionType", 0f);
+                    fogOfWarPropertyBlock.SetFloat("_TransitionProgress", 0f);
+                    fogOfWarPropertyBlock.SetFloat("_AnimatedHexRadius", 0f);
+                    fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
                 }
                 
-                // Отладочный вывод для понимания, почему состояние не меняется
-                Debug.LogWarning($"[FogOfWar] SetFogOfWarState: Клетка ({gridX}, {gridY}) не может перейти из {fogState} в {state}, " +
-                    $"потому что идет анимация к {transitionTargetState}. " +
-                    $"Текущее fogState: {fogState}");
-                return;
+                // Обновляем previousState для корректного определения типа следующей анимации
+                previousState = fogState;
+                
+                // Продолжаем выполнение метода для запуска новой анимации или установки состояния
             }
             
             // Проверяем, нужна ли анимация перехода
@@ -1225,17 +1258,43 @@ namespace CellNameSpace
         /// </summary>
         public void RefreshFogOfWarRaggedEdges()
         {
-            // Если идет анимация, не обновляем рваные края, чтобы не прервать анимацию
-            if (transitionCoroutine != null)
-            {
-                return;
-            }
-            
             // Имеет смысл только для состояний, где рендерится туман (Hidden/Explored)
             if (fogState == FogOfWarState.Hidden || fogState == FogOfWarState.Explored)
             {
-                UpdateFogOfWarAlpha();
+                // Принудительно пересчитываем края, игнорируя кэш
+                if (fogOfWarPropertyBlock == null)
+                {
+                    fogOfWarPropertyBlock = new MaterialPropertyBlock();
+                }
+                
+                fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+                
+                Vector4 originalPos = new Vector4(originalPosition.x, originalPosition.y, originalPosition.z, 0f);
+                fogOfWarPropertyBlock.SetVector("_OriginalPosition", originalPos);
+                
+                // Если анимация НЕ идет, сбрасываем параметры анимации
+                if (transitionCoroutine == null)
+                {
+                    fogOfWarPropertyBlock.SetFloat("_TransitionType", 0f);
+                    fogOfWarPropertyBlock.SetFloat("_TransitionProgress", 0f);
+                }
+                // Если анимация идет, НЕ трогаем параметры анимации (_TransitionType, _TransitionProgress)
+                // но ВСЕ РАВНО обновляем рваные края
+                
+                // Принудительно пересчитываем края с forceRecalculate = true
+                UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock, false, true);
+                
+                fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
+                fogStateChanged = false; // Сбрасываем флаг после обновления
             }
+        }
+        
+        /// <summary>
+        /// Проверяет, изменилось ли состояние FOW с последнего обновления краев
+        /// </summary>
+        public bool HasFogStateChanged()
+        {
+            return fogStateChanged;
         }
 
         /// <summary>
@@ -1248,7 +1307,8 @@ namespace CellNameSpace
         /// </summary>
         /// <param name="propertyBlock">MaterialPropertyBlock для установки параметров</param>
         /// <param name="forceAllEdges">Если true, включает все рваные края независимо от соседей</param>
-        private void UpdateRaggedEdgesPerCell(MaterialPropertyBlock propertyBlock, bool forceAllEdges = false)
+        /// <param name="forceRecalculate">Если true, принудительно пересчитывает края даже если кэш валиден</param>
+        private void UpdateRaggedEdgesPerCell(MaterialPropertyBlock propertyBlock, bool forceAllEdges = false, bool forceRecalculate = false)
         {
             // Если нет менеджера тумана — выходим
             if (FogOfWarManager.Instance == null)
@@ -1260,6 +1320,14 @@ namespace CellNameSpace
             // Для анимации сгорания (forceAllEdges = true) всегда устанавливаем параметры граней
             if (!forceAllEdges && !FogOfWarManager.Instance.IsRaggedEdgesEnabled())
             {
+                return;
+            }
+
+            // Используем кэш, если он валиден и параметры не изменились
+            if (!forceRecalculate && cachedRaggedEdges != null && cachedForceAllEdges == forceAllEdges)
+            {
+                // Применяем кэшированные значения
+                ApplyRaggedEdgesToPropertyBlock(propertyBlock, cachedRaggedEdges);
                 return;
             }
 
@@ -1331,7 +1399,23 @@ namespace CellNameSpace
                 }
             }
 
+            // Сохраняем в кэш
+            if (cachedRaggedEdges == null)
+            {
+                cachedRaggedEdges = new bool[6];
+            }
+            System.Array.Copy(faceActive, cachedRaggedEdges, 6);
+            cachedForceAllEdges = forceAllEdges;
+            
             // Применяем маску к шейдерным параметрам граней
+            ApplyRaggedEdgesToPropertyBlock(propertyBlock, faceActive);
+        }
+        
+        /// <summary>
+        /// Применяет маску рваных краев к MaterialPropertyBlock
+        /// </summary>
+        private void ApplyRaggedEdgesToPropertyBlock(MaterialPropertyBlock propertyBlock, bool[] faceActive)
+        {
             // Соответствие индексов faceActive к параметрам шейдера:
             // 0 -> _RaggedEdgeFlatLeft   (Flat Left, 90-150°)
             // 1 -> _RaggedEdgeTopRight   (Top Right, 330-30°)
@@ -1710,6 +1794,13 @@ namespace CellNameSpace
             
             float elapsedTime = 0f;
             
+            // Кэшируем _OriginalPosition один раз перед циклом
+            Vector4 cachedOriginalPos = fogOfWarPropertyBlock.GetVector("_OriginalPosition");
+            if (cachedOriginalPos == Vector4.zero)
+            {
+                cachedOriginalPos = new Vector4(originalPosition.x, originalPosition.y, originalPosition.z, 0f);
+            }
+            
             while (elapsedTime < duration)
             {
                 elapsedTime += Time.deltaTime;
@@ -1718,24 +1809,8 @@ namespace CellNameSpace
                 // Применяем easing для более плавного движения
                 progress = Mathf.SmoothStep(0f, 1f, progress);
                 
-                // Обновляем параметры анимации в MaterialPropertyBlock
-                // Важно: получаем текущий блок, чтобы сохранить все параметры (включая _OriginalPosition)
-                if (fogOfWarPropertyBlock == null)
-                {
-                    fogOfWarPropertyBlock = new MaterialPropertyBlock();
-                }
-                
-                fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
-                
-                // Убеждаемся, что _OriginalPosition установлен (на случай, если материал был изменен извне)
-                Vector4 currentOriginalPos = fogOfWarPropertyBlock.GetVector("_OriginalPosition");
-                if (currentOriginalPos == Vector4.zero)
-                {
-                    Vector4 originalPos = new Vector4(originalPosition.x, originalPosition.y, originalPosition.z, 0f);
-                    fogOfWarPropertyBlock.SetVector("_OriginalPosition", originalPos);
-                }
-                
-                // Обновляем параметры анимации
+                // Обновляем только изменяющиеся параметры без лишних GetPropertyBlock
+                fogOfWarPropertyBlock.SetVector("_OriginalPosition", cachedOriginalPos);
                 fogOfWarPropertyBlock.SetFloat("_TransitionType", transitionType);
                 fogOfWarPropertyBlock.SetFloat("_TransitionProgress", progress);
                 
@@ -1750,9 +1825,8 @@ namespace CellNameSpace
                     fogOfWarPropertyBlock.SetFloat("_AnimatedHexRadius", animatedRadius);
                 }
                 
-                // Обновляем параметры неровных краев (важно для эффекта сгорания)
-                // Для анимации сгорания принудительно включаем все рваные края
-                UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock, isBurnAnimationActive);
+                // Применяем кэшированные параметры неровных краев (они уже установлены один раз перед циклом)
+                // Не нужно вызывать UpdateRaggedEdgesPerCell каждый кадр
                 
                 fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
                 
@@ -1837,6 +1911,37 @@ namespace CellNameSpace
             if (fogState == FogOfWarState.Hidden || fogState == FogOfWarState.Explored)
             {
                 UpdateFogOfWarAlpha();
+            }
+            
+            // После завершения анимации обновляем рваные края для всех соседей
+            // Это важно, так как изменение состояния этой клетки влияет на отображение краев у соседей
+            RefreshNeighborsFogOfWarRaggedEdges();
+        }
+        
+        /// <summary>
+        /// Обновляет рваные края тумана войны для всех соседних клеток
+        /// </summary>
+        private void RefreshNeighborsFogOfWarRaggedEdges()
+        {
+            if (FogOfWarManager.Instance == null)
+                return;
+            
+            CellNameSpace.Grid grid = FogOfWarManager.Instance.GetGrid();
+            if (grid == null)
+                return;
+            
+            int gridWidth = grid.GetGridWidth();
+            int gridHeight = grid.GetGridHeight();
+            
+            // Обновляем рваные края для всех соседей
+            var neighbors = HexagonalGridHelper.GetNeighbors(gridX, gridY, gridWidth, gridHeight);
+            foreach (var pos in neighbors)
+            {
+                CellInfo neighbor = grid.GetCellInfoAt(pos.x, pos.y);
+                if (neighbor != null)
+                {
+                    neighbor.RefreshFogOfWarRaggedEdges();
+                }
             }
         }
         
