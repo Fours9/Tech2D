@@ -1229,8 +1229,15 @@ namespace CellNameSpace
         /// <param name="forceAllEdges">Если true, включает все рваные края независимо от соседей</param>
         private void UpdateRaggedEdgesPerCell(MaterialPropertyBlock propertyBlock, bool forceAllEdges = false)
         {
-            // Если нет менеджера тумана или эффект неровных краев глобально отключен — выходим
-            if (FogOfWarManager.Instance == null || !FogOfWarManager.Instance.IsRaggedEdgesEnabled())
+            // Если нет менеджера тумана — выходим
+            if (FogOfWarManager.Instance == null)
+            {
+                return;
+            }
+            
+            // Если эффект неровных краев глобально отключен И мы не принудительно включаем все края — выходим
+            // Для анимации сгорания (forceAllEdges = true) всегда устанавливаем параметры граней
+            if (!forceAllEdges && !FogOfWarManager.Instance.IsRaggedEdgesEnabled())
             {
                 return;
             }
@@ -1247,48 +1254,59 @@ namespace CellNameSpace
             // Маска активных граней: 0 = Flat Left, 1 = Top Right, 2 = Bottom Right,
             // 3 = Flat Right, 4 = Bottom Left, 5 = Top Left
             bool[] faceActive = new bool[6];
-
-            // Получаем соседей по координатам сетки
-            var neighbors = HexagonalGridHelper.GetNeighbors(gridX, gridY, gridWidth, gridHeight);
-
-            foreach (var pos in neighbors)
+            
+            // Если принудительно включаем все края (для анимации сгорания), устанавливаем все грани как активные
+            if (forceAllEdges)
             {
-                CellInfo neighbor = grid.GetCellInfoAt(pos.x, pos.y);
-                if (neighbor == null)
-                    continue;
-
-                FogOfWarState neighborState = neighbor.GetFogOfWarState();
+                for (int i = 0; i < faceActive.Length; i++)
+                {
+                    faceActive[i] = true;
+                }
+            }
+            else
+            {
+                // Получаем соседей по координатам сетки
+                var neighbors = HexagonalGridHelper.GetNeighbors(gridX, gridY, gridWidth, gridHeight);
                 
-                // Определяем, должен ли этот сосед рвать край в зависимости от нашего состояния
-                bool neighborTriggersEdge = false;
-                if (fogState == FogOfWarState.Hidden)
+                foreach (var pos in neighbors)
                 {
-                    // Для Hidden нас рвёт всё, что не Hidden: Visible или Explored
-                    neighborTriggersEdge = (neighborState == FogOfWarState.Visible ||
-                                            neighborState == FogOfWarState.Explored);
-                }
-                else if (fogState == FogOfWarState.Explored)
-                {
-                    // Для Explored нас рвут только реально видимые соседи
-                    neighborTriggersEdge = (neighborState == FogOfWarState.Visible);
-                }
+                    CellInfo neighbor = grid.GetCellInfoAt(pos.x, pos.y);
+                    if (neighbor == null)
+                        continue;
 
-                if (!neighborTriggersEdge)
-                    continue;
+                    FogOfWarState neighborState = neighbor.GetFogOfWarState();
+                    
+                    // Определяем, должен ли этот сосед рвать край в зависимости от нашего состояния
+                    bool neighborTriggersEdge = false;
+                    if (fogState == FogOfWarState.Hidden)
+                    {
+                        // Для Hidden нас рвёт всё, что не Hidden: Visible или Explored
+                        neighborTriggersEdge = (neighborState == FogOfWarState.Visible ||
+                                                neighborState == FogOfWarState.Explored);
+                    }
+                    else if (fogState == FogOfWarState.Explored)
+                    {
+                        // Для Explored нас рвут только реально видимые соседи
+                        neighborTriggersEdge = (neighborState == FogOfWarState.Visible);
+                    }
 
-                // Берём направление до соседа в ЛОКАЛЬНОЙ системе координат меша тумана,
-                // чтобы совпасть с тем, как шейдер видит вершины (v.vertex.xy).
-                Vector3 neighborWorldPos3 = neighbor.GetOriginalPosition();
-                Vector3 neighborLocalPos3 = fogOfWarRenderer.transform.InverseTransformPoint(neighborWorldPos3);
-                Vector2 dir = new Vector2(neighborLocalPos3.x, neighborLocalPos3.y);
+                    if (!neighborTriggersEdge)
+                        continue;
 
-                if (dir.sqrMagnitude < 0.0001f)
-                    continue;
+                    // Берём направление до соседа в ЛОКАЛЬНОЙ системе координат меша тумана,
+                    // чтобы совпасть с тем, как шейдер видит вершины (v.vertex.xy).
+                    Vector3 neighborWorldPos3 = neighbor.GetOriginalPosition();
+                    Vector3 neighborLocalPos3 = fogOfWarRenderer.transform.InverseTransformPoint(neighborWorldPos3);
+                    Vector2 dir = new Vector2(neighborLocalPos3.x, neighborLocalPos3.y);
 
-                int faceIndex = GetClosestFaceIndexForDirection(dir);
-                if (faceIndex >= 0 && faceIndex < faceActive.Length)
-                {
-                    faceActive[faceIndex] = true;
+                    if (dir.sqrMagnitude < 0.0001f)
+                        continue;
+
+                    int faceIndex = GetClosestFaceIndexForDirection(dir);
+                    if (faceIndex >= 0 && faceIndex < faceActive.Length)
+                    {
+                        faceActive[faceIndex] = true;
+                    }
                 }
             }
 
@@ -1519,18 +1537,23 @@ namespace CellNameSpace
         {
             // Определяем тип перехода
             float transitionType = 0f;
+            bool isBurnAnimation = false;
+            
             if (fromState == FogOfWarState.Hidden && 
                 (toState == FogOfWarState.Visible || toState == FogOfWarState.Explored))
             {
                 transitionType = 1f; // Сгорание
+                isBurnAnimation = true;
             }
             else if (fromState == FogOfWarState.Explored && toState == FogOfWarState.Visible)
             {
-                transitionType = 2f; // Fade out
+                transitionType = 1f; // Сгорание (изменено с fade out на сгорание)
+                isBurnAnimation = true;
             }
             else if (fromState == FogOfWarState.Visible && toState == FogOfWarState.Explored)
             {
                 transitionType = 3f; // Fade in
+                isBurnAnimation = false;
             }
             
             // Если тип перехода не определен, завершаем корутину
@@ -1541,26 +1564,29 @@ namespace CellNameSpace
             }
             
             // Определяем, является ли это анимацией сгорания
-            bool isBurnAnimationActive = (transitionType > 0.5f && transitionType < 1.5f);
+            bool isBurnAnimationActive = isBurnAnimation;
             
             // Для анимации нужно правильно настроить материал и видимость рендерера
             // В зависимости от типа перехода используем разные материалы
             Material animationMaterial = null;
             bool shouldShowRenderer = true;
             
-            if (isBurnAnimationActive) // Тип 1 = сгорание (Hidden→Visible/Explored)
+            if (isBurnAnimationActive) // Тип 1 = сгорание (Hidden→Visible/Explored или Explored→Visible)
             {
-                // Для сгорания используем материал Hidden (fogUnseenMaterial)
-                animationMaterial = FogOfWarManager.Instance != null ? 
-                    FogOfWarManager.Instance.GetFogUnseenMaterial() : null;
+                // Для сгорания используем материал в зависимости от исходного состояния
+                if (fromState == FogOfWarState.Hidden)
+                {
+                    // Hidden → Visible/Explored: используем материал Hidden
+                    animationMaterial = FogOfWarManager.Instance != null ? 
+                        FogOfWarManager.Instance.GetFogUnseenMaterial() : null;
+                }
+                else if (fromState == FogOfWarState.Explored)
+                {
+                    // Explored → Visible: используем материал Explored
+                    animationMaterial = FogOfWarManager.Instance != null ? 
+                        FogOfWarManager.Instance.GetFogExploredMaterial() : null;
+                }
                 shouldShowRenderer = true;
-            }
-            else if (transitionType > 1.5f && transitionType < 2.5f) // Тип 2 = fade out (Explored→Visible)
-            {
-                // Для fade out используем материал Explored
-                animationMaterial = FogOfWarManager.Instance != null ? 
-                    FogOfWarManager.Instance.GetFogExploredMaterial() : null;
-                shouldShowRenderer = true; // Оставляем рендерер включенным для анимации
             }
             else if (transitionType > 2.5f && transitionType < 3.5f) // Тип 3 = fade in (Visible→Explored)
             {
@@ -1611,9 +1637,22 @@ namespace CellNameSpace
             // Для анимации сгорания принудительно включаем все рваные края
             UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock, isBurnAnimationActive);
             
+            // Получаем исходный _HexRadius из материала для анимации сгорания
+            float originalHexRadius = 0f;
+            if (isBurnAnimationActive && animationMaterial != null && animationMaterial.HasProperty("_HexRadius"))
+            {
+                originalHexRadius = animationMaterial.GetFloat("_HexRadius");
+            }
+            
             // Устанавливаем параметры анимации
             fogOfWarPropertyBlock.SetFloat("_TransitionType", transitionType);
             fogOfWarPropertyBlock.SetFloat("_TransitionProgress", 0f);
+            
+            // Для анимации сгорания устанавливаем начальный анимированный радиус
+            if (isBurnAnimationActive)
+            {
+                fogOfWarPropertyBlock.SetFloat("_AnimatedHexRadius", originalHexRadius);
+            }
             
             // Применяем MaterialPropertyBlock
             fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
@@ -1649,6 +1688,17 @@ namespace CellNameSpace
                 fogOfWarPropertyBlock.SetFloat("_TransitionType", transitionType);
                 fogOfWarPropertyBlock.SetFloat("_TransitionProgress", progress);
                 
+                // Для анимации сгорания плавно уменьшаем радиус от исходного до 0 с ускорением
+                if (isBurnAnimationActive)
+                {
+                    // Используем квадратичную функцию для ускорения: progress^2
+                    // Это создаст эффект ускорения - в начале медленнее, в конце быстрее
+                    float acceleratedProgress = progress * progress;
+                    // Плавно уменьшаем радиус: при progress = 0 радиус = originalHexRadius, при progress = 1 радиус = 0
+                    float animatedRadius = originalHexRadius * (1f - acceleratedProgress);
+                    fogOfWarPropertyBlock.SetFloat("_AnimatedHexRadius", animatedRadius);
+                }
+                
                 // Обновляем параметры неровных краев (важно для эффекта сгорания)
                 // Для анимации сгорания принудительно включаем все рваные края
                 UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock, isBurnAnimationActive);
@@ -1662,6 +1712,36 @@ namespace CellNameSpace
             // Это нужно, чтобы UpdateFogOfWarVisual мог правильно установить материал
             transitionCoroutine = null;
             
+            // Для анимации сгорания: перед сбросом параметров устанавливаем альфу в 0,
+            // чтобы предотвратить появление полной клетки Hidden на миг
+            if (isBurnAnimationActive)
+            {
+                if (fogOfWarPropertyBlock == null)
+                {
+                    fogOfWarPropertyBlock = new MaterialPropertyBlock();
+                }
+                
+                fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+                
+                // Получаем текущий цвет и устанавливаем альфу в 0
+                Color currentColor = fogOfWarPropertyBlock.GetColor("_Color");
+                if (currentColor == Color.clear)
+                {
+                    // Если цвет не установлен, получаем из материала
+                    if (fogOfWarRenderer.sharedMaterial != null && fogOfWarRenderer.sharedMaterial.HasProperty("_Color"))
+                    {
+                        currentColor = fogOfWarRenderer.sharedMaterial.GetColor("_Color");
+                    }
+                    else
+                    {
+                        currentColor = Color.white;
+                    }
+                }
+                //currentColor.a = 0f; // Устанавливаем альфу в 0
+                //fogOfWarPropertyBlock.SetColor("_Color", currentColor);
+                fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
+            }
+            
             // Сбрасываем параметры анимации
             if (fogOfWarPropertyBlock == null)
             {
@@ -1669,8 +1749,19 @@ namespace CellNameSpace
             }
             
             fogOfWarRenderer.GetPropertyBlock(fogOfWarPropertyBlock);
+            
+            // ========== СБРОС ПАРАМЕТРОВ АНИМАЦИИ ==========
+            // Сбрасываем тип анимации перехода (0 = нет анимации)
             fogOfWarPropertyBlock.SetFloat("_TransitionType", 0f);
+            
+            // Сбрасываем прогресс анимации (0 = начало, 1 = конец)
             fogOfWarPropertyBlock.SetFloat("_TransitionProgress", 0f);
+            
+            // Сбрасываем анимированный радиус (устанавливаем в 0, чтобы не использовался)
+            // Это важно, так как шейдер проверяет _AnimatedHexRadius > 0 для определения активной анимации сгорания
+            fogOfWarPropertyBlock.SetFloat("_AnimatedHexRadius", 0f);
+            // ================================================
+            
             fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
             
             // Применяем финальное состояние после завершения анимации

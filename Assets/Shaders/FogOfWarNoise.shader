@@ -119,6 +119,7 @@ Shader "Custom/FogOfWarNoise"
             float _ExploredToVisibleDuration; // Длительность анимации Explored→Visible (секунды)
             float _VisibleToExploredDuration; // Длительность анимации Visible→Explored (секунды)
             float _TransitionsEnabled; // Включены ли анимации переходов (0 или 1)
+            float _AnimatedHexRadius; // Анимированный радиус для эффекта сгорания (уменьшается от _HexRadius до 0)
             
             // Полная SDF для pointy-top шестиугольника
             // r - расстояние от центра до вершины (_HexRadius)
@@ -311,23 +312,29 @@ Shader "Custom/FogOfWarNoise"
                     col.rgb = lerp(col.rgb, foggedColor, cloudsStrength);
                 }
                 
+                // Проверяем, активна ли анимация сгорания (тип 1)
+                bool isBurnAnimationActive = (_TransitionType > 0.5 && _TransitionType < 1.5);
+                
+                // Для анимации сгорания используем анимированный радиус, иначе обычный
+                // Если _AnimatedHexRadius > 0, используем его, иначе используем _HexRadius
+                float currentHexRadius = isBurnAnimationActive ? _AnimatedHexRadius : _HexRadius;
+                
                 // Вычисляем SDF для определения расстояния до края (нужно для рваных краёв и тления)
-                float hexSDFValue = hexSDF(i.localPos, _HexRadius);
+                float hexSDFValue = hexSDF(i.localPos, currentHexRadius);
                 float modifiedSDF = hexSDFValue;
                 float edgeFade = 1.0;
                 bool isRaggedEdgeActive = false;
                 
-                // Проверяем, активна ли анимация сгорания (тип 1)
-                bool isBurnAnimationActive = (_TransitionType > 0.5 && _TransitionType < 1.5);
-                
-                // Применяем неровные края, если эффект включен
-                if (_RaggedEdgesEnabled > 0.5)
+                // Применяем неровные края, если эффект включен ИЛИ активна анимация сгорания
+                // Для анимации сгорания рваные края всегда должны быть видны
+                if (_RaggedEdgesEnabled > 0.5 || isBurnAnimationActive)
                 {
                     // Определяем ближайшую грань
-                    int closestFace = getClosestFace(i.localPos, _HexRadius);
+                    int closestFace = getClosestFace(i.localPos, currentHexRadius);
                     
                     // Проверяем, включен ли эффект для этой грани
-                    float faceEnabled = getFaceEnabled(closestFace);
+                    // Для анимации сгорания всегда считаем, что грань включена
+                    float faceEnabled = isBurnAnimationActive ? 1.0 : getFaceEnabled(closestFace);
                     
                     // Применяем эффект только если он включен для этой грани
                     if (faceEnabled > 0.5)
@@ -337,41 +344,34 @@ Shader "Custom/FogOfWarNoise"
                         // Генерируем шум на основе тех же координат, что и основная текстура:
                         // _OriginalPosition + worldOffset (без tiling/frac), чтобы рисунок рваных краёв
                         // и огня был привязан к карте так же, как бумага.
-                        float2 baseCoord = (_OriginalPosition.xy + i.worldOffset) * _RaggedEdgesScale;
-                        float2 noiseCoord = baseCoord;
-                        float noiseValue = smoothNoise2D(noiseCoord);
+                        // Для анимации сгорания масштабируем координаты шума пропорционально уменьшению радиуса,
+                        // чтобы рваные края "сжимались" вместе с радиусом
+                        float radiusScale = isBurnAnimationActive && _HexRadius > 0.0 ? 
+                            (currentHexRadius / _HexRadius) : 1.0;
+                        float2 baseCoord = (_OriginalPosition.xy + i.worldOffset) * _RaggedEdgesScale * radiusScale;
+                        
+                        // Добавляем анимацию для эффекта "плавания" рваных краев
+                        // Используем время для создания постоянного движения краев
+                        float2 animatedCoord = baseCoord + _Time.y * _GlowFlickerSpeed * 0.3;
+                        float noiseValue = smoothNoise2D(animatedCoord);
                         
                         // Преобразуем шум из [0, 1] в [-intensity, +intensity]
                         // Это создаст неровности, которые будут "вдавливать" и "выдавливать" края
-                        float noiseOffset = (noiseValue - 0.5) * 2.0 * _RaggedEdgesIntensity * _HexRadius;
+                        float noiseOffset = (noiseValue - 0.5) * 2.0 * _RaggedEdgesIntensity * currentHexRadius;
                         
                         // Применяем шум к SDF: если SDF + offset < 0, пиксель видим
                         // Если SDF + offset >= 0, пиксель обрезаем (альфа = 0)
                         modifiedSDF = hexSDFValue + noiseOffset;
                     }
                 }
-                // Если рваные края не включены, но активна анимация сгорания, используем чистый SDF
-                else if (isBurnAnimationActive)
-                {
-                    // Для анимации сгорания используем чистый SDF без шума
-                    modifiedSDF = hexSDFValue;
-                    isRaggedEdgeActive = true; // Помечаем как активную для эффекта обугленности
-                }
                 
-                // Если активна анимация сгорания, вычисляем глубину сгорания
-                float burnDepth = 0.0;
-                if (isBurnAnimationActive)
-                {
-                    // Максимальная глубина от края до центра = _HexRadius * sqrt(3) / 2
-                    float maxDepth = _HexRadius * sqrt(3.0) * 0.5;
-                    burnDepth = _TransitionProgress * maxDepth;
-                }
-                
-                // Применяем обрезание на основе модифицированного SDF и глубины сгорания
+                // Применяем обрезание на основе модифицированного SDF
+                // Для анимации сгорания радиус уже уменьшен через _AnimatedHexRadius,
+                // поэтому просто обрезаем все, что снаружи уменьшенного радиуса
                 if (isRaggedEdgeActive || isBurnAnimationActive)
                 {
-                    float burnThreshold = -burnDepth;
-                    if (modifiedSDF > burnThreshold)
+                    // Если SDF положительный (снаружи), обрезаем пиксель
+                    if (modifiedSDF > 0.0)
                     {
                         col.a = 0.0;
                     }
@@ -380,9 +380,9 @@ Shader "Custom/FogOfWarNoise"
                         // Плавный переход на краю для более мягкого обрезания
                         // Используем smoothstep для создания плавного перехода
                         float fadeRange = _RaggedEdgesEnabled > 0.5 ? 
-                            (_RaggedEdgesIntensity * _HexRadius * 0.5) : 
-                            (_HexRadius * 0.1); // Меньший диапазон для чистого SDF
-                        edgeFade = smoothstep(burnThreshold, burnThreshold - fadeRange, modifiedSDF);
+                            (_RaggedEdgesIntensity * currentHexRadius * 0.5) : 
+                            (currentHexRadius * 0.1); // Меньший диапазон для чистого SDF
+                        edgeFade = smoothstep(0.0, -fadeRange, modifiedSDF);
                         col.a *= edgeFade;
                     }
                 }
@@ -395,11 +395,13 @@ Shader "Custom/FogOfWarNoise"
                 if (_BurntEnabled > 0.5 && _RaggedEdgesEnabled > 0.5 && isRaggedEdgeActive && col.a > 0.001)
                 {
                     // Чистый SDF по идеальному гексу: 0 на границе, отрицательный внутри
+                    // Используем currentHexRadius, чтобы обугленность следовала за уменьшающимся радиусом
                     float edgeSDF = hexSDFValue;
                     
                     // Определяем внутреннюю границу обугленного пояса.
                     // При edgeSDF = 0 — самый край, при edgeSDF = innerLimit — конец пояса внутрь.
-                    float innerLimit = -_BurntWidth * _HexRadius;
+                    // Используем currentHexRadius, чтобы обугленность следовала за уменьшающимся радиусом
+                    float innerLimit = -_BurntWidth * currentHexRadius;
                     
                     // Нормализуем расстояние в диапазон [0,1] вдоль пояса:
                     // 0 — глубоко внутри, 1 — на самом краю.
@@ -418,8 +420,8 @@ Shader "Custom/FogOfWarNoise"
                 }
                 
                 // Применяем эффект тления вдоль рваного края
-                // Эффект работает только если неровные края включены и пиксель видим
-                if (_RaggedEdgesEnabled > 0.5 && isRaggedEdgeActive && col.a > 0.001)
+                // Эффект работает если рваные края активны (обычные или в анимации) и пиксель видим
+                if (isRaggedEdgeActive && col.a > 0.001)
                 {
                     // Определяем расстояние до модифицированного края (modifiedSDF)
                     // Используем отрицательное значение modifiedSDF (внутри гекса с учетом шума) для определения близости к неровному краю
@@ -427,7 +429,8 @@ Shader "Custom/FogOfWarNoise"
                     
                     // Нормализуем расстояние: 0 на неровном краю (где modifiedSDF = 0), увеличивается внутрь
                     // Используем _GlowWidth для определения зоны тления
-                    float glowZone = _GlowWidth * _HexRadius;
+                    // Используем currentHexRadius, чтобы тление следовало за уменьшающимся радиусом
+                    float glowZone = _GlowWidth * currentHexRadius;
                     
                     // Вычисляем фактор тления: максимален на неровном краю, затухает внутрь
                     // Используем smoothstep для более плавного перехода

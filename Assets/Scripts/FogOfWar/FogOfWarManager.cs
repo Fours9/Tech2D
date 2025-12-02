@@ -591,7 +591,7 @@ public class FogOfWarManager : MonoBehaviour
             return 1.0f; // Значение по умолчанию
         }
         
-        // Explored → Visible: fade out (из материала Explored)
+        // Explored → Visible: сгорание (из материала Explored)
         if (fromState == FogOfWarState.Explored && toState == FogOfWarState.Visible)
         {
             if (fogExploredMaterial != null && fogExploredMaterial.HasProperty("_ExploredToVisibleDuration"))
