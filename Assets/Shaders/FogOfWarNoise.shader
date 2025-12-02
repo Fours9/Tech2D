@@ -15,6 +15,7 @@ Shader "Custom/FogOfWarNoise"
         [Header(Ragged Edges)]
         [Range(0.0, 1.0)] _RaggedEdgesIntensity ("Ragged Edges Intensity", Float) = 0.1
         [Range(0.1, 10.0)] _RaggedEdgesScale ("Ragged Edges Scale", Float) = 2.0
+        [Range(0.0, 5.0)] _RaggedEdgesAnimationSpeed ("Ragged Edges Animation Speed", Float) = 0.5
         [Header(Explored Clouds)]
         [Toggle] _CloudsEnabled ("Clouds Enabled", Float) = 0.0
         [Range(0.1, 10.0)] _CloudsScale ("Clouds Scale", Float) = 1.5
@@ -92,6 +93,7 @@ Shader "Custom/FogOfWarNoise"
             float _VignetteEnabled; // Включена ли виньетка (0 или 1)
             float _RaggedEdgesIntensity; // Интенсивность неровных краев (0-1)
             float _RaggedEdgesScale; // Масштаб шума для неровных краев
+            float _RaggedEdgesAnimationSpeed; // Скорость анимации неровных краев (0-5)
             float _CloudsEnabled; // Включены ли облака (0 или 1)
             float _CloudsScale;   // Масштаб шума для облаков
             float _CloudsIntensity; // Интенсивность облаков (0-1)
@@ -352,7 +354,7 @@ Shader "Custom/FogOfWarNoise"
                         
                         // Добавляем анимацию для эффекта "плавания" рваных краев
                         // Используем время для создания постоянного движения краев
-                        float2 animatedCoord = baseCoord + _Time.y * _GlowFlickerSpeed * 0.3;
+                        float2 animatedCoord = baseCoord + _Time.y * _RaggedEdgesAnimationSpeed * 0.3;
                         float noiseValue = smoothNoise2D(animatedCoord);
                         
                         // Преобразуем шум из [0, 1] в [-intensity, +intensity]

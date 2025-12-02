@@ -68,7 +68,7 @@ Material:
     - _ExploredToVisibleDuration: 0.5
     - _GlowFlickerSpeed: 3
     - _GlowInnerRadius: 0.75
-    - _GlowIntensity: 2
+    - _GlowIntensity: 3
     - _GlowIntensityExplored: 0.5
     - _GlowIntensityUnseen: 0.2
     - _GlowOuterRadius: 0.95
@@ -89,8 +89,9 @@ Material:
     - _RaggedEdgeTop: 1
     - _RaggedEdgeTopLeft: 1
     - _RaggedEdgeTopRight: 1
-    - _RaggedEdgesIntensity: 0.1
-    - _RaggedEdgesScale: 4
+    - _RaggedEdgesAnimationSpeed: 7
+    - _RaggedEdgesIntensity: 0.2
+    - _RaggedEdgesScale: 6
     - _SecondaryNoise: 0.3
     - _SparkIntensity: 0.8
     - _TextureScale: 0.02
@@ -102,7 +103,7 @@ Material:
     - _VisibleToExploredDuration: 0.5
     m_Colors:
     - _BurnColor: {r: 0.14999998, g: 0.049999982, b: 0.02, a: 1}
-    - _BurntColor: {r: 0.14999998, g: 0.06999998, b: 0.02, a: 1}
+    - _BurntColor: {r: 0.4528302, g: 0.24382487, b: 0.11320755, a: 1}
     - _Color: {r: 0.8301887, g: 0.8301887, b: 0.8301887, a: 1}
     - _ExploredTint: {r: 0.8962264, g: 0.8252907, b: 0.75671947, a: 0.6}
     - _GlowColor: {r: 1, g: 0.77394015, b: 0.5990566, a: 1}

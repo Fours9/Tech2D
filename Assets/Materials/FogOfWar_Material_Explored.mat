@@ -89,6 +89,7 @@ Material:
     - _RaggedEdgeTop: 0
     - _RaggedEdgeTopLeft: 1
     - _RaggedEdgeTopRight: 1
+    - _RaggedEdgesAnimationSpeed: 0.45
     - _RaggedEdgesIntensity: 0.1
     - _RaggedEdgesScale: 2
     - _SecondaryNoise: 0.3
