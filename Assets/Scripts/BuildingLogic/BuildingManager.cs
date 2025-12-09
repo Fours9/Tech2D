@@ -80,18 +80,17 @@ public class BuildingManager : MonoBehaviour
             return false;
         }
         
-        // Устанавливаем спрайт постройки
-        Sprite buildingSprite = building.GetSprite();
-        if (buildingSprite != null)
+        // Устанавливаем данные о постройке
+        BuildingStats buildingStats = building.buildingStats;
+        if (buildingStats != null)
         {
-            cell.SetBuildingSprite(buildingSprite);
+            cell.SetBuildingStats(buildingStats);
             placedBuildings[cellPosition] = building;
-            Debug.Log($"BuildingManager: Постройка '{building.GetName()}' установлена на клетку ({cellPosition.x}, {cellPosition.y})");
             return true;
         }
         else
         {
-            Debug.LogWarning($"BuildingManager: У постройки '{building.GetName()}' нет спрайта!");
+            Debug.LogWarning($"BuildingManager: У постройки '{building.GetName()}' нет BuildingStats!");
             return false;
         }
     }
@@ -115,9 +114,9 @@ public class BuildingManager : MonoBehaviour
             // Проверяем, не центр ли это города
             if (!cityManager.HasCityAt(cellPosition))
             {
-                cell.ClearBuildingSprite();
+                cell.SetBuildingStats(null);
             }
-            // Если это центр города, оставляем спрайт города
+            // Если это центр города, оставляем BuildingStats города
         }
         
         placedBuildings.Remove(cellPosition);

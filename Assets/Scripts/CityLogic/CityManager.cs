@@ -9,7 +9,7 @@ using CellNameSpace;
 public class CityManager : MonoBehaviour
 {
     [Header("Настройки городов")]
-    [SerializeField] private Sprite cityCenterSprite; // Спрайт центра города
+    [SerializeField] private BuildingStats cityCenterBuildingStats; // BuildingStats центра города (пользователь назначит в инспекторе)
     [Tooltip("Радиус видимости для тумана войны (в клетках) от каждой клетки города")]
     [SerializeField] private int defaultCityVisionRadius = 2; // Радиус видимости по умолчанию
     
@@ -80,14 +80,14 @@ public class CityManager : MonoBehaviour
             return false;
         }
         
-        // Устанавливаем спрайт города на слой построек
-        if (cityCenterSprite != null)
+        // Устанавливаем BuildingStats центра города
+        if (cityCenterBuildingStats != null)
         {
-            targetCell.SetBuildingSprite(cityCenterSprite);
+            targetCell.SetBuildingStats(cityCenterBuildingStats);
         }
         else
         {
-            Debug.LogWarning("CityManager: Спрайт центра города не назначен!");
+            Debug.LogWarning("CityManager: BuildingStats центра города не назначен!");
         }
         
         // Создаем информацию о городе

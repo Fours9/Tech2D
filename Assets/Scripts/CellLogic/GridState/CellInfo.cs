@@ -32,6 +32,10 @@ namespace CellNameSpace
         private CellOverlayManager cachedOverlayManager = null;
         private Vector2? cachedCellSize = null; // Кэшированный размер клетки
         private CityInfo owningCity = null; // Город, которому принадлежит клетка
+        
+        [Header("Данные клетки (не визуализация)")]
+        private BuildingStats buildingStats = null; // Данные о постройке на клетке (может быть null)
+        private ResourceStats resourceStats = null; // Данные о ресурсе на клетке (может быть null)
         private Vector3 originalPosition; // Изначальная позиция клетки в мире
         private bool originalPositionSet = false; // Флаг, что изначальная позиция уже установлена
         private MaterialPropertyBlock materialPropertyBlock = null; // MaterialPropertyBlock для передачи параметров в шейдер
@@ -298,9 +302,10 @@ namespace CellNameSpace
             ApplyOriginalPositionToShader();
             
             // Если клетка принадлежит городу, применяем визуализацию принадлежности
+            // Визуализация применяется через CellVisualizationManager с учетом тумана войны
             if (owningCity != null)
             {
-                ApplyOwnershipVisualization();
+                CellVisualizationManager.ApplyOwnershipVisualization(this);
             }
             
             // Обновляем оверлеи при изменении типа клетки (если требуется)
@@ -419,7 +424,7 @@ namespace CellNameSpace
         /// Получает размер клетки в локальных координатах (без учета масштаба родителя)
         /// Использует кэширование для оптимизации
         /// </summary>
-        private Vector2 GetCellSize()
+        public Vector2 GetCellSize()
         {
             // Возвращаем кэшированное значение, если оно есть
             if (cachedCellSize.HasValue)
@@ -465,7 +470,7 @@ namespace CellNameSpace
         /// <summary>
         /// Масштабирует спрайт так, чтобы он точно совпадал с размером клетки
         /// </summary>
-        private void ScaleSpriteToCellSize(SpriteRenderer spriteRenderer, Sprite sprite, Vector2 targetSize)
+        public void ScaleSpriteToCellSize(SpriteRenderer spriteRenderer, Sprite sprite, Vector2 targetSize)
         {
             if (spriteRenderer == null || sprite == null)
                 return;
@@ -495,7 +500,7 @@ namespace CellNameSpace
         /// Обновляет позицию и масштаб ресурсов в зависимости от наличия постройки
         /// Если есть постройка, ресурсы уменьшаются в 4 раза и размещаются в центре по X и внизу по Y
         /// </summary>
-        private void UpdateResourcePositionAndScale()
+        public void UpdateResourcePositionAndScale()
         {
             if (resourcesOverlay == null || resourcesOverlay.sprite == null || !resourcesOverlay.enabled)
                 return;
@@ -570,103 +575,92 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Устанавливает спрайт на слой построек (для городов и других строений)
+        /// Устанавливает данные о постройке на клетке (данные, не визуализация)
+        /// Вызывает визуализацию через CellVisualizationManager
         /// </summary>
-        /// <param name="sprite">Спрайт для установки</param>
-        public void SetBuildingSprite(Sprite sprite)
+        /// <param name="stats">BuildingStats постройки (может быть null для удаления)</param>
+        public void SetBuildingStats(BuildingStats stats)
         {
-            if (buildingsOverlay == null)
-            {
-                Debug.LogWarning($"CellInfo: buildingsOverlay не назначен на клетке {gameObject.name}");
-                return;
-            }
+            buildingStats = stats;
             
-            if (sprite != null)
-            {
-                buildingsOverlay.sprite = sprite;
-                buildingsOverlay.enabled = true;
-                
-                // Масштабируем спрайт под размер клетки
-                Vector2 cellSize = GetCellSize();
-                ScaleSpriteToCellSize(buildingsOverlay, sprite, cellSize);
-                
-                // Обновляем позицию и масштаб ресурсов после установки постройки
-                UpdateResourcePositionAndScale();
-            }
-            else
-            {
-                buildingsOverlay.sprite = null;
-                buildingsOverlay.enabled = false;
-                
-                // Обновляем позицию и масштаб ресурсов после удаления постройки
-                UpdateResourcePositionAndScale();
-            }
+            // Визуализация применяется через CellVisualizationManager с учетом тумана войны
+            CellVisualizationManager.ApplyBuildingVisualization(this);
         }
         
         /// <summary>
-        /// Удаляет спрайт со слоя построек
+        /// Получает данные о постройке на клетке
         /// </summary>
-        public void ClearBuildingSprite()
+        public BuildingStats GetBuildingStats()
         {
-            if (buildingsOverlay != null)
+            return buildingStats;
+        }
+        
+        /// <summary>
+        /// Устанавливает данные о ресурсе на клетке (данные, не визуализация)
+        /// Вызывает визуализацию через CellVisualizationManager
+        /// </summary>
+        /// <param name="stats">ResourceStats ресурса (может быть null для удаления)</param>
+        public void SetResourceStats(ResourceStats stats)
+        {
+            resourceStats = stats;
+            
+            // Визуализация применяется через CellVisualizationManager с учетом тумана войны
+            CellVisualizationManager.ApplyResourceVisualization(this);
+        }
+        
+        /// <summary>
+        /// Получает данные о ресурсе на клетке
+        /// </summary>
+        public ResourceStats GetResourceStats()
+        {
+            return resourceStats;
+        }
+        
+        /// <summary>
+        /// Получает оверлей построек (для использования в CellVisualizationManager)
+        /// </summary>
+        public SpriteRenderer GetBuildingsOverlay()
+        {
+            return buildingsOverlay;
+        }
+        
+        /// <summary>
+        /// Получает оверлей ресурсов (для использования в CellVisualizationManager)
+        /// </summary>
+        public SpriteRenderer GetResourcesOverlay()
+        {
+            return resourcesOverlay;
+        }
+        
+        /// <summary>
+        /// Отключает тинтинг принадлежности
+        /// </summary>
+        public void DisableOwnershipTinting()
+        {
+            if (ownershipOverlay != null)
             {
-                buildingsOverlay.sprite = null;
-                buildingsOverlay.enabled = false;
-                
-                // Обновляем позицию и масштаб ресурсов после удаления постройки
-                UpdateResourcePositionAndScale();
+                ownershipOverlay.enabled = false;
             }
         }
         
         /// <summary>
-        /// Устанавливает принадлежность клетки к городу (визуальная индикация)
-        /// Подсвечивает клетку изменением цвета для визуального выделения
+        /// Устанавливает принадлежность клетки к городу (данные)
+        /// Вызывает визуализацию через CellVisualizationManager
         /// </summary>
-        /// <param name="city">Город, которому принадлежит клетка</param>
+        /// <param name="city">Город, которому принадлежит клетка (может быть null для удаления)</param>
         public void SetCityOwnership(CityInfo city)
         {
             owningCity = city;
             
-            // Визуальная индикация: применяем границы и overlay-тинтинг
-            ApplyOwnershipVisualization();
-        }
-        
-        /// <summary>
-        /// Применяет визуализацию принадлежности клетки игроку/городу (границы + overlay-тинтинг + цвет Edge)
-        /// </summary>
-        private void ApplyOwnershipVisualization()
-        {
-            if (owningCity == null)
-                return;
-            
-            // Получаем цвет игрока из города (город наследует цвет от игрока-владельца)
-            Color playerColor = GetPlayerColorFromCity(owningCity);
-            
-            // Применяем границы через обводку
-            SetOutline(true, playerColor, 2.5f);
-            
-            // Применяем overlay-тинтинг
-            ApplyOwnershipTinting(playerColor);
-            
-            // Применяем цвет Edge в шейдере
-            ApplyEdgeColor(playerColor);
-        }
-        
-        /// <summary>
-        /// Получает цвет игрока из города
-        /// Город наследует цвет от игрока-владельца
-        /// </summary>
-        private Color GetPlayerColorFromCity(CityInfo city)
-        {
-            // Используем статический метод CityManager для получения цвета города
-            return CityManager.GetCityColor(city);
+            // Визуализация применяется через CellVisualizationManager с учетом тумана войны
+            CellVisualizationManager.ApplyOwnershipVisualization(this);
         }
         
         /// <summary>
         /// Применяет легкий тинтинг принадлежности через overlay-слой
         /// </summary>
         /// <param name="playerColor">Цвет игрока</param>
-        private void ApplyOwnershipTinting(Color playerColor)
+        public void ApplyOwnershipTinting(Color playerColor)
         {
             if (ownershipOverlay == null)
             {
@@ -697,7 +691,7 @@ namespace CellNameSpace
         /// Применяет цвет Edge в шейдере через MaterialPropertyBlock
         /// </summary>
         /// <param name="edgeColor">Цвет края клетки</param>
-        private void ApplyEdgeColor(Color edgeColor)
+        public void ApplyEdgeColor(Color edgeColor)
         {
             if (cellRenderer == null)
                 return;
@@ -724,30 +718,11 @@ namespace CellNameSpace
         
         /// <summary>
         /// Убирает принадлежность клетки к городу
-        /// Отключает границы, overlay-тинтинг и цвет Edge
+        /// Использует SetCityOwnership(null) для единообразия
         /// </summary>
         public void ClearCityOwnership()
         {
-            if (owningCity != null)
-            {
-                CityInfo cityToRemove = owningCity;
-                owningCity = null; // Очищаем перед обновлением, чтобы визуализация не применилась снова
-                
-                // Отключаем границы
-                SetOutline(false);
-                
-                // Отключаем overlay-тинтинг
-                if (ownershipOverlay != null)
-                {
-                    ownershipOverlay.enabled = false;
-                }
-                
-                // Сбрасываем цвет Edge обратно на черный
-                ApplyEdgeColor(Color.black);
-                
-                // Восстанавливаем оригинальный цвет через UpdateCellColor
-                UpdateCellColor(false);
-            }
+            SetCityOwnership(null);
         }
         
         /// <summary>
@@ -1566,6 +1541,8 @@ namespace CellNameSpace
                     fogOfWarRenderer.enabled = false;
                     // Показываем оверлеи для видимых клеток
                     SetOverlaysVisibility(true);
+                    // Применяем всю визуализацию (постройки, ресурсы, принадлежность)
+                    CellVisualizationManager.ApplyAllVisualization(this);
                     break;
             }
         }
