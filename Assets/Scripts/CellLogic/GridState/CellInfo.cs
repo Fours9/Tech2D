@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections;
-using System.Reflection;
 using FogOfWar;
 
 namespace CellNameSpace
@@ -337,6 +336,13 @@ namespace CellNameSpace
             Vector4 originalPos = new Vector4(originalPosition.x, originalPosition.y, originalPosition.z, 0f);
             materialPropertyBlock.SetVector("_OriginalPosition", originalPos);
             
+            // Устанавливаем цвет Edge в черный по умолчанию, если клетка не принадлежит городу
+            // Если клетка принадлежит городу, цвет Edge будет установлен в ApplyOwnershipVisualization
+            if (owningCity == null)
+            {
+                materialPropertyBlock.SetColor("_EdgeColor", Color.black);
+            }
+            
             // Применяем MaterialPropertyBlock к рендереру
             meshRenderer.SetPropertyBlock(materialPropertyBlock);
         }
@@ -630,14 +636,14 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Применяет визуализацию принадлежности клетки игроку/городу (границы + overlay-тинтинг)
+        /// Применяет визуализацию принадлежности клетки игроку/городу (границы + overlay-тинтинг + цвет Edge)
         /// </summary>
         private void ApplyOwnershipVisualization()
         {
             if (owningCity == null)
                 return;
             
-            // Получаем цвет игрока из города
+            // Получаем цвет игрока из города (город наследует цвет от игрока-владельца)
             Color playerColor = GetPlayerColorFromCity(owningCity);
             
             // Применяем границы через обводку
@@ -645,37 +651,19 @@ namespace CellNameSpace
             
             // Применяем overlay-тинтинг
             ApplyOwnershipTinting(playerColor);
+            
+            // Применяем цвет Edge в шейдере
+            ApplyEdgeColor(playerColor);
         }
         
         /// <summary>
-        /// Получает цвет игрока из города (вспомогательный метод для обхода проблем компиляции)
+        /// Получает цвет игрока из города
+        /// Город наследует цвет от игрока-владельца
         /// </summary>
         private Color GetPlayerColorFromCity(CityInfo city)
         {
-            if (city == null)
-                return Color.white;
-            
-            // Используем рефлексию для безопасного доступа к полю player
-            FieldInfo playerField = typeof(CityInfo).GetField("player");
-            if (playerField != null)
-            {
-                object playerObj = playerField.GetValue(city);
-                if (playerObj != null)
-                {
-                    // Получаем поле playerColor через рефлексию
-                    FieldInfo colorField = playerObj.GetType().GetField("playerColor");
-                    if (colorField != null)
-                    {
-                        object colorObj = colorField.GetValue(playerObj);
-                        if (colorObj is Color)
-                        {
-                            return (Color)colorObj;
-                        }
-                    }
-                }
-            }
-            
-            return Color.white; // Цвет по умолчанию
+            // Используем статический метод CityManager для получения цвета города
+            return CityManager.GetCityColor(city);
         }
         
         /// <summary>
@@ -710,8 +698,37 @@ namespace CellNameSpace
         }
         
         /// <summary>
+        /// Применяет цвет Edge в шейдере через MaterialPropertyBlock
+        /// </summary>
+        /// <param name="edgeColor">Цвет края клетки</param>
+        private void ApplyEdgeColor(Color edgeColor)
+        {
+            if (cellRenderer == null)
+                return;
+            
+            MeshRenderer meshRenderer = cellRenderer as MeshRenderer;
+            if (meshRenderer == null)
+                return;
+            
+            // Создаем MaterialPropertyBlock, если его еще нет
+            if (materialPropertyBlock == null)
+            {
+                materialPropertyBlock = new MaterialPropertyBlock();
+            }
+            
+            // Получаем текущие свойства (если они уже были установлены)
+            meshRenderer.GetPropertyBlock(materialPropertyBlock);
+            
+            // Устанавливаем цвет Edge в шейдер
+            materialPropertyBlock.SetColor("_EdgeColor", edgeColor);
+            
+            // Применяем MaterialPropertyBlock к рендереру
+            meshRenderer.SetPropertyBlock(materialPropertyBlock);
+        }
+        
+        /// <summary>
         /// Убирает принадлежность клетки к городу
-        /// Отключает границы и overlay-тинтинг
+        /// Отключает границы, overlay-тинтинг и цвет Edge
         /// </summary>
         public void ClearCityOwnership()
         {
@@ -728,6 +745,9 @@ namespace CellNameSpace
                 {
                     ownershipOverlay.enabled = false;
                 }
+                
+                // Сбрасываем цвет Edge обратно на черный
+                ApplyEdgeColor(Color.black);
                 
                 // Восстанавливаем оригинальный цвет через UpdateCellColor
                 UpdateCellColor(false);

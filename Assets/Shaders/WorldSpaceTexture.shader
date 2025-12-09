@@ -9,6 +9,7 @@ Shader "Custom/WorldSpaceTexture"
         // _HexRadius устанавливается автоматически через код, не отображается в инспекторе
         [Range(0.0, 1.0)] _EdgeRadius ("Edge Radius", Float) = 0.9
         [Range(0.0, 1.0)] _EdgeDarkening ("Edge Darkening", Float) = 0.9
+        _EdgeColor ("Edge Color", Color) = (0,0,0,1) // Цвет края клетки (по умолчанию черный)
     }
     
     SubShader
@@ -46,6 +47,7 @@ Shader "Custom/WorldSpaceTexture"
             float _EdgeRadius; // От какого расстояния от центра начинать затемнение (0-1)
             float _EdgeDarkening; // Насколько сильно затемнять у самого края (0-1)
             float _VignetteEnabled; // Включена ли виньетка (0 или 1)
+            fixed4 _EdgeColor; // Цвет края клетки
             
             // Полная SDF для pointy-top шестиугольника
             // r - расстояние от центра до вершины (_HexRadius)
@@ -131,13 +133,12 @@ Shader "Custom/WorldSpaceTexture"
                         darkeningFactor = saturate(darkeningFactor); // Ограничиваем 0-1
                     }
                     
-                    // Множитель яркости:
-                    // При факторе 0 → яркость = 1.0 (ничего не меняем)
-                    // При факторе 1 → яркость = 1.0 - _EdgeDarkening
-                    float brightnessMultiplier = lerp(1.0, 1.0 - _EdgeDarkening, darkeningFactor);
-                    
-                    // Применяем виньетку к цвету
-                    col.rgb *= brightnessMultiplier;
+                    // Интерполируем между исходным цветом и цветом Edge
+                    // При факторе 0 → используем исходный цвет
+                    // При факторе 1 → используем цвет Edge
+                    // Также учитываем _EdgeDarkening для контроля интенсивности
+                    float edgeBlendFactor = darkeningFactor * _EdgeDarkening;
+                    col.rgb = lerp(col.rgb, _EdgeColor.rgb, edgeBlendFactor);
                 }
                 
                 return col;

@@ -266,8 +266,8 @@ MonoBehaviour:
   mountainFrequency: 0.215
   mountainFragmentation: 0.3
   mountainSeed: 0
-  forestFrequency: 0.285
-  forestFragmentation: 0.731
+  forestFrequency: 0.15
+  forestFragmentation: 1
   forestSeed: 0
   desertFrequency: 0.269
   desertFragmentation: 0.269
@@ -375,7 +375,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6086b380fa0cbc6479805f354ab74f8d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
-  fogOfWarEnabled: 1
+  fogOfWarEnabled: 0
   fogOfWarVignetteEnabled: 1
   worldSpaceTextureVignetteEnabled: 1
   vignetteHexRadius: 1
