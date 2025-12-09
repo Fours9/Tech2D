@@ -148,12 +148,6 @@ public class FogOfWarManager : MonoBehaviour
         Bounds meshBounds = meshFilter.sharedMesh.bounds;
         float hexRadius = meshBounds.extents.y;
         
-        // Логируем для проверки
-        Debug.Log($"[FogOfWarManager] mesh.bounds.extents.x = {meshBounds.extents.x}, extents.y = {meshBounds.extents.y}");
-        Debug.Log($"[FogOfWarManager] hexRadius = {hexRadius}");
-        Debug.Log($"[FogOfWarManager] mesh.bounds.size: {meshBounds.size}");
-        Debug.Log($"[FogOfWarManager] meshFilter.transform.localScale: {meshFilter.transform.localScale}");
-        
         // Устанавливаем _HexRadius, _RaggedEdgesEnabled и параметры граней в материалы тумана.
         // Виньетку (_VignetteEnabled, _VignetteHexRadius) настраиваем отдельно на каждом материале,
         // чтобы Hidden и Explored могли иметь разные значения.
@@ -167,7 +161,6 @@ public class FogOfWarManager : MonoBehaviour
             fogUnseenMaterial.SetFloat("_RaggedEdgeBottomLeft", raggedEdgeBottomLeft ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgeBottomRight", raggedEdgeBottomRight ? 1.0f : 0.0f);
             fogUnseenMaterial.SetFloat("_RaggedEdgeFlatRight", raggedEdgeFlatRight ? 1.0f : 0.0f);
-            Debug.Log($"[FogOfWarManager] Установлены параметры неровных краев в fogUnseenMaterial");
         }
         
         if (fogExploredMaterial != null)
@@ -180,7 +173,6 @@ public class FogOfWarManager : MonoBehaviour
             fogExploredMaterial.SetFloat("_RaggedEdgeBottomLeft", raggedEdgeBottomLeft ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgeBottomRight", raggedEdgeBottomRight ? 1.0f : 0.0f);
             fogExploredMaterial.SetFloat("_RaggedEdgeFlatRight", raggedEdgeFlatRight ? 1.0f : 0.0f);
-            Debug.Log($"[FogOfWarManager] Установлены параметры неровных краев в fogExploredMaterial");
         }
         
         // Устанавливаем _HexRadius и _VignetteEnabled во все материалы, использующие WorldSpaceTexture шейдер
@@ -198,10 +190,6 @@ public class FogOfWarManager : MonoBehaviour
                     mat.SetFloat("_VignetteEnabled", worldSpaceTextureVignetteEnabled ? 1.0f : 0.0f);
                     materialsUpdated++;
                 }
-            }
-            if (materialsUpdated > 0)
-            {
-                Debug.Log($"[FogOfWarManager] Установлен _HexRadius = {hexRadius}, _VignetteEnabled = {worldSpaceTextureVignetteEnabled} в {materialsUpdated} материалах с шейдером WorldSpaceTexture");
             }
         }
     }
@@ -518,8 +506,6 @@ public class FogOfWarManager : MonoBehaviour
             if (realDistance <= radius)
             {
                 filteredCells.Add(cell);
-                Debug.Log($"[FogOfWar] GetCellsInVisionRange: Клетка ({cellCoord.x}, {cellCoord.y}) включена - " +
-                    $"BFS: {bestDistance[cell]}, реальное: {realDistance}, радиус: {radius}");
             }
             else
             {

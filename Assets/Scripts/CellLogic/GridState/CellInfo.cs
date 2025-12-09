@@ -592,8 +592,6 @@ namespace CellNameSpace
                 
                 // Обновляем позицию и масштаб ресурсов после установки постройки
                 UpdateResourcePositionAndScale();
-                
-                Debug.Log($"CellInfo: Спрайт строения установлен на клетку ({gridX}, {gridY})");
             }
             else
             {
@@ -631,8 +629,6 @@ namespace CellNameSpace
             
             // Визуальная индикация: применяем границы и overlay-тинтинг
             ApplyOwnershipVisualization();
-            
-            Debug.Log($"CellInfo: Клетка ({gridX}, {gridY}) теперь принадлежит городу {city.name}");
         }
         
         /// <summary>
@@ -751,8 +747,6 @@ namespace CellNameSpace
                 
                 // Восстанавливаем оригинальный цвет через UpdateCellColor
                 UpdateCellColor(false);
-                
-                Debug.Log($"CellInfo: Клетка ({gridX}, {gridY}) больше не принадлежит городу {cityToRemove.name}");
             }
         }
         
@@ -1130,8 +1124,6 @@ namespace CellNameSpace
                 
                 // Если новое состояние отличается от целевого состояния анимации,
                 // прерываем текущую анимацию и запускаем новую
-                Debug.Log($"[FogOfWar] SetFogOfWarState: Клетка ({gridX}, {gridY}) прерывает анимацию " +
-                    $"{previousState} → {transitionTargetState} для нового перехода {fogState} → {state}");
                 
                 // Останавливаем текущую корутину
                 StopCoroutine(transitionCoroutine);

@@ -68,7 +68,6 @@ public class UnitSelectionManager : MonoBehaviour
         {
             OnUnitSelected(selectedUnit);
             OnUnitSelectedEvent?.Invoke(selectedUnit);
-            Debug.Log($"Юнит выбран: {selectedUnit.gameObject.name}");
         }
     }
     
@@ -82,7 +81,6 @@ public class UnitSelectionManager : MonoBehaviour
             OnUnitDeselected(selectedUnit);
             selectedUnit = null;
             OnUnitDeselectedEvent?.Invoke();
-            Debug.Log("Выделение снято с юнита");
         }
     }
     

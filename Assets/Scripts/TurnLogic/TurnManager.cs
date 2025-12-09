@@ -132,14 +132,9 @@ public class TurnManager : MonoBehaviour
                 )
             );
 
-            if (removed > 0)
-            {
-                Debug.Log($"TurnManager: Удалено {removed} старых приказ(ов) движения для того же юнита, сохранён только последний");
-            }
         }
 
         currentOrders.Add(order);
-        Debug.Log($"TurnManager: Приказ добавлен: {order.GetDescription()}");
     }
 
     /// <summary>
@@ -162,7 +157,6 @@ public class TurnManager : MonoBehaviour
     public void StartPlanningPhase()
     {
         currentState = TurnState.Planning;
-        Debug.Log($"TurnManager: Начало фазы планирования. Ход {currentTurn}");
 
         // В начале фазы планирования сбрасываем очки движения у всех юнитов
         if (unitManager == null)
@@ -198,7 +192,6 @@ public class TurnManager : MonoBehaviour
             return;
 
         currentState = TurnState.Resolving;
-        Debug.Log($"TurnManager: Завершение планирования, начало исполнения. Ход {currentTurn}");
 
         // Подготавливаем очередь приказов для последовательного исполнения
         ResolveOrders();
@@ -217,7 +210,6 @@ public class TurnManager : MonoBehaviour
 
         if (currentOrders.Count == 0)
         {
-            Debug.Log("TurnManager: Нет приказов для исполнения в этом ходу");
             // Даже если приказов нет, окончание хода обработаем в Update,
             // когда увидим, что очередь пуста.
             _isResolvingOrders = true;
@@ -234,7 +226,6 @@ public class TurnManager : MonoBehaviour
         _activeOrder = null;
         _isResolvingOrders = true;
 
-        Debug.Log($"TurnManager: Подготовлено {_pendingOrders.Count} приказ(ов) к исполнению");
     }
 
     // ---- Новая логика поочерёдного исполнения приказов ----
@@ -266,7 +257,6 @@ public class TurnManager : MonoBehaviour
             try
             {
                 _activeOrder.Execute(this);
-                Debug.Log($"TurnManager: Запущен приказ: {_activeOrder.GetDescription()}");
             }
             catch (System.Exception ex)
             {
@@ -279,7 +269,6 @@ public class TurnManager : MonoBehaviour
             // Ждём завершения активного приказа (для движения юнита — пока он не дойдёт)
             if (_activeOrder.IsComplete)
             {
-                Debug.Log($"TurnManager: Приказ завершён: {_activeOrder.GetDescription()}");
                 _activeOrder = null;
             }
         }
@@ -371,7 +360,6 @@ public class TurnManager : MonoBehaviour
         if (materialsIncome != 0)
             resourceManager.Add(ResourceType.Materials, materialsIncome);
 
-        Debug.Log($"TurnManager: Экономика конца хода - золото +{goldIncome}, еда +{foodIncome}, материалы +{materialsIncome}");
     }
 
     /// <summary>
@@ -379,7 +367,6 @@ public class TurnManager : MonoBehaviour
     /// </summary>
     private void FinishTurn()
     {
-        Debug.Log($"TurnManager: Ход {currentTurn} завершён");
         currentTurn++;
         StartNextTurn();
     }
@@ -390,7 +377,6 @@ public class TurnManager : MonoBehaviour
     /// </summary>
     private void StartNextTurn()
     {
-        Debug.Log($"TurnManager: Начало хода {currentTurn}");
         StartPlanningPhase();
     }
 }

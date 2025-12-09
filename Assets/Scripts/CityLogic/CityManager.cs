@@ -84,7 +84,6 @@ public class CityManager : MonoBehaviour
         if (cityCenterSprite != null)
         {
             targetCell.SetBuildingSprite(cityCenterSprite);
-            Debug.Log($"CityManager: Спрайт города установлен на клетку ({gridX}, {gridY})");
         }
         else
         {
@@ -131,14 +130,12 @@ public class CityManager : MonoBehaviour
             }
             
             cityInfo.expansionRadius = 1;
-            Debug.Log($"CityManager: Город {cityInfo.name} создан с радиусом 1. Клеток: {cityInfo.ownedCells.Count}");
         }
         
         // Удаляем юнит
         if (unitManager != null)
         {
             unitManager.RemoveUnit(unit.gameObject);
-            Debug.Log($"CityManager: Юнит удален");
         }
         else
         {
@@ -155,10 +152,7 @@ public class CityManager : MonoBehaviour
         if (CitySelectionManager.Instance != null)
         {
             CitySelectionManager.Instance.SelectCity(cityInfo);
-            Debug.Log($"CityManager: Город {cityInfo.name} автоматически выделен");
         }
-        
-        Debug.Log($"CityManager: Город создан на позиции ({gridX}, {gridY})");
         
         // Обновляем видимость тумана войны после того, как все клетки города уже помечены
         // Используем корутину, чтобы дождаться следующего кадра, когда юнит будет полностью удален
@@ -237,8 +231,6 @@ public class CityManager : MonoBehaviour
             // Добавляем клетку к городу
             city.ownedCells.Add(targetPos);
             MarkCellAsOwned(targetPos, city);
-            Debug.Log($"CityManager: Клетка ({targetPos.x}, {targetPos.y}) добавлена к городу {city.name}");
-            
             // Обновляем видимость тумана войны после добавления клетки
             if (FogOfWarManager.Instance != null)
             {
@@ -280,8 +272,6 @@ public class CityManager : MonoBehaviour
             }
             
             city.expansionRadius++;
-            Debug.Log($"CityManager: Город {city.name} расширен. Новых клеток: {newCells.Count}, радиус: {city.expansionRadius}");
-            
             // Обновляем видимость тумана войны после расширения города
             if (newCells.Count > 0 && FogOfWarManager.Instance != null)
             {

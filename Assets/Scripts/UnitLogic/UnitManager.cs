@@ -157,7 +157,6 @@ public class UnitManager : MonoBehaviour
         }
         
         spawnedUnits.Add(unit);
-        Debug.Log($"UnitManager: Юнит заспавнен на позиции ({spawnPos.x}, {spawnPos.y})");
         
         // Обновляем видимость тумана войны после спавна юнита
         if (FogOfWarManager.Instance != null)
@@ -169,7 +168,6 @@ public class UnitManager : MonoBehaviour
         if (moveCameraToUnitOnSpawn && cameraController != null)
         {
             cameraController.MoveToTarget(unit, instantCameraMove);
-            Debug.Log($"UnitManager: Камера перемещена на юнита");
         }
         
         return unit;

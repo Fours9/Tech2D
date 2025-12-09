@@ -68,7 +68,6 @@ public class CitySelectionManager : MonoBehaviour
         {
             OnCitySelected(selectedCity);
             OnCitySelectedEvent?.Invoke(selectedCity);
-            Debug.Log($"Город выбран: {selectedCity.name}");
         }
     }
     
@@ -82,7 +81,6 @@ public class CitySelectionManager : MonoBehaviour
             OnCityDeselected(selectedCity);
             selectedCity = null;
             OnCityDeselectedEvent?.Invoke();
-            Debug.Log("Выделение снято с города");
         }
     }
     

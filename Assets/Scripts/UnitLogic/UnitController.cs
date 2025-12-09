@@ -111,7 +111,6 @@ public class UnitController : MonoBehaviour
         // Если целевая клетка совпадает с текущей
         if (startCell == targetCell)
         {
-            Debug.Log("UnitController: Юнит уже на целевой клетке");
             return;
         }
         
@@ -159,7 +158,6 @@ public class UnitController : MonoBehaviour
         
         if (path.Count == 0)
         {
-            Debug.Log("UnitController: После ограничения по очкам движения путь пуст, юнит не двигается");
             return;
         }
         
@@ -167,8 +165,6 @@ public class UnitController : MonoBehaviour
         currentPath = path;
         currentPathIndex = 0;
         isMoving = true;
-        
-        Debug.Log($"UnitController: Построен маршрут из {path.Count} клеток (с ограничением {maxMovementCost}) к ({targetCell.GetGridX()}, {targetCell.GetGridY()})");
     }
 
     /// <summary>
@@ -283,8 +279,6 @@ public class UnitController : MonoBehaviour
             
             // Переходим к следующей клетке
             currentPathIndex++;
-            
-            Debug.Log($"UnitController: Юнит достиг клетки ({targetCell.GetGridX()}, {targetCell.GetGridY()}), осталось {currentPath.Count - currentPathIndex} клеток");
         }
     }
     
@@ -302,8 +296,6 @@ public class UnitController : MonoBehaviour
         {
             FogOfWarManager.Instance.UpdateVisibility();
         }
-        
-        Debug.Log($"UnitController: Юнит {gameObject.name} завершил маршрут");
     }
     
     /// <summary>

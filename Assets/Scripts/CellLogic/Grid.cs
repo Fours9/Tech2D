@@ -93,7 +93,6 @@ namespace CellNameSpace
             {
                 savedTimeScale = Time.timeScale;
                 Time.timeScale = 0f;
-                Debug.Log("Игра поставлена на паузу для генерации карты");
             }
             
             // Очищаем существующие клетки
@@ -126,8 +125,6 @@ namespace CellNameSpace
             cachedHexWidth = hexWidth;
             cachedHexOffset = hexOffset;
             cachedActualCellSize = actualCellSize;
-            
-            Debug.Log($"Генерация сетки: {gridWidth}x{gridHeight}, размер клетки: {actualCellSize}, расстояние: {hexWidth}x{hexHeight}");
             
             // Сначала создаем все клетки как field
             // ВАЖНО: визуально строим поле СВЕРХУ ВНИЗ,
@@ -190,36 +187,30 @@ namespace CellNameSpace
             int actualLandSeed = landSeed == 0 ? Random.Range(1, 1000000) : landSeed;
             TerrainGenerator.GenerateLand(grid, gridWidth, gridHeight,
                 landFrequency, landFragmentation, actualLandSeed);
-            Debug.Log("Суша сгенерирована");
             
             // Генерируем водоемы
             int actualWaterSeed = waterSeed == 0 ? Random.Range(1, 1000000) : waterSeed;
             WaterBodyGenerator.GenerateWaterBodies(grid, gridWidth, gridHeight, 
                 waterFrequency, waterFragmentation, actualWaterSeed,
                 convertShallowOnlyToDeep, convertShallowNearDeepToDeep, shallowToDeepChance, waterProcessingIterations);
-            Debug.Log("Водоемы сгенерированы");
             
             // Генерируем горы (не перекрывая водоемы)
             int actualMountainSeed = mountainSeed == 0 ? Random.Range(1, 1000000) : mountainSeed;
             TerrainGenerator.GenerateMountains(grid, gridWidth, gridHeight,
                 mountainFrequency, mountainFragmentation, actualMountainSeed);
-            Debug.Log("Горы сгенерированы");
             
             // Генерируем леса (не перекрывая водоемы)
             int actualForestSeed = forestSeed == 0 ? Random.Range(1, 1000000) : forestSeed;
             TerrainGenerator.GenerateForests(grid, gridWidth, gridHeight,
                 forestFrequency, forestFragmentation, actualForestSeed);
-            Debug.Log("Леса сгенерированы");
             
             // Генерируем пустыни (не перекрывая водоемы)
             int actualDesertSeed = desertSeed == 0 ? Random.Range(1, 1000000) : desertSeed;
             TerrainGenerator.GenerateDeserts(grid, gridWidth, gridHeight,
                 desertFrequency, desertFragmentation, actualDesertSeed);
-            Debug.Log("Пустыни сгенерированы");
             
             // Применяем логику совместимости
             TerrainCompatibility.ApplyCompatibilityRules(grid, gridWidth, gridHeight);
-            Debug.Log("Логика совместимости применена");
             
             // Находим менеджеры один раз для оптимизации
             CellMaterialManager materialManager = FindFirstObjectByType<CellMaterialManager>();
@@ -236,8 +227,6 @@ namespace CellNameSpace
                 // Синхронное применение (для Editor или если корутины отключены)
                 ApplyCellTypesSync(grid, materialManager, overlayManager);
             }
-            
-            Debug.Log($"Создано клеток: {cells.Count}");
         }
         
         /// <summary>
@@ -313,8 +302,6 @@ namespace CellNameSpace
             {
                 yield return StartCoroutine(UpdateOverlaysBatchCoroutine());
             }
-            
-            Debug.Log("Применение типов клеток завершено");
 
             // Типы всех клеток применены — считаем генерацию завершённой
             IsGenerationComplete = true;
@@ -350,8 +337,6 @@ namespace CellNameSpace
                     }
                 }
             }
-            
-            Debug.Log("Обновление оверлеев завершено");
         }
         
         /// <summary>
@@ -371,7 +356,6 @@ namespace CellNameSpace
             if (pauseGameDuringGeneration && Application.isPlaying)
             {
                 Time.timeScale = savedTimeScale;
-                Debug.Log("Игра возобновлена после генерации карты");
             }
         }
         
