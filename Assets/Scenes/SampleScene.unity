@@ -249,20 +249,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Grid
   cellPrefab: {fileID: 5993114145590717218, guid: 6c2e9b1d205d97348ac9ccc3dfc82e9b, type: 3}
-  gridWidth: 100
+  gridWidth: 150
   gridHeight: 100
   cellSize: 1
   pixelGap: 0
-  landFrequency: 0.6
+  landFrequency: 0.44
   landFragmentation: 0
   landSeed: 0
-  waterFrequency: 0.385
-  waterFragmentation: 0.008
+  waterFrequency: 0.2
+  waterFragmentation: 0.5
   waterSeed: 0
   convertShallowOnlyToDeep: 1
   convertShallowNearDeepToDeep: 1
-  shallowToDeepChance: 0.2
+  shallowToDeepChance: 0.09
   waterProcessingIterations: 3
+  islandsFrequency: 0.2
+  islandsFragmentation: 1
+  islandsSeed: 0
   mountainFrequency: 0.215
   mountainFragmentation: 0.3
   mountainSeed: 0
@@ -375,7 +378,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6086b380fa0cbc6479805f354ab74f8d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
-  fogOfWarEnabled: 1
+  fogOfWarEnabled: 0
   fogOfWarVignetteEnabled: 1
   worldSpaceTextureVignetteEnabled: 1
   vignetteHexRadius: 1

@@ -32,6 +32,13 @@ namespace CellNameSpace
         [SerializeField] private float shallowToDeepChance = 0.2f; // Шанс превращения shallow в deep_water при наличии соседа deep_water (0-1)
         [SerializeField] [Min(1)] private int waterProcessingIterations = 3; // Количество итераций обработки воды (сколько раз прогонять все правила по кругу)
         
+        [Header("Генерация островов (второй этап суши)")]
+        [Range(0f, 1f)]
+        [SerializeField] private float islandsFrequency = 0.15f; // Частота появления островов в воде
+        [Range(0f, 1f)]
+        [SerializeField] private float islandsFragmentation = 0.5f; // Раздробленность островов
+        [SerializeField] private int islandsSeed = 0; // Сид для генерации островов (0 = случайный)
+        
         [Header("Генерация гор")]
         [Range(0f, 1f)]
         [SerializeField] private float mountainFrequency = 0.15f; // Частота появления гор
@@ -192,6 +199,15 @@ namespace CellNameSpace
             int actualWaterSeed = waterSeed == 0 ? Random.Range(1, 1000000) : waterSeed;
             WaterBodyGenerator.GenerateWaterBodies(grid, gridWidth, gridHeight, 
                 waterFrequency, waterFragmentation, actualWaterSeed,
+                convertShallowOnlyToDeep, convertShallowNearDeepToDeep, shallowToDeepChance, waterProcessingIterations);
+            
+            // Генерируем острова (второй этап генерации суши - создаем острова в океанах)
+            int actualIslandsSeed = islandsSeed == 0 ? Random.Range(1, 1000000) : islandsSeed;
+            TerrainGenerator.GenerateIslands(grid, gridWidth, gridHeight,
+                islandsFrequency, islandsFragmentation, actualIslandsSeed);
+            
+            // Повторно обрабатываем воду после генерации островов (превращаем shallow в deep_water где нужно)
+            WaterBodyGenerator.ProcessWaterBodies(grid, gridWidth, gridHeight,
                 convertShallowOnlyToDeep, convertShallowNearDeepToDeep, shallowToDeepChance, waterProcessingIterations);
             
             // Генерируем горы (не перекрывая водоемы)

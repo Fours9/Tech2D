@@ -14,6 +14,7 @@ Material:
   m_ValidKeywords: []
   m_InvalidKeywords:
   - _BURNTENABLED_ON
+  - _MAPDECORATIONSENABLED_ON
   - _RAGGEDEDGEBOTTOMLEFT_ON
   - _RAGGEDEDGEBOTTOMRIGHT_ON
   - _RAGGEDEDGEBOTTOM_ON
@@ -38,6 +39,26 @@ Material:
     m_TexEnvs:
     - _MainTex:
         m_Texture: {fileID: 2800000, guid: ccd7b6c55c59ebc408ac55e1126b9a39, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MapDecorationsTex:
+        m_Texture: {fileID: 2800000, guid: 560345e8b0badaa4893db2d87a33ba75, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MapDecorationsTex1:
+        m_Texture: {fileID: 2800000, guid: f6135024567f58247bac9ca05acbca17, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MapDecorationsTex2:
+        m_Texture: {fileID: 2800000, guid: bc1f99a247b892445982c8ab33dd6ee8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MapDecorationsTex3:
+        m_Texture: {fileID: 2800000, guid: 560345e8b0badaa4893db2d87a33ba75, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MapDecorationsTex4:
+        m_Texture: {fileID: 2800000, guid: b8e4da02e2784754d99038d010ed9f11, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _PaperTexture:
@@ -78,6 +99,14 @@ Material:
     - _GlowWidth: 0.3
     - _HexRadius: 0.01
     - _HiddenToVisibleDuration: 1
+    - _MapDecorationsCellSize: 25
+    - _MapDecorationsDensity: 0.1
+    - _MapDecorationsEnabled: 1
+    - _MapDecorationsIntensity: 0.8
+    - _MapDecorationsNoiseScale: 0.1
+    - _MapDecorationsOpacity: 0.6
+    - _MapDecorationsRandomOffset: 0.3
+    - _MapDecorationsScale: 1
     - _NoiseIntensity: 0.5
     - _NoiseScale: 10
     - _NoiseStrength: 0.3

@@ -603,7 +603,7 @@ namespace CellNameSpace
         public void SetResourceStats(ResourceStats stats)
         {
             resourceStats = stats;
-            
+                
             // Визуализация применяется через CellVisualizationManager с учетом тумана войны
             CellVisualizationManager.ApplyResourceVisualization(this);
         }
@@ -649,7 +649,7 @@ namespace CellNameSpace
         /// </summary>
         /// <param name="city">Город, которому принадлежит клетка (может быть null для удаления)</param>
         public void SetCityOwnership(CityInfo city)
-        {
+            {
             owningCity = city;
             
             // Визуализация применяется через CellVisualizationManager с учетом тумана войны

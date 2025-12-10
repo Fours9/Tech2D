@@ -3,7 +3,7 @@ using UnityEngine;
 namespace CellNameSpace
 {
     /// <summary>
-    /// Класс для генерации типов местности (land, mountain, forest, desert)
+    /// Класс для генерации типов местности (land, islands, mountain, forest, desert)
     /// </summary>
     public static class TerrainGenerator
     {
@@ -41,6 +41,49 @@ namespace CellNameSpace
                         
                         // Если значение шума меньше порога частоты, создаем сушу (field)
                         if (noiseValue < landFrequency)
+                        {
+                            grid[col, row] = CellType.field;
+                        }
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Генерирует острова (field клетки) из воды (shallow и deep_water) на карте
+        /// Используется как второй этап генерации суши для создания островов в океанах
+        /// </summary>
+        public static void GenerateIslands(CellType[,] grid, int gridWidth, int gridHeight,
+            float islandsFrequency, float islandsFragmentation, int islandsSeed)
+        {
+            // Сохраняем состояние Random
+            Random.State oldState = Random.state;
+            Random.InitState(islandsSeed);
+            
+            // Генерируем offset для шума
+            float offsetX = Random.Range(-10000f, 10000f);
+            float offsetY = Random.Range(-10000f, 10000f);
+            
+            // Восстанавливаем состояние Random
+            Random.state = oldState;
+            
+            // Масштаб шума для островов (можно использовать другую формулу для отличия от первой генерации суши)
+            // При fragmentation = 0: scale = 0.03 (очень кучные острова)
+            // При fragmentation = 1: scale = 0.08 (более раздробленные острова)
+            float scale = 0.03f * (1f + 2f * islandsFragmentation);
+            
+            // Применяем шум к клеткам воды (shallow и deep_water), создавая field (острова)
+            for (int row = 0; row < gridHeight; row++)
+            {
+                for (int col = 0; col < gridWidth; col++)
+                {
+                    // Применяем только к воде (shallow или deep_water), создавая field (острова)
+                    if (grid[col, row] == CellType.shallow || grid[col, row] == CellType.deep_water)
+                    {
+                        float noiseValue = Mathf.PerlinNoise((col + offsetX) * scale, (row + offsetY) * scale);
+                        
+                        // Если значение шума меньше порога частоты, создаем остров (field)
+                        if (noiseValue < islandsFrequency)
                         {
                             grid[col, row] = CellType.field;
                         }

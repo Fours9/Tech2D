@@ -62,6 +62,7 @@ namespace CellNameSpace
         }
         
         /// <summary>
+        /// <summary>
         /// Обрабатывает водоемы, определяя какие должны быть shallow, а какие deep_water
         /// Логика выполняется несколько итераций по кругу:
         /// 1. Если контактирует с землей → обязательно shallow
@@ -70,7 +71,7 @@ namespace CellNameSpace
         /// 4. Если клетка shallow имеет соседей ТОЛЬКО shallow → становится deep_water (опционально)
         /// 5. Если клетка shallow имеет соседа deep_water → шанс стать deep_water (опционально)
         /// </summary>
-        private static void ProcessWaterBodies(CellType[,] grid, int gridWidth, int gridHeight,
+        public static void ProcessWaterBodies(CellType[,] grid, int gridWidth, int gridHeight,
             bool convertShallowOnlyToDeep, bool convertShallowNearDeepToDeep, float shallowToDeepChance, int processingIterations)
         {
             // Выполняем все проходы несколько раз по кругу
