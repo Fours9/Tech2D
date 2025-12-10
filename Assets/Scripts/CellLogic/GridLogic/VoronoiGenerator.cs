@@ -98,22 +98,62 @@ namespace CellNameSpace
             // Определяем тип для каждого региона (сушу или воду)
             Dictionary<int, bool> regionIsLand = new Dictionary<int, bool>();
             
-            // Находим максимальный ID региона
-            int maxRegionId = 0;
+            // Собираем все уникальные ID регионов, которые реально существуют на карте
+            HashSet<int> existingRegions = new HashSet<int>();
             for (int row = 0; row < gridHeight; row++)
             {
                 for (int col = 0; col < gridWidth; col++)
                 {
-                    if (regions[col, row] > maxRegionId)
-                        maxRegionId = regions[col, row];
+                    existingRegions.Add(regions[col, row]);
                 }
             }
             
-            // Для каждого региона определяем, будет ли он сушей
-            for (int regionId = 0; regionId <= maxRegionId; regionId++)
+            // Для каждого существующего региона определяем, будет ли он сушей
+            List<int> regionList = new List<int>(existingRegions);
+            int landCount = 0;
+            int waterCount = 0;
+            
+            foreach (int regionId in regionList)
             {
                 float randomValue = Random.value; // 0.0 - 1.0
-                regionIsLand[regionId] = randomValue < landFrequency;
+                bool isLand = randomValue < landFrequency;
+                regionIsLand[regionId] = isLand;
+                
+                if (isLand)
+                    landCount++;
+                else
+                    waterCount++;
+            }
+            
+            // Гарантируем минимум 30% регионов суши (если получилось меньше)
+            int minLandRegions = Mathf.Max(1, Mathf.RoundToInt(regionList.Count * 0.3f));
+            if (landCount < minLandRegions)
+            {
+                // Превращаем случайные водные регионы в сушу
+                List<int> waterRegions = new List<int>();
+                foreach (int regionId in regionList)
+                {
+                    if (!regionIsLand[regionId])
+                    {
+                        waterRegions.Add(regionId);
+                    }
+                }
+                
+                // Перемешиваем список водных регионов
+                for (int i = 0; i < waterRegions.Count; i++)
+                {
+                    int randomIndex = Random.Range(i, waterRegions.Count);
+                    int temp = waterRegions[i];
+                    waterRegions[i] = waterRegions[randomIndex];
+                    waterRegions[randomIndex] = temp;
+                }
+                
+                // Превращаем необходимое количество в сушу
+                int needed = minLandRegions - landCount;
+                for (int i = 0; i < needed && i < waterRegions.Count; i++)
+                {
+                    regionIsLand[waterRegions[i]] = true;
+                }
             }
             
             // Восстанавливаем состояние Random
@@ -137,6 +177,109 @@ namespace CellNameSpace
                     }
                 }
             }
+        }
+        
+        /// <summary>
+        /// Фильтрует слишком маленькие регионы, объединяя их с соседними
+        /// </summary>
+        /// <param name="regions">Массив регионов Voronoi</param>
+        /// <param name="gridWidth">Ширина сетки</param>
+        /// <param name="gridHeight">Высота сетки</param>
+        /// <param name="minRegionSize">Минимальный размер региона в клетках</param>
+        public static void FilterSmallRegions(int[,] regions, int gridWidth, int gridHeight, int minRegionSize)
+        {
+            // Подсчитываем размер каждого региона
+            Dictionary<int, int> regionSizes = new Dictionary<int, int>();
+            
+            for (int row = 0; row < gridHeight; row++)
+            {
+                for (int col = 0; col < gridWidth; col++)
+                {
+                    int regionId = regions[col, row];
+                    if (!regionSizes.ContainsKey(regionId))
+                    {
+                        regionSizes[regionId] = 0;
+                    }
+                    regionSizes[regionId]++;
+                }
+            }
+            
+            // Находим маленькие регионы и объединяем их с соседними
+            foreach (var kvp in regionSizes)
+            {
+                int regionId = kvp.Key;
+                int size = kvp.Value;
+                
+                if (size < minRegionSize)
+                {
+                    // Находим самый большой соседний регион
+                    int largestNeighborRegion = FindLargestNeighborRegion(regions, gridWidth, gridHeight, regionId, regionSizes);
+                    
+                    if (largestNeighborRegion >= 0)
+                    {
+                        // Заменяем маленький регион на соседний
+                        for (int row = 0; row < gridHeight; row++)
+                        {
+                            for (int col = 0; col < gridWidth; col++)
+                            {
+                                if (regions[col, row] == regionId)
+                                {
+                                    regions[col, row] = largestNeighborRegion;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Находит самый большой соседний регион для заданного региона
+        /// </summary>
+        private static int FindLargestNeighborRegion(int[,] regions, int gridWidth, int gridHeight,
+            int targetRegionId, Dictionary<int, int> regionSizes)
+        {
+            Dictionary<int, int> neighborSizes = new Dictionary<int, int>();
+            
+            // Проходим по всем клеткам целевого региона
+            for (int row = 0; row < gridHeight; row++)
+            {
+                for (int col = 0; col < gridWidth; col++)
+                {
+                    if (regions[col, row] == targetRegionId)
+                    {
+                        // Проверяем соседей
+                        List<Vector2Int> neighbors = HexagonalGridHelper.GetNeighbors(col, row, gridWidth, gridHeight);
+                        foreach (Vector2Int neighbor in neighbors)
+                        {
+                            int neighborRegionId = regions[neighbor.x, neighbor.y];
+                            if (neighborRegionId != targetRegionId)
+                            {
+                                if (!neighborSizes.ContainsKey(neighborRegionId))
+                                {
+                                    neighborSizes[neighborRegionId] = regionSizes.ContainsKey(neighborRegionId) 
+                                        ? regionSizes[neighborRegionId] : 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Находим самый большой соседний регион
+            int largestRegionId = -1;
+            int largestSize = 0;
+            
+            foreach (var kvp in neighborSizes)
+            {
+                if (kvp.Value > largestSize)
+                {
+                    largestSize = kvp.Value;
+                    largestRegionId = kvp.Key;
+                }
+            }
+            
+            return largestRegionId;
         }
     }
 }

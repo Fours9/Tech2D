@@ -253,24 +253,41 @@ MonoBehaviour:
   gridHeight: 100
   cellSize: 1
   pixelGap: 0
+  useVoronoiForLand: 1
+  voronoiRegions: 21
+  voronoiSeed: 0
+  voronoiMinRegionSize: 5
   landFrequency: 0.44
-  landFragmentation: 0
+  landFragmentation: 0.06
   landSeed: 0
-  waterFrequency: 0.2
-  waterFragmentation: 0.5
+  waterFrequency: 0.3
+  waterFragmentation: 0.2
   waterSeed: 0
   convertShallowOnlyToDeep: 1
   convertShallowNearDeepToDeep: 1
   shallowToDeepChance: 0.09
   waterProcessingIterations: 3
-  islandsFrequency: 0.2
-  islandsFragmentation: 1
+  islandsFrequency: 0.3
+  islandsFragmentation: 0.74
   islandsSeed: 0
+  lakeFrequency: 0.1
+  lakeMinSize: 3
+  lakeSeed: 0
+  lakeMaxPercentage: 0.2
+  inlandSeaFrequency: 0.2
+  inlandSeaMinSize: 10
+  inlandSeaSeed: 0
+  inlandSeaMaxPercentage: 0.3
+  inlandSeaLandNeighborThreshold: 0.26
+  riverChance: 0.8
+  riverSeed: 0
+  riverMeanderStrength: 0.26
+  riverMeanderNoiseScale: 25
   mountainFrequency: 0.215
   mountainFragmentation: 0.3
   mountainSeed: 0
   forestFrequency: 0.15
-  forestFragmentation: 1
+  forestFragmentation: 0.78
   forestSeed: 0
   desertFrequency: 0.269
   desertFragmentation: 0.269

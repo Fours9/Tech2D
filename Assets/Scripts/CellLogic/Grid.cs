@@ -18,6 +18,7 @@ namespace CellNameSpace
         [Range(5, 50)]
         [SerializeField] private int voronoiRegions = 15; // Количество регионов Voronoi (континентов)
         [SerializeField] private int voronoiSeed = 0; // Сид для генерации Voronoi (0 = случайный)
+        [SerializeField] [Min(1)] private int voronoiMinRegionSize = 5; // Минимальный размер региона в клетках (маленькие регионы объединяются с соседними)
         [Range(0f, 1f)]
         [SerializeField] private float landFrequency = 0.5f; // Частота появления суши (field)
         [Range(0f, 1f)]
@@ -42,6 +43,32 @@ namespace CellNameSpace
         [Range(0f, 1f)]
         [SerializeField] private float islandsFragmentation = 0.5f; // Раздробленность островов
         [SerializeField] private int islandsSeed = 0; // Сид для генерации островов (0 = случайный)
+        
+        [Header("Генерация озер")]
+        [Range(0f, 1f)]
+        [SerializeField] private float lakeFrequency = 0.1f; // Частота появления озер
+        [SerializeField] [Min(1)] private int lakeMinSize = 3; // Минимальный размер озера в клетках
+        [SerializeField] private int lakeSeed = 0; // Сид для генерации озер (0 = случайный)
+        [Range(0f, 1f)]
+        [SerializeField] private float lakeMaxPercentage = 0.02f; // Максимальная доля площади под озера (от всей карты)
+        
+        [Header("Генерация внутренних морей")]
+        [Range(0f, 1f)]
+        [SerializeField] private float inlandSeaFrequency = 0.05f; // Частота появления внутренних морей
+        [SerializeField] [Min(1)] private int inlandSeaMinSize = 10; // Минимальный размер внутреннего моря в клетках
+        [SerializeField] private int inlandSeaSeed = 0; // Сид для генерации внутренних морей (0 = случайный)
+        [Range(0f, 1f)]
+        [SerializeField] private float inlandSeaMaxPercentage = 0.05f; // Максимальная доля площади под внутренние моря (от всей карты)
+        [Range(0f, 1f)]
+        [SerializeField] private float inlandSeaLandNeighborThreshold = 0.3f; // Доля соседей-суши, требуемая для признания области внутренним морем
+        
+        [Header("Генерация рек")]
+        [Range(0f, 1f)]
+        [SerializeField] private float riverChance = 0.8f; // Шанс генерации реки от озера
+        [SerializeField] private int riverSeed = 0; // Сид для генерации рек (0 = случайный)
+        [Range(0f, 2f)]
+        [SerializeField] private float riverMeanderStrength = 0.6f; // Насколько извилистые реки (0 = прямые)
+        [SerializeField] private float riverMeanderNoiseScale = 0.25f; // Масштаб шума для извилин
         
         [Header("Генерация гор")]
         [Range(0f, 1f)]
@@ -205,6 +232,9 @@ namespace CellNameSpace
                     gridWidth, gridHeight, this.voronoiRegions, actualVoronoiSeed,
                     cachedHexWidth, cachedHexHeight, cachedHexOffset);
                 
+                // Фильтруем маленькие регионы, объединяя их с соседними
+                VoronoiGenerator.FilterSmallRegions(voronoiRegions, gridWidth, gridHeight, voronoiMinRegionSize);
+                
                 int actualLandSeed = landSeed == 0 ? Random.Range(1, 1000000) : landSeed;
                 VoronoiGenerator.ApplyVoronoiToGrid(grid, voronoiRegions, gridWidth, gridHeight,
                     landFrequency, actualLandSeed);
@@ -228,24 +258,39 @@ namespace CellNameSpace
             TerrainGenerator.GenerateIslands(grid, gridWidth, gridHeight,
                 islandsFrequency, islandsFragmentation, actualIslandsSeed);
             
-            // Повторно обрабатываем воду после генерации островов (превращаем shallow в deep_water где нужно)
+            // Генерируем озера (на суше, не соединенные с океаном)
+            int actualLakeSeed = lakeSeed == 0 ? Random.Range(1, 1000000) : lakeSeed;
+            LakeGenerator.GenerateLakes(grid, gridWidth, gridHeight,
+                lakeFrequency, lakeMinSize, actualLakeSeed, lakeMaxPercentage);
+            
+            // Генерируем внутренние моря (большие водоемы внутри континентов)
+            int actualInlandSeaSeed = inlandSeaSeed == 0 ? Random.Range(1, 1000000) : inlandSeaSeed;
+            InlandSeaGenerator.GenerateInlandSeas(grid, gridWidth, gridHeight,
+                inlandSeaFrequency, inlandSeaMinSize, actualInlandSeaSeed, inlandSeaMaxPercentage, inlandSeaLandNeighborThreshold);
+            
+            // Генерируем реки (от озер к ближайшей воде)
+            int actualRiverSeed = riverSeed == 0 ? Random.Range(1, 1000000) : riverSeed;
+            RiverGenerator.GenerateRivers(grid, gridWidth, gridHeight,
+                riverChance, actualRiverSeed, riverMeanderStrength, riverMeanderNoiseScale);
+            
+            // Обработка воды (ProcessWaterBodies) - после всех основных этапов
             WaterBodyGenerator.ProcessWaterBodies(grid, gridWidth, gridHeight,
                 convertShallowOnlyToDeep, convertShallowNearDeepToDeep, shallowToDeepChance, waterProcessingIterations);
             
-            // Генерируем горы (не перекрывая водоемы)
-            int actualMountainSeed = mountainSeed == 0 ? Random.Range(1, 1000000) : mountainSeed;
-            TerrainGenerator.GenerateMountains(grid, gridWidth, gridHeight,
-                mountainFrequency, mountainFragmentation, actualMountainSeed);
+            // Генерируем пустыни (не перекрывая водоемы)
+            int actualDesertSeed = desertSeed == 0 ? Random.Range(1, 1000000) : desertSeed;
+            TerrainGenerator.GenerateDeserts(grid, gridWidth, gridHeight,
+                desertFrequency, desertFragmentation, actualDesertSeed);
             
             // Генерируем леса (не перекрывая водоемы)
             int actualForestSeed = forestSeed == 0 ? Random.Range(1, 1000000) : forestSeed;
             TerrainGenerator.GenerateForests(grid, gridWidth, gridHeight,
                 forestFrequency, forestFragmentation, actualForestSeed);
             
-            // Генерируем пустыни (не перекрывая водоемы)
-            int actualDesertSeed = desertSeed == 0 ? Random.Range(1, 1000000) : desertSeed;
-            TerrainGenerator.GenerateDeserts(grid, gridWidth, gridHeight,
-                desertFrequency, desertFragmentation, actualDesertSeed);
+            // Генерируем горы (не перекрывая водоемы)
+            int actualMountainSeed = mountainSeed == 0 ? Random.Range(1, 1000000) : mountainSeed;
+            TerrainGenerator.GenerateMountains(grid, gridWidth, gridHeight,
+                mountainFrequency, mountainFragmentation, actualMountainSeed);
             
             // Применяем логику совместимости
             TerrainCompatibility.ApplyCompatibilityRules(grid, gridWidth, gridHeight);
