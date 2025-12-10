@@ -14,6 +14,10 @@ namespace CellNameSpace
         [SerializeField] private float pixelGap = 0.1f; // Зазор между клетками в пикселях (1 пиксель = 0.01 единицы при стандартном PPU = 100)
         
         [Header("Генерация суши")]
+        [SerializeField] private bool useVoronoiForLand = false; // Использовать Voronoi для генерации континентов
+        [Range(5, 50)]
+        [SerializeField] private int voronoiRegions = 15; // Количество регионов Voronoi (континентов)
+        [SerializeField] private int voronoiSeed = 0; // Сид для генерации Voronoi (0 = случайный)
         [Range(0f, 1f)]
         [SerializeField] private float landFrequency = 0.5f; // Частота появления суши (field)
         [Range(0f, 1f)]
@@ -70,6 +74,7 @@ namespace CellNameSpace
         
         // Кэшированные значения для расчета ширины карты
         private float cachedHexWidth = 0f;
+        private float cachedHexHeight = 0f;
         private float cachedHexOffset = 0f;
         private float cachedActualCellSize = 0f;
         
@@ -130,6 +135,7 @@ namespace CellNameSpace
             
             // Кэшируем значения для расчета ширины карты
             cachedHexWidth = hexWidth;
+            cachedHexHeight = hexHeight;
             cachedHexOffset = hexOffset;
             cachedActualCellSize = actualCellSize;
             
@@ -191,9 +197,25 @@ namespace CellNameSpace
             }
             
             // Генерируем сушу (field клетки)
-            int actualLandSeed = landSeed == 0 ? Random.Range(1, 1000000) : landSeed;
-            TerrainGenerator.GenerateLand(grid, gridWidth, gridHeight,
-                landFrequency, landFragmentation, actualLandSeed);
+            if (useVoronoiForLand)
+            {
+                // Используем Voronoi для генерации континентов
+                int actualVoronoiSeed = voronoiSeed == 0 ? Random.Range(1, 1000000) : voronoiSeed;
+                int[,] voronoiRegions = VoronoiGenerator.GenerateVoronoiRegions(
+                    gridWidth, gridHeight, this.voronoiRegions, actualVoronoiSeed,
+                    cachedHexWidth, cachedHexHeight, cachedHexOffset);
+                
+                int actualLandSeed = landSeed == 0 ? Random.Range(1, 1000000) : landSeed;
+                VoronoiGenerator.ApplyVoronoiToGrid(grid, voronoiRegions, gridWidth, gridHeight,
+                    landFrequency, actualLandSeed);
+            }
+            else
+            {
+                // Используем обычный метод генерации суши
+                int actualLandSeed = landSeed == 0 ? Random.Range(1, 1000000) : landSeed;
+                TerrainGenerator.GenerateLand(grid, gridWidth, gridHeight,
+                    landFrequency, landFragmentation, actualLandSeed);
+            }
             
             // Генерируем водоемы
             int actualWaterSeed = waterSeed == 0 ? Random.Range(1, 1000000) : waterSeed;
