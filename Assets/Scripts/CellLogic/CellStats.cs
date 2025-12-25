@@ -24,8 +24,6 @@ public class CellStats : ScriptableObject
     [Header("Визуал")]
     public Material material;      // Материал для этого типа клетки (опционально)
     public Color baseColor = Color.white; // Базовый цвет (используется, если material не задан)
-    public Sprite resourceOverlay; // Спрайт оверлея ресурсов (опционально)
-    public Sprite buildingOverlay; // Спрайт оверлея построек (опционально)
 }
 
 

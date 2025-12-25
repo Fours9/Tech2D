@@ -308,10 +308,21 @@ namespace CellNameSpace
                 CellVisualizationManager.ApplyOwnershipVisualization(this);
             }
             
-            // Обновляем оверлеи при изменении типа клетки (если требуется)
-            if (updateOverlays)
+            // Устанавливаем ResourceStats и BuildingStats из CellOverlayManager
+            // Вызываем всегда, независимо от updateOverlays (это установка данных, не визуализация)
+            // Визуализация применяется через CellVisualizationManager с учетом тумана войны
+            if (cachedOverlayManager == null || !cachedOverlayManager.gameObject.activeInHierarchy)
             {
-                UpdateOverlays();
+                cachedOverlayManager = FindOverlayManager();
+            }
+            
+            if (cachedOverlayManager != null)
+            {
+                ResourceStats resourceStats = cachedOverlayManager.GetResourceStats(cellType);
+                BuildingStats buildingStats = cachedOverlayManager.GetBuildingStats(cellType);
+                
+                SetResourceStats(resourceStats);
+                SetBuildingStats(buildingStats);
             }
         }
         
@@ -350,74 +361,6 @@ namespace CellNameSpace
             
             // Применяем MaterialPropertyBlock к рендереру
             meshRenderer.SetPropertyBlock(materialPropertyBlock);
-        }
-        
-        /// <summary>
-        /// Обновляет оверлеи (спрайты) клетки в зависимости от её типа
-        /// </summary>
-        public void UpdateOverlays()
-        {
-            // Кэшируем overlayManager, но проверяем его каждый раз (на случай если он появился позже)
-            if (cachedOverlayManager == null || !cachedOverlayManager.gameObject.activeInHierarchy)
-            {
-                cachedOverlayManager = FindOverlayManager();
-            }
-            
-            // Получаем размер клетки для масштабирования спрайтов (с кэшированием)
-            Vector2 cellSize = GetCellSize();
-            
-            // Обновляем слой ресурсов
-            if (resourcesOverlay != null)
-            {
-                Sprite resourceSprite = null;
-                
-                if (cachedOverlayManager != null)
-                {
-                    resourceSprite = cachedOverlayManager.GetOverlaySprite(cellType, OverlayLayer.Resources);
-                }
-                
-                if (resourceSprite != null)
-                {
-                    resourcesOverlay.sprite = resourceSprite;
-                    resourcesOverlay.enabled = true;
-                    // Масштабируем спрайт под размер клетки
-                    ScaleSpriteToCellSize(resourcesOverlay, resourceSprite, cellSize);
-                    // Обновляем позицию и масштаб в зависимости от наличия постройки
-                    UpdateResourcePositionAndScale();
-                }
-                else
-                {
-                    resourcesOverlay.sprite = null;
-                    resourcesOverlay.enabled = false;
-                }
-            }
-            
-            // Обновляем слой построек (пока оставляем пустым, будет использоваться позже)
-            if (buildingsOverlay != null)
-            {
-                Sprite buildingSprite = null;
-                
-                if (cachedOverlayManager != null)
-                {
-                    buildingSprite = cachedOverlayManager.GetOverlaySprite(cellType, OverlayLayer.Buildings);
-                }
-                
-                if (buildingSprite != null)
-                {
-                    buildingsOverlay.sprite = buildingSprite;
-                    buildingsOverlay.enabled = true;
-                    // Масштабируем спрайт под размер клетки
-                    ScaleSpriteToCellSize(buildingsOverlay, buildingSprite, cellSize);
-                }
-                else
-                {
-                    buildingsOverlay.sprite = null;
-                    buildingsOverlay.enabled = false;
-                }
-            }
-            
-            // Обновляем позицию и масштаб ресурсов после обновления всех оверлеев
-            UpdateResourcePositionAndScale();
         }
         
         /// <summary>

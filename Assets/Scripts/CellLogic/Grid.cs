@@ -333,16 +333,9 @@ namespace CellNameSpace
                 }
             }
             
-            // Обновляем оверлеи батчами после применения всех типов
-            if (overlayManager != null && Application.isPlaying)
-            {
-                StartCoroutine(UpdateOverlaysBatchCoroutineWithResume());
-            }
-            else
-            {
-                // Если корутины не используются, сразу возобновляем игру
-                ResumeGame();
-            }
+            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
+            // Возобновляем игру после завершения генерации
+            ResumeGame();
 
             // Типы всех клеток применены — считаем генерацию завершённой
             IsGenerationComplete = true;
@@ -379,55 +372,12 @@ namespace CellNameSpace
                     }
                 }
             }
-            
-            // Обновляем оверлеи батчами после применения всех типов
-            if (overlayManager != null)
-            {
-                yield return StartCoroutine(UpdateOverlaysBatchCoroutine());
-            }
 
+            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
             // Типы всех клеток применены — считаем генерацию завершённой
             IsGenerationComplete = true;
             
             // Возобновляем игру после завершения генерации
-            ResumeGame();
-        }
-        
-        /// <summary>
-        /// Корутина для батчевого обновления оверлеев
-        /// </summary>
-        private IEnumerator UpdateOverlaysBatchCoroutine()
-        {
-            int processed = 0;
-            
-            foreach (GameObject cell in cells)
-            {
-                if (cell == null)
-                    continue;
-                    
-                CellInfo cellInfo = cell.GetComponent<CellInfo>();
-                if (cellInfo != null)
-                {
-                    cellInfo.UpdateOverlays();
-                    processed++;
-                    
-                    // Каждые cellsPerFrame клеток делаем паузу на один кадр
-                    if (processed >= cellsPerFrame)
-                    {
-                        processed = 0;
-                        // Используем WaitForEndOfFrame для работы при timeScale = 0
-                        yield return new WaitForEndOfFrame();
-                    }
-                }
-            }
-        }
-        
-        /// <summary>
-        /// Корутина для батчевого обновления оверлеев с возобновлением игры
-        /// </summary>
-        private IEnumerator UpdateOverlaysBatchCoroutineWithResume()
-        {
-            yield return StartCoroutine(UpdateOverlaysBatchCoroutine());
             ResumeGame();
         }
         

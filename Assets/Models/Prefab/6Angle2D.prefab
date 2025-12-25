@@ -454,8 +454,6 @@ MonoBehaviour:
   hexagonSprite: {fileID: 21300000, guid: 8e580b503150720498224e13efb2c69f, type: 3}
   fogState: 0
   fogOfWarRenderer: {fileID: 4093594445276026817}
-  hiddenAlpha: 1
-  exploredAlpha: 0.6
   outlineEnabled: 1
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   outlineWidth: 2

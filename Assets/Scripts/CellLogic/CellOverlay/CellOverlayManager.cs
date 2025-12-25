@@ -4,118 +4,110 @@ using System.Collections.Generic;
 namespace CellNameSpace
 {
     /// <summary>
-    /// Типы слоев оверлеев для клеток
-    /// </summary>
-    public enum OverlayLayer
-    {
-        Resources,  // Слой ресурсов (деревья, камни и т.д.)
-        Buildings   // Слой построек
-    }
-    
-    /// <summary>
-    /// Менеджер для управления оверлеями (спрайтами) клеток в зависимости от их типа и слоя
+    /// Менеджер для управления оверлеями ресурсов и построек для клеток в зависимости от их типа.
+    /// Хранит маппинг CellType -> ResourceStats/BuildingStats.
     /// </summary>
     public class CellOverlayManager : MonoBehaviour
     {
         [System.Serializable]
-        public class CellOverlayMapping
+        public class ResourceOverlayMapping
         {
             public CellType cellType;
-            public OverlayLayer layer;
-            public Sprite sprite;
+            public ResourceStats resourceStats;
         }
         
-        [Header("Оверлеи для типов клеток")]
-        [SerializeField] private List<CellOverlayMapping> overlayMappings = new List<CellOverlayMapping>();
+        [System.Serializable]
+        public class BuildingOverlayMapping
+        {
+            public CellType cellType;
+            public BuildingStats buildingStats;
+        }
         
-        private Dictionary<(CellType, OverlayLayer), Sprite> overlayDictionary;
+        [Header("Ресурсы для типов клеток")]
+        [SerializeField] private List<ResourceOverlayMapping> resourceMappings = new List<ResourceOverlayMapping>();
+        
+        [Header("Постройки для типов клеток")]
+        [SerializeField] private List<BuildingOverlayMapping> buildingMappings = new List<BuildingOverlayMapping>();
+        
+        private Dictionary<CellType, ResourceStats> resourceDictionary;
+        private Dictionary<CellType, BuildingStats> buildingDictionary;
         
         private void Awake()
         {
-            InitializeDictionary();
+            InitializeDictionaries();
         }
         
         /// <summary>
-        /// Инициализирует словарь оверлеев из списка маппингов
+        /// Инициализирует словари оверлеев из списков маппингов
         /// </summary>
-        private void InitializeDictionary()
+        private void InitializeDictionaries()
         {
-            overlayDictionary = new Dictionary<(CellType, OverlayLayer), Sprite>();
+            resourceDictionary = new Dictionary<CellType, ResourceStats>();
+            buildingDictionary = new Dictionary<CellType, BuildingStats>();
             
-            foreach (var mapping in overlayMappings)
+            foreach (var mapping in resourceMappings)
             {
-                if (mapping.sprite != null)
+                if (mapping.resourceStats != null)
                 {
-                    overlayDictionary[(mapping.cellType, mapping.layer)] = mapping.sprite;
+                    resourceDictionary[mapping.cellType] = mapping.resourceStats;
+                }
+            }
+            
+            foreach (var mapping in buildingMappings)
+            {
+                if (mapping.buildingStats != null)
+                {
+                    buildingDictionary[mapping.cellType] = mapping.buildingStats;
                 }
             }
         }
         
         /// <summary>
-        /// Получает спрайт оверлея для указанного типа клетки и слоя
-        /// Сначала пытается получить из CellStats, затем из старого маппинга (для обратной совместимости)
+        /// Получает ResourceStats для указанного типа клетки
         /// </summary>
         /// <param name="cellType">Тип клетки</param>
-        /// <param name="layer">Слой оверлея</param>
-        /// <returns>Спрайт для данного типа и слоя, или null если не найден</returns>
-        public Sprite GetOverlaySprite(CellType cellType, OverlayLayer layer)
+        /// <returns>ResourceStats для данного типа, или null если не найден</returns>
+        public ResourceStats GetResourceStats(CellType cellType)
         {
-            // Сначала пытаемся получить из CellStats
-            if (CellStatsManager.Instance != null)
+            if (resourceDictionary == null)
             {
-                CellStats stats = CellStatsManager.Instance.GetCellStats(cellType);
-                if (stats != null)
-                {
-                    switch (layer)
-                    {
-                        case OverlayLayer.Resources:
-                            if (stats.resourceOverlay != null)
-                                return stats.resourceOverlay;
-                            break;
-                        case OverlayLayer.Buildings:
-                            if (stats.buildingOverlay != null)
-                                return stats.buildingOverlay;
-                            break;
-                    }
-                }
+                InitializeDictionaries();
             }
             
-            // Fallback: старый маппинг (для обратной совместимости)
-            if (overlayDictionary == null)
+            if (resourceDictionary.TryGetValue(cellType, out ResourceStats stats))
             {
-                InitializeDictionary();
-            }
-            
-            if (overlayDictionary.TryGetValue((cellType, layer), out Sprite sprite))
-            {
-                return sprite;
+                return stats;
             }
             
             return null;
         }
         
         /// <summary>
-        /// Проверяет, есть ли оверлей для указанного типа клетки и слоя
+        /// Получает BuildingStats для указанного типа клетки
         /// </summary>
         /// <param name="cellType">Тип клетки</param>
-        /// <param name="layer">Слой оверлея</param>
-        /// <returns>true если оверлей найден, false иначе</returns>
-        public bool HasOverlayForType(CellType cellType, OverlayLayer layer)
+        /// <returns>BuildingStats для данного типа, или null если не найден</returns>
+        public BuildingStats GetBuildingStats(CellType cellType)
         {
-            if (overlayDictionary == null)
+            if (buildingDictionary == null)
             {
-                InitializeDictionary();
+                InitializeDictionaries();
             }
             
-            return overlayDictionary.ContainsKey((cellType, layer)) && overlayDictionary[(cellType, layer)] != null;
+            if (buildingDictionary.TryGetValue(cellType, out BuildingStats stats))
+            {
+                return stats;
+            }
+            
+            return null;
         }
         
         /// <summary>
-        /// Обновляет словарь оверлеев (вызывать после изменения overlayMappings в Inspector)
+        /// Обновляет словари оверлеев (вызывать после изменения маппингов в Inspector)
         /// </summary>
         public void RefreshOverlays()
         {
-            InitializeDictionary();
+            InitializeDictionaries();
         }
         
         /// <summary>
@@ -124,13 +116,19 @@ namespace CellNameSpace
         [ContextMenu("Refresh Overlays")]
         public void RefreshOverlaysPublic()
         {
-            InitializeDictionary();
-            Debug.Log($"[CellOverlayManager] Overlays refreshed. Dictionary count: {overlayDictionary.Count}");
+            InitializeDictionaries();
+            Debug.Log($"[CellOverlayManager] Overlays refreshed. Resources: {resourceDictionary.Count}, Buildings: {buildingDictionary.Count}");
             
-            // Выводим информацию о всех оверлеях
-            foreach (var kvp in overlayDictionary)
+            // Выводим информацию о всех ресурсах
+            foreach (var kvp in resourceDictionary)
             {
-                Debug.Log($"[CellOverlayManager] {kvp.Key.Item1} + {kvp.Key.Item2} -> {(kvp.Value != null ? kvp.Value.name : "NULL")}");
+                Debug.Log($"[CellOverlayManager] Resource: {kvp.Key} -> {(kvp.Value != null ? kvp.Value.displayName : "NULL")}");
+            }
+            
+            // Выводим информацию о всех постройках
+            foreach (var kvp in buildingDictionary)
+            {
+                Debug.Log($"[CellOverlayManager] Building: {kvp.Key} -> {(kvp.Value != null ? kvp.Value.displayName : "NULL")}");
             }
         }
         
@@ -139,13 +137,11 @@ namespace CellNameSpace
         /// </summary>
         private void OnValidate()
         {
-            // В Editor режиме обновляем словарь при изменении в Inspector
-            if (!Application.isPlaying && overlayMappings != null)
+            // В Editor режиме обновляем словари при изменении в Inspector
+            if (!Application.isPlaying && (resourceMappings != null || buildingMappings != null))
             {
-                // Не вызываем InitializeDictionary здесь, чтобы не создавать словарь в Editor
+                // Не вызываем InitializeDictionaries здесь, чтобы не создавать словари в Editor
             }
         }
     }
 }
-
-
