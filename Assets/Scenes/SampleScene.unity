@@ -250,7 +250,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Grid
   cellPrefab: {fileID: 5993114145590717218, guid: 6c2e9b1d205d97348ac9ccc3dfc82e9b, type: 3}
   gridWidth: 150
-  gridHeight: 100
+  gridHeight: 70
   cellSize: 1
   pixelGap: 0
   useVoronoiForLand: 1

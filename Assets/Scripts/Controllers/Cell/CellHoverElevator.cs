@@ -57,12 +57,10 @@ public class CellHoverElevator : MonoBehaviour
         if (TurnManager.Instance != null && TurnManager.Instance.GetCurrentState() == TurnState.Resolving)
         {
             // Сбрасываем эффект и возвращаем клетки в исходное положение
-            if (currentHoveredCell != null)
-            {
-                currentHoveredCell = null;
-                ResetElevation();
-            }
-            // Продолжаем возвращать клетки обратно
+            currentHoveredCell = null;
+            // Очищаем целевые позиции, чтобы все клетки начали возвращаться
+            ClearElevation();
+            // Продолжаем возвращать клетки обратно каждый кадр, пока они не вернутся
             AnimateReset();
             return;
         }
@@ -71,12 +69,10 @@ public class CellHoverElevator : MonoBehaviour
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
         {
             // Если курсор над UI, сбрасываем эффект
-            if (currentHoveredCell != null)
-            {
-                currentHoveredCell = null;
-                ResetElevation();
-            }
-            // Продолжаем возвращать клетки обратно
+            currentHoveredCell = null;
+            // Очищаем целевые позиции, чтобы все клетки начали возвращаться
+            ClearElevation();
+            // Продолжаем возвращать клетки обратно каждый кадр, пока они не вернутся
             AnimateReset();
             return;
         }
