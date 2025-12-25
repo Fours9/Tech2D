@@ -150,6 +150,12 @@ public class UnitManager : MonoBehaviour
             unitInfo.SetGridPosition(spawnPos.x, spawnPos.y);
             unitInfo.SetUnitStats(defaultUnitStats);
             unitInfo.ResetMovementPoints();
+            
+            // Регистрируем юнита в FogOfWarManager (на случай если Awake() не сработал из-за порядка инициализации)
+            if (FogOfWarManager.Instance != null)
+            {
+                FogOfWarManager.Instance.RegisterUnit(unitInfo);
+            }
         }
         else
         {

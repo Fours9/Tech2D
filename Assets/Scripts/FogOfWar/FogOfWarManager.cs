@@ -54,6 +54,8 @@ public class FogOfWarManager : MonoBehaviour
     
     private HashSet<CellInfo> visibleCells = new HashSet<CellInfo>(); // Клетки, видимые в текущий момент
     private HashSet<CellInfo> exploredCells = new HashSet<CellInfo>(); // Клетки, которые были исследованы
+    private HashSet<UnitInfo> registeredUnits = new HashSet<UnitInfo>(); // Зарегистрированные юниты для оптимизации
+    private HashSet<Vector2Int> prevVisibleCellCoords = new HashSet<Vector2Int>(); // Предыдущее состояние видимости для дельты
     
     private void Awake()
     {
@@ -234,11 +236,9 @@ public class FogOfWarManager : MonoBehaviour
         HashSet<Vector2Int> visibleCellCoords = new HashSet<Vector2Int>();
         List<CellInfo> newVisibleCellsList = new List<CellInfo>();
         
-        // Находим все юниты на карте
-        UnitInfo[] allUnits = FindObjectsByType<UnitInfo>(FindObjectsSortMode.None);
-        
+        // Используем зарегистрированные юниты вместо FindObjectsByType для оптимизации
         // Для каждого юнита определяем видимые клетки
-        foreach (UnitInfo unit in allUnits)
+        foreach (UnitInfo unit in registeredUnits)
         {
             if (unit == null || !unit.IsPositionInitialized())
                 continue;
@@ -310,63 +310,56 @@ public class FogOfWarManager : MonoBehaviour
             }
         }
         
-        // Теперь обновляем состояние всех клеток
+        // Вычисляем дельту видимости для оптимизации (вместо полного перебора сетки)
+        HashSet<Vector2Int> becameVisible = new HashSet<Vector2Int>(visibleCellCoords);
+        becameVisible.ExceptWith(prevVisibleCellCoords);
+        
+        HashSet<Vector2Int> becameNotVisible = new HashSet<Vector2Int>(prevVisibleCellCoords);
+        becameNotVisible.ExceptWith(visibleCellCoords);
+        
         int gridWidth = grid.GetGridWidth();
         int gridHeight = grid.GetGridHeight();
-        
-        // Обновляем все клетки
-        for (int x = 0; x < gridWidth; x++)
-        {
-            for (int y = 0; y < gridHeight; y++)
-            {
-                CellInfo cell = grid.GetCellInfoAt(x, y);
-                if (cell == null)
-                    continue;
-                
-                Vector2Int cellCoord = new Vector2Int(x, y);
-                
-                // Если клетка видима
-                if (visibleCellCoords.Contains(cellCoord))
-                {
-                    cell.SetFogOfWarState(FogOfWarState.Visible);
-                }
-                else
-                {
-                    // Клетка не видима
-                    FogOfWarState currentState = cell.GetFogOfWarState();
-                    
-                    // Если клетка была видимой, но больше не видна, делаем её исследованной
-                    if (currentState == FogOfWarState.Visible)
-
-                    {
-                        if (cell.HasBeenExplored())
-                        {
-                            cell.SetFogOfWarState(FogOfWarState.Explored);
-                        }
-                        else
-                        {
-                            cell.SetFogOfWarState(FogOfWarState.Hidden);
-                        }
-                    }
-                    // Если клетка уже была Hidden или Explored, оставляем как есть
-                }
-            }
-        }
         
         // После того как все состояния обновлены, пересчитываем неровные края
         // ТОЛЬКО для клеток, состояние которых изменилось, и их соседей
         HashSet<CellInfo> cellsToRefresh = new HashSet<CellInfo>();
         List<CellInfo> changedCells = new List<CellInfo>();
         
-        // Сначала собираем все изменившиеся клетки
-        for (int x = 0; x < gridWidth; x++)
+        // Обновляем состояния только для клеток, которые изменили видимость (дельта)
+        // Клетки, которые стали видимыми
+        foreach (Vector2Int coord in becameVisible)
         {
-            for (int y = 0; y < gridHeight; y++)
+            CellInfo cell = grid.GetCellInfoAt(coord.x, coord.y);
+            if (cell != null)
             {
-                CellInfo cell = grid.GetCellInfoAt(x, y);
-                if (cell == null)
-                    continue;
+                cell.SetFogOfWarState(FogOfWarState.Visible);
                 
+                // Сразу проверяем, изменилось ли состояние, и добавляем в списки
+                if (cell.HasFogStateChanged())
+                {
+                    changedCells.Add(cell);
+                    cellsToRefresh.Add(cell);
+                }
+            }
+        }
+        
+        // Клетки, которые перестали быть видимыми
+        foreach (Vector2Int coord in becameNotVisible)
+        {
+            CellInfo cell = grid.GetCellInfoAt(coord.x, coord.y);
+            if (cell != null)
+            {
+                // Если клетка была видимой, но больше не видна, делаем её исследованной
+                if (cell.HasBeenExplored())
+                {
+                    cell.SetFogOfWarState(FogOfWarState.Explored);
+                }
+                else
+                {
+                    cell.SetFogOfWarState(FogOfWarState.Hidden);
+                }
+                
+                // Сразу проверяем, изменилось ли состояние, и добавляем в списки
                 if (cell.HasFogStateChanged())
                 {
                     changedCells.Add(cell);
@@ -400,6 +393,9 @@ public class FogOfWarManager : MonoBehaviour
         
         // Обновляем текущий список видимых клеток
         visibleCells = new HashSet<CellInfo>(newVisibleCellsList);
+        
+        // Сохраняем текущее состояние видимости для следующего обновления
+        prevVisibleCellCoords = new HashSet<Vector2Int>(visibleCellCoords);
     }
     
     /// <summary>
@@ -509,8 +505,10 @@ public class FogOfWarManager : MonoBehaviour
             }
             else
             {
+#if UNITY_EDITOR
                 Debug.LogWarning($"[FogOfWar] GetCellsInVisionRange: Клетка ({cellCoord.x}, {cellCoord.y}) ИСКЛЮЧЕНА - " +
                     $"BFS: {bestDistance[cell]}, реальное: {realDistance} > радиус: {radius}");
+#endif
             }
         }
 
@@ -564,6 +562,28 @@ public class FogOfWarManager : MonoBehaviour
     public bool IsFogOfWarEnabled()
     {
         return fogOfWarEnabled;
+    }
+    
+    /// <summary>
+    /// Регистрирует юнита для отслеживания видимости (вызывается из UnitInfo.Awake)
+    /// </summary>
+    public void RegisterUnit(UnitInfo unit)
+    {
+        if (unit != null)
+        {
+            registeredUnits.Add(unit);
+        }
+    }
+    
+    /// <summary>
+    /// Отменяет регистрацию юнита (вызывается из UnitInfo.OnDestroy)
+    /// </summary>
+    public void UnregisterUnit(UnitInfo unit)
+    {
+        if (unit != null)
+        {
+            registeredUnits.Remove(unit);
+        }
     }
     
     /// <summary>

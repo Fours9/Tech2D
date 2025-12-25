@@ -16,6 +16,24 @@ public class UnitInfo : MonoBehaviour
     [Header("Состояние движения")]
     [SerializeField] private int currentMovementPoints = 0; // Оставшиеся очки движения на текущий ход
     
+    private void Awake()
+    {
+        // Регистрируем юнита в FogOfWarManager для оптимизации
+        if (FogOfWarManager.Instance != null)
+        {
+            FogOfWarManager.Instance.RegisterUnit(this);
+        }
+    }
+    
+    private void OnDestroy()
+    {
+        // Отменяем регистрацию юнита при уничтожении
+        if (FogOfWarManager.Instance != null)
+        {
+            FogOfWarManager.Instance.UnregisterUnit(this);
+        }
+    }
+    
     /// <summary>
     /// Получить позицию X в сетке
     /// </summary>

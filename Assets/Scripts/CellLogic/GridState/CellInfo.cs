@@ -76,6 +76,14 @@ namespace CellNameSpace
             // Обводка должна включаться только явно через SetOutline()
             // ApplyOutlineFromInspector(); // Отключено, чтобы обводка не была видна при создании карты
             
+            // Инициализируем видимость компонентов в зависимости от начального состояния тумана войны
+            // Это нужно, чтобы при создании карты клетки с состоянием Hidden имели отключенные компоненты
+            if (fogState == FogOfWarState.Hidden)
+            {
+                // Если клетка создана с состоянием Hidden, отключаем компоненты
+                UpdateCellComponentsVisibility(FogOfWarState.Visible, FogOfWarState.Hidden);
+            }
+            
             // Убеждаемся, что originalPosition передана в шейдер
             // Это также применит параметры тумана войны через ApplyOriginalPositionToShader
             ApplyOriginalPositionToShader();
@@ -1016,8 +1024,12 @@ namespace CellNameSpace
             {
                 if (fogState != FogOfWarState.Visible)
                 {
+                    FogOfWarState oldStateForComponents = fogState;
                     fogState = FogOfWarState.Visible;
                     hasBeenExplored = true;
+                    
+                    // Обновляем видимость компонентов
+                    UpdateCellComponentsVisibility(oldStateForComponents, fogState);
                     
                     // Инвалидируем кэш рваных краев при изменении состояния
                     cachedRaggedEdges = null;
@@ -1038,9 +1050,12 @@ namespace CellNameSpace
                 fogStateChanged = true;
             }
             
-            // Если состояние не изменилось и анимация не идет, ничего не делаем
+            // Если состояние не изменилось и анимация не идет, проверяем видимость компонентов
+            // Это нужно для инициализации при создании карты, когда клетки уже имеют состояние Hidden
             if (oldState == state && transitionCoroutine == null)
             {
+                // Все равно обновляем видимость компонентов на случай, если они были инициализированы неправильно
+                UpdateCellComponentsVisibility(oldState, state);
                 return;
             }
             
@@ -1122,6 +1137,9 @@ namespace CellNameSpace
             if (!willStartAnimation)
             {
                 fogState = state;
+                
+                // Обновляем видимость компонентов
+                UpdateCellComponentsVisibility(oldState, state);
                 
                 // Если клетка стала видимой, отмечаем её как исследованную
                 if (state == FogOfWarState.Visible)
@@ -1239,6 +1257,49 @@ namespace CellNameSpace
         public bool HasFogStateChanged()
         {
             return fogStateChanged;
+        }
+        
+        /// <summary>
+        /// Обновляет видимость MeshRenderer и Collider в зависимости от состояния тумана войны
+        /// Отключает компоненты когда клетка становится Hidden, включает когда перестает быть Hidden
+        /// </summary>
+        private void UpdateCellComponentsVisibility(FogOfWarState oldState, FogOfWarState newState)
+        {
+            // Если клетка становится Hidden - отключаем компоненты
+            if (oldState != FogOfWarState.Hidden && newState == FogOfWarState.Hidden)
+            {
+                // Отключаем MeshRenderer
+                MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
+                if (meshRenderer != null)
+                {
+                    meshRenderer.enabled = false;
+                }
+                
+                // Отключаем Collider
+                Collider cellCollider = GetComponent<Collider>();
+                if (cellCollider != null)
+                {
+                    cellCollider.enabled = false;
+                }
+            }
+            // Если клетка перестает быть Hidden - включаем компоненты
+            else if (oldState == FogOfWarState.Hidden && newState != FogOfWarState.Hidden)
+            {
+                // Включаем MeshRenderer
+                MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
+                if (meshRenderer != null)
+                {
+                    meshRenderer.enabled = true;
+                }
+                
+                // Включаем Collider
+                Collider cellCollider = GetComponent<Collider>();
+                if (cellCollider != null)
+                {
+                    cellCollider.enabled = true;
+                }
+            }
+            // В остальных случаях ничего не делаем
         }
 
         /// <summary>
@@ -1616,6 +1677,9 @@ namespace CellNameSpace
                 // Устанавливаем финальное состояние
                 fogState = toState;
                 
+                // Обновляем видимость компонентов
+                UpdateCellComponentsVisibility(fromState, toState);
+                
                 // Если клетка стала видимой, отмечаем её как исследованную
                 if (toState == FogOfWarState.Visible)
                 {
@@ -1635,6 +1699,9 @@ namespace CellNameSpace
             // Устанавливаем целевое состояние сразу после того, как запомнили его
             // Это позволяет другим системам видеть правильное состояние во время анимации
             fogState = toState;
+            
+            // Обновляем видимость компонентов
+            UpdateCellComponentsVisibility(fromState, toState);
             
             // Если клетка стала видимой, отмечаем её как исследованную
             if (toState == FogOfWarState.Visible)
@@ -1837,6 +1904,8 @@ namespace CellNameSpace
             
             // Устанавливаем финальное состояние после завершения анимации
             // Используем toState (который уже сохранен в transitionTargetState)
+            // Примечание: fogState уже был установлен ранее в корутине (строка 1690),
+            // и видимость компонентов уже была обновлена там, так что здесь просто подтверждаем состояние
             fogState = toState;
             
             // Если клетка стала видимой, отмечаем её как исследованную
