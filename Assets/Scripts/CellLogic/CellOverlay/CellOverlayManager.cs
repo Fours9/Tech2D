@@ -68,7 +68,7 @@ namespace CellNameSpace
         /// <param name="cellType">Тип клетки</param>
         /// <returns>ResourceStats для данного типа, или null если не найден</returns>
         public ResourceStats GetResourceStats(CellType cellType)
-        {
+                    {
             if (resourceDictionary == null)
             {
                 InitializeDictionaries();

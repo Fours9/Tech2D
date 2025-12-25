@@ -296,7 +296,8 @@ namespace CellNameSpace
             }
             
             // Применяем материал или цвет (с защитой - если materialManager null, используется цвет)
-            CellColorManager.ApplyMaterialToCell(cellRenderer, cellType, cachedMaterialManager);
+            // Используем существующий materialPropertyBlock для правильного восстановления цвета
+            CellColorManager.ApplyMaterialToCell(cellRenderer, cellType, cachedMaterialManager, materialPropertyBlock);
             
             // Передаем originalPosition в шейдер через MaterialPropertyBlock
             ApplyOriginalPositionToShader();

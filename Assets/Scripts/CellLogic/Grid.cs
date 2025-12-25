@@ -335,7 +335,7 @@ namespace CellNameSpace
             
             // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
             // Возобновляем игру после завершения генерации
-            ResumeGame();
+                ResumeGame();
 
             // Типы всех клеток применены — считаем генерацию завершённой
             IsGenerationComplete = true;
@@ -372,7 +372,7 @@ namespace CellNameSpace
                     }
                 }
             }
-
+            
             // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
             // Типы всех клеток применены — считаем генерацию завершённой
             IsGenerationComplete = true;
