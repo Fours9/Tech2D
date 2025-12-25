@@ -722,10 +722,23 @@ namespace CellNameSpace
                         // Яркий цвет, хорошо видимый поверх террейна
                         spriteRenderer.color = Color.cyan;
                     }
-                    // Для MeshRenderer
-                    else if (cellRenderer is MeshRenderer meshRenderer && meshRenderer.material != null)
+                    // Для MeshRenderer используем MaterialPropertyBlock (не создает material instance)
+                    else if (cellRenderer is MeshRenderer meshRenderer && meshRenderer.sharedMaterial != null)
                     {
-                        meshRenderer.material.color = Color.cyan;
+                        // Создаем MaterialPropertyBlock, если его еще нет
+                        if (materialPropertyBlock == null)
+                        {
+                            materialPropertyBlock = new MaterialPropertyBlock();
+                        }
+                        
+                        // Получаем текущие свойства (чтобы не потерять другие параметры)
+                        meshRenderer.GetPropertyBlock(materialPropertyBlock);
+                        
+                        // Устанавливаем цвет подсветки через MaterialPropertyBlock
+                        materialPropertyBlock.SetColor("_Color", Color.cyan);
+                        
+                        // Применяем MaterialPropertyBlock к рендереру
+                        meshRenderer.SetPropertyBlock(materialPropertyBlock);
                     }
                 }
                 else

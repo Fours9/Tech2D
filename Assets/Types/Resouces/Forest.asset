@@ -16,4 +16,4 @@ MonoBehaviour:
   displayName: 
   description: 
   icon: {fileID: 0}
-  sprite: {fileID: 0}
+  sprite: {fileID: 21300000, guid: 04be6412910df7249b6bf172ebf43b6e, type: 3}

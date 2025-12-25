@@ -20,5 +20,3 @@ MonoBehaviour:
   isWalkable: 1
   material: {fileID: 2100000, guid: 5955c57daf967324eb1581429db4968e, type: 2}
   baseColor: {r: 0.31132078, g: 0.24962895, b: 0.036712352, a: 1}
-  resourceOverlay: {fileID: 0}
-  buildingOverlay: {fileID: 0}

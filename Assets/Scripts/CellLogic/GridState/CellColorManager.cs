@@ -48,11 +48,12 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Применяет цвет к рендереру клетки, сохраняя альфу исходного цвета
+        /// Применяет цвет к рендереру клетки через MaterialPropertyBlock (без создания material instance)
         /// </summary>
         /// <param name="renderer">Рендерер клетки</param>
         /// <param name="cellType">Тип клетки</param>
-        public static void ApplyColorToCell(Renderer renderer, CellType cellType)
+        /// <param name="propertyBlock">MaterialPropertyBlock для использования (если null, будет создан новый)</param>
+        public static void ApplyColorToCell(Renderer renderer, CellType cellType, MaterialPropertyBlock propertyBlock = null)
         {
             if (renderer == null)
                 return;
@@ -70,21 +71,28 @@ namespace CellNameSpace
                 return;
             }
             
-            // Для MeshRenderer
+            // Для MeshRenderer используем MaterialPropertyBlock для избежания создания material instance
             MeshRenderer meshRenderer = renderer as MeshRenderer;
-            if (meshRenderer != null)
+            if (meshRenderer != null && meshRenderer.sharedMaterial != null)
             {
-                if (meshRenderer.sharedMaterial != null)
+                // Создаем MaterialPropertyBlock, если он не передан
+                if (propertyBlock == null)
                 {
-                    // Сохраняем альфу из исходного цвета материала
-                    Color originalColor = meshRenderer.sharedMaterial.color;
-                    newColor.a = originalColor.a;
-                    
-                    // Для изменения цвета используем material.color (создаст instance)
-                    // Это необходимо для работы функциональности окрашивания
-                    // MaterialPropertyBlock может не работать для всех материалов и шейдеров
-                    meshRenderer.material.color = newColor;
+                    propertyBlock = new MaterialPropertyBlock();
                 }
+                
+                // Получаем текущие свойства (чтобы не потерять другие параметры)
+                meshRenderer.GetPropertyBlock(propertyBlock);
+                
+                // Сохраняем альфу из исходного цвета материала
+                Color originalColor = meshRenderer.sharedMaterial.color;
+                newColor.a = originalColor.a;
+                
+                // Устанавливаем цвет через MaterialPropertyBlock (не создает material instance)
+                propertyBlock.SetColor("_Color", newColor);
+                
+                // Применяем MaterialPropertyBlock к рендереру
+                meshRenderer.SetPropertyBlock(propertyBlock);
             }
         }
         
@@ -102,7 +110,9 @@ namespace CellNameSpace
             // Защита: если materialManager не назначен или null, сразу используем цвета
             if (materialManager == null)
             {
-                ApplyColorToCell(renderer, cellType);
+                // Создаем MaterialPropertyBlock локально для применения цвета без создания material instance
+                MaterialPropertyBlock block = new MaterialPropertyBlock();
+                ApplyColorToCell(renderer, cellType, block);
                 return;
             }
             
@@ -111,7 +121,9 @@ namespace CellNameSpace
             // Проверяем, что это MeshRenderer (для SpriteRenderer материалы не применяются)
             if (meshRenderer == null)
             {
-                ApplyColorToCell(renderer, cellType);
+                // Создаем MaterialPropertyBlock локально для применения цвета без создания material instance
+                MaterialPropertyBlock block = new MaterialPropertyBlock();
+                ApplyColorToCell(renderer, cellType, block);
                 return;
             }
             
@@ -129,7 +141,9 @@ namespace CellNameSpace
                     Debug.LogWarning($"CellColorManager: Ошибка при получении материала для типа {cellType}: {ex.Message}");
                     _loggedErrors.Add(cellType);
                 }
-                ApplyColorToCell(renderer, cellType);
+                // Создаем MaterialPropertyBlock локально для применения цвета без создания material instance
+                MaterialPropertyBlock block = new MaterialPropertyBlock();
+                ApplyColorToCell(renderer, cellType, block);
                 return;
             }
             
@@ -154,8 +168,10 @@ namespace CellNameSpace
                 }
             }
             
-            // Если материал не найден для типа - красим цветом, НЕ меняя материал префаба
-            ApplyColorToCell(renderer, cellType);
+            // Если материал не найден для типа - красим цветом через MaterialPropertyBlock, НЕ меняя материал префаба
+            // Создаем MaterialPropertyBlock локально для применения цвета без создания material instance
+            MaterialPropertyBlock colorBlock = new MaterialPropertyBlock();
+            ApplyColorToCell(renderer, cellType, colorBlock);
         }
     }
 }

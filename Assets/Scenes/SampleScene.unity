@@ -334,13 +334,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 10bbf5b49f61f134dbe7bb87b28a5885, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CellOverlayManager
-  overlayMappings:
+  resourceMappings:
   - cellType: 3
-    layer: 0
-    sprite: {fileID: 21300000, guid: 04be6412910df7249b6bf172ebf43b6e, type: 3}
+    resourceStats: {fileID: 11400000, guid: 80b53c240911454449333841a83db63e, type: 2}
   - cellType: 5
-    layer: 0
-    sprite: {fileID: -8273445311213168830, guid: cb0b3c4a47434ec4eba12b0930fbc238, type: 3}
+    resourceStats: {fileID: 11400000, guid: 2d107b9b749db084cb35fa70e355b959, type: 2}
+  buildingMappings: []
 --- !u!114 &141372084
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1980,7 +1979,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.93570614, y: 0.07452573}
   m_AnchorMax: {x: 0.9825879, y: 0.1614854}
-  m_AnchoredPosition: {x: 0, y: 0.30004883}
+  m_AnchoredPosition: {x: 0, y: 0.3000183}
   m_SizeDelta: {x: 0, y: -0.08300781}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1887661417
