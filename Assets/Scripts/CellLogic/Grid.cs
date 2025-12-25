@@ -501,6 +501,80 @@ namespace CellNameSpace
         }
         
         /// <summary>
+        /// Получает горизонтальное расстояние между центрами клеток (hexWidth)
+        /// </summary>
+        public float GetHexWidth()
+        {
+            // Если значения еще не кэшированы, вычисляем их
+            if (cachedHexWidth <= 0f)
+            {
+                Renderer prefabRenderer = cellPrefab != null ? cellPrefab.GetComponent<Renderer>() : null;
+                float actualCellSize = cellSize;
+                
+                if (prefabRenderer != null && cellSize <= 0.1f)
+                {
+                    actualCellSize = Mathf.Max(prefabRenderer.bounds.size.x, prefabRenderer.bounds.size.y) * cellSize;
+                }
+                
+                cachedHexWidth = actualCellSize * 1.732f + pixelGap;
+            }
+            
+            return cachedHexWidth;
+        }
+        
+        /// <summary>
+        /// Получает вертикальное расстояние между центрами клеток (hexHeight)
+        /// </summary>
+        public float GetHexHeight()
+        {
+            // Если значения еще не кэшированы, вычисляем их
+            if (cachedHexHeight <= 0f)
+            {
+                Renderer prefabRenderer = cellPrefab != null ? cellPrefab.GetComponent<Renderer>() : null;
+                float actualCellSize = cellSize;
+                
+                if (prefabRenderer != null && cellSize <= 0.1f)
+                {
+                    actualCellSize = Mathf.Max(prefabRenderer.bounds.size.x, prefabRenderer.bounds.size.y) * cellSize;
+                }
+                
+                cachedHexHeight = actualCellSize * 1.5f + pixelGap;
+            }
+            
+            return cachedHexHeight;
+        }
+        
+        /// <summary>
+        /// Получает смещение для нечетных строк (hexOffset)
+        /// </summary>
+        public float GetHexOffset()
+        {
+            // Если значения еще не кэшированы, вычисляем их
+            if (cachedHexOffset <= 0f)
+            {
+                Renderer prefabRenderer = cellPrefab != null ? cellPrefab.GetComponent<Renderer>() : null;
+                float actualCellSize = cellSize;
+                
+                if (prefabRenderer != null && cellSize <= 0.1f)
+                {
+                    actualCellSize = Mathf.Max(prefabRenderer.bounds.size.x, prefabRenderer.bounds.size.y) * cellSize;
+                }
+                
+                cachedHexOffset = (actualCellSize * 1.732f + pixelGap) * 0.5f;
+            }
+            
+            return cachedHexOffset;
+        }
+        
+        /// <summary>
+        /// Получает начальную Y координату (позиция верхней строки)
+        /// </summary>
+        public float GetStartY()
+        {
+            return (gridHeight - 1) * GetHexHeight();
+        }
+        
+        /// <summary>
         /// Включает/выключает обводку для всех клеток
         /// </summary>
         /// <param name="enabled">Включить обводку</param>

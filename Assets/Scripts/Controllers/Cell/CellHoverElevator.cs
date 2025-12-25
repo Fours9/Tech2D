@@ -137,6 +137,46 @@ public class CellHoverElevator : MonoBehaviour
     }
     
     /// <summary>
+    /// Вычисляет границы области поиска в координатах сетки для оптимизации
+    /// </summary>
+    /// <param name="cursorPos2D">Позиция курсора в мировых координатах (X, Y)</param>
+    /// <param name="minCol">Минимальная колонка (выходной параметр)</param>
+    /// <param name="maxCol">Максимальная колонка (выходной параметр)</param>
+    /// <param name="minRow">Минимальная строка (выходной параметр)</param>
+    /// <param name="maxRow">Максимальная строка (выходной параметр)</param>
+    private void GetSearchBounds(Vector2 cursorPos2D, out int minCol, out int maxCol, out int minRow, out int maxRow)
+    {
+        // Получаем параметры сетки
+        float hexWidth = grid.GetHexWidth();
+        float hexHeight = grid.GetHexHeight();
+        float hexOffset = grid.GetHexOffset();
+        float startY = grid.GetStartY();
+        int gridWidth = grid.GetGridWidth();
+        int gridHeight = grid.GetGridHeight();
+        
+        // Запас для предотвращения отставания эффекта при движении курсора
+        float searchMargin = hoverRadius * 0.2f; // 20% запас
+        float searchRadius = hoverRadius + searchMargin;
+        
+        // Bounding box круга
+        float minX = cursorPos2D.x - searchRadius;
+        float maxX = cursorPos2D.x + searchRadius;
+        float minY = cursorPos2D.y - searchRadius;
+        float maxY = cursorPos2D.y + searchRadius;
+        
+        // Преобразуем Y координаты в строки (row)
+        // Формула обратная: row = (startY - y) / hexHeight
+        minRow = Mathf.Max(0, Mathf.FloorToInt((startY - maxY) / hexHeight));
+        maxRow = Mathf.Min(gridHeight - 1, Mathf.CeilToInt((startY - minY) / hexHeight));
+        
+        // Преобразуем X координаты в колонки (col)
+        // Учитываем, что нечетные строки смещены на hexOffset
+        // Используем упрощенную формулу с запасом для учета смещений
+        minCol = Mathf.Max(0, Mathf.FloorToInt((minX - hexOffset) / hexWidth));
+        maxCol = Mathf.Min(gridWidth - 1, Mathf.CeilToInt((maxX + hexOffset) / hexWidth));
+    }
+    
+    /// <summary>
     /// Обновляет эффект приподнимания для клеток вокруг курсора
     /// </summary>
     private void UpdateElevation()
@@ -153,16 +193,16 @@ public class CellHoverElevator : MonoBehaviour
         // Игнорируем Z координату курсора для расчета расстояния (используем только X и Y)
         Vector2 cursorPos2D = new Vector2(cursorWorldPos.x, cursorWorldPos.y);
         
-        // Получаем все клетки сетки
-        int gridWidth = grid.GetGridWidth();
-        int gridHeight = grid.GetGridHeight();
+        // Вычисляем границы области поиска для оптимизации
+        int minCol, maxCol, minRow, maxRow;
+        GetSearchBounds(cursorPos2D, out minCol, out maxCol, out minRow, out maxRow);
         
-        // Проходим по всем клеткам и проверяем, попадают ли они в круг
-        for (int x = 0; x < gridWidth; x++)
+        // Перебираем только клетки в вычисленной области
+        for (int col = minCol; col <= maxCol; col++)
         {
-            for (int y = 0; y < gridHeight; y++)
+            for (int row = minRow; row <= maxRow; row++)
             {
-                CellInfo cell = grid.GetCellInfoAt(x, y);
+                CellInfo cell = grid.GetCellInfoAt(col, row);
                 if (cell == null)
                     continue;
                 
