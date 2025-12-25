@@ -100,7 +100,8 @@ Shader "Custom/WorldSpaceTexture"
                 // Применяем масштаб и смещение из _MainTex_ST, затем тилируем через frac
                 float2 uv = i.uv * _MainTex_ST.xy + _MainTex_ST.zw;
                 // Тиллируем текстуру (повторяем)
-                uv = frac(uv);
+                // Используем uv - floor(uv) вместо frac для корректной работы с отрицательными координатами
+                uv = uv - floor(uv);
                 fixed4 col = tex2D(_MainTex, uv) * _Color;
                 
                 // Расчет виньетки на основе полной SDF правильного pointy-top шестиугольника
