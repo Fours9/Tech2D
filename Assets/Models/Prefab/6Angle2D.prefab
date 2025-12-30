@@ -475,6 +475,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 6368091232878326168}
     m_Modifications:
     - target: {fileID: 5200300635712522999, guid: 9d06e11413c489349a590bc44b231ccc, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5200300635712522999, guid: 9d06e11413c489349a590bc44b231ccc, type: 3}
       propertyPath: m_Materials.Array.size
       value: 1
       objectReference: {fileID: 0}
@@ -485,6 +489,10 @@ PrefabInstance:
     - target: {fileID: 5993114145590717218, guid: 9d06e11413c489349a590bc44b231ccc, type: 3}
       propertyPath: m_Name
       value: 6Angle2DFogOfWar
+      objectReference: {fileID: 0}
+    - target: {fileID: 5993114145590717218, guid: 9d06e11413c489349a590bc44b231ccc, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6368091232878326168, guid: 9d06e11413c489349a590bc44b231ccc, type: 3}
       propertyPath: m_LocalScale.x

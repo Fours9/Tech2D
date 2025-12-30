@@ -55,10 +55,17 @@ namespace CellNameSpace
         // Флаг для отслеживания изменений состояния FOW (используется для batch-обновления)
         private bool fogStateChanged = false;
         
+        // Управление состоянием основного MeshRenderer для системы чанков
+        private bool mainRendererShouldBeEnabled = true; // Желаемое состояние от чанков/Grid (по умолчанию true до объединения в чанки)
+        private MeshRenderer cachedMainMeshRenderer = null; // Кешируем MeshRenderer для быстрого доступа
+        private CellChunk chunk = null; // Чанк, к которому принадлежит эта клетка
+        private CellNameSpace.Grid cachedGrid = null; // Кешируем Grid для проверки IsGenerationComplete
+        
         void Awake()
         {
             // Кэшируем рендерер при создании объекта
             cellRenderer = GetComponent<Renderer>();
+            cachedMainMeshRenderer = GetComponent<MeshRenderer>();
             // Сохраняем изначальную позицию только если она еще не была установлена
             if (!originalPositionSet)
             {
@@ -257,6 +264,70 @@ namespace CellNameSpace
             return originalPosition;
         }
         
+        /// <summary>
+        /// Устанавливает чанк, к которому принадлежит эта клетка
+        /// </summary>
+        public void SetChunk(CellChunk cellChunk)
+        {
+            chunk = cellChunk;
+        }
+        
+        /// <summary>
+        /// Получает чанк, к которому принадлежит эта клетка
+        /// </summary>
+        public CellChunk GetChunk()
+        {
+            return chunk;
+        }
+        
+        /// <summary>
+        /// Устанавливает желаемое состояние основного MeshRenderer (от чанков/Grid)
+        /// Фактическое состояние зависит также от FogOfWar (клетка не должна быть Hidden)
+        /// </summary>
+        public void SetMainRendererState(bool enabled)
+        {
+            mainRendererShouldBeEnabled = enabled;
+            UpdateMainRendererActualState();
+        }
+        
+        /// <summary>
+        /// Обновляет фактическое состояние MeshRenderer с учетом желаемого состояния и FogOfWar
+        /// MeshRenderer включается только если И желаемое состояние true, И клетка не Hidden
+        /// ИСКЛЮЧЕНИЕ: до завершения генерации карты MeshRenderer всегда включен, если mainRendererShouldBeEnabled == true (игнорируем FogOfWar)
+        /// </summary>
+        private void UpdateMainRendererActualState()
+        {
+            if (cachedMainMeshRenderer == null)
+            {
+                cachedMainMeshRenderer = GetComponent<MeshRenderer>();
+                if (cachedMainMeshRenderer == null)
+                    return;
+            }
+            
+            // Кешируем Grid для проверки IsGenerationComplete (вызываем FindFirstObjectByType только один раз)
+            if (cachedGrid == null)
+            {
+                cachedGrid = FindFirstObjectByType<CellNameSpace.Grid>();
+            }
+            
+            bool isGenerationComplete = cachedGrid != null && cachedGrid.IsGenerationComplete;
+            
+            bool shouldBeEnabled;
+            
+            // До завершения генерации карты MeshRenderer всегда включен, если mainRendererShouldBeEnabled == true (игнорируем FogOfWar)
+            if (!isGenerationComplete)
+            {
+                shouldBeEnabled = mainRendererShouldBeEnabled;
+            }
+            else
+            {
+                // После завершения генерации учитываем и желаемое состояние, и FogOfWar
+                shouldBeEnabled = mainRendererShouldBeEnabled && (fogState != FogOfWarState.Hidden);
+            }
+            
+            cachedMainMeshRenderer.enabled = shouldBeEnabled;
+        }
+        
         
         /// <summary>
         /// Устанавливает менеджеры для оптимизации (избегает поиска через FindFirstObjectByType)
@@ -272,13 +343,37 @@ namespace CellNameSpace
         }
         
         /// <summary>
+        /// Устанавливает ссылку на Grid для оптимизации (избегает поиска через FindFirstObjectByType)
+        /// </summary>
+        /// <param name="grid">Ссылка на Grid</param>
+        public void SetGrid(CellNameSpace.Grid grid)
+        {
+            cachedGrid = grid;
+        }
+        
+        /// <summary>
         /// Установить тип клетки
         /// </summary>
         /// <param name="type">Новый тип клетки</param>
         /// <param name="updateOverlays">Обновлять ли оверлеи (по умолчанию true, можно отключить для массового обновления)</param>
         public void SetCellType(CellType type, bool updateOverlays = true)
         {
+            CellType oldType = cellType;
             cellType = type;
+            
+            // Если тип изменился и клетка принадлежит чанку, помечаем чанк как "грязный"
+            if (oldType != type && chunk != null)
+            {
+                chunk.MarkDirty();
+                
+                // Уведомляем Grid о необходимости пересборки чанка
+                Grid grid = FindFirstObjectByType<Grid>();
+                if (grid != null)
+                {
+                    grid.MarkChunkDirty(chunk);
+                }
+            }
+            
             // Обновляем цвет при изменении типа
             UpdateCellColor(updateOverlays);
         }
@@ -1268,12 +1363,8 @@ namespace CellNameSpace
             // Если клетка становится Hidden - отключаем компоненты
             if (oldState != FogOfWarState.Hidden && newState == FogOfWarState.Hidden)
             {
-                // Отключаем MeshRenderer
-                MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
-                if (meshRenderer != null)
-                {
-                    meshRenderer.enabled = false;
-                }
+                // Обновляем состояние MeshRenderer (учтет, что fogState теперь Hidden)
+                UpdateMainRendererActualState();
                 
                 // Отключаем Collider
                 Collider cellCollider = GetComponent<Collider>();
@@ -1285,12 +1376,8 @@ namespace CellNameSpace
             // Если клетка перестает быть Hidden - включаем компоненты
             else if (oldState == FogOfWarState.Hidden && newState != FogOfWarState.Hidden)
             {
-                // Включаем MeshRenderer
-                MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
-                if (meshRenderer != null)
-                {
-                    meshRenderer.enabled = true;
-                }
+                // Обновляем состояние MeshRenderer (учтет, что fogState теперь не Hidden)
+                UpdateMainRendererActualState();
                 
                 // Включаем Collider
                 Collider cellCollider = GetComponent<Collider>();

@@ -21,6 +21,18 @@ public class CellHoverElevator : MonoBehaviour
     private HashSet<CellInfo> elevatedCells = new HashSet<CellInfo>();
     private Dictionary<CellInfo, Vector3> targetPositions = new Dictionary<CellInfo, Vector3>();
     
+    // Чанки с включенным индивидуальным рендерингом
+    private HashSet<CellChunk> activeChunks = new HashSet<CellChunk>();
+    
+    // Кешированные параметры сетки (не меняются после создания карты)
+    private float cachedHexWidth = 0f;
+    private float cachedHexHeight = 0f;
+    private float cachedHexOffset = 0f;
+    private float cachedStartY = 0f;
+    private int cachedGridWidth = 0;
+    private int cachedGridHeight = 0;
+    private bool gridParamsCached = false;
+    
     // Текущая клетка под курсором
     private CellInfo currentHoveredCell = null;
     
@@ -49,13 +61,63 @@ public class CellHoverElevator : MonoBehaviour
                 Debug.LogWarning("CellHoverElevator: Камера не найдена");
             }
         }
+        
+        // Кешируем параметры сетки
+        CacheGridParams();
+    }
+    
+    /// <summary>
+    /// Кеширует параметры сетки (вызывается один раз при старте или когда grid становится доступен)
+    /// </summary>
+    private void CacheGridParams()
+    {
+        if (grid == null || gridParamsCached)
+            return;
+        
+        cachedHexWidth = grid.GetHexWidth();
+        cachedHexHeight = grid.GetHexHeight();
+        cachedHexOffset = grid.GetHexOffset();
+        cachedStartY = grid.GetStartY();
+        cachedGridWidth = grid.GetGridWidth();
+        cachedGridHeight = grid.GetGridHeight();
+        gridParamsCached = true;
     }
     
     void Update()
     {
+        // Отключаем hover эффект пока не завершится генерация карты и создание чанков
+        if (grid == null || !grid.IsGenerationComplete)
+        {
+            // Отключаем все активные чанки
+            foreach (CellChunk chunk in activeChunks)
+            {
+                if (chunk != null)
+                {
+                    chunk.EnableChunkRendering();
+                }
+            }
+            activeChunks.Clear();
+            // Сбрасываем эффект и возвращаем клетки в исходное положение
+            currentHoveredCell = null;
+            // Очищаем целевые позиции, чтобы все клетки начали возвращаться
+            ClearElevation();
+            // Продолжаем возвращать клетки обратно каждый кадр, пока они не вернутся
+            AnimateReset();
+            return;
+        }
+        
         // Отключаем hover эффект во время стадии воспроизведения приказов
         if (TurnManager.Instance != null && TurnManager.Instance.GetCurrentState() == TurnState.Resolving)
         {
+            // Отключаем все активные чанки
+            foreach (CellChunk chunk in activeChunks)
+            {
+                if (chunk != null)
+                {
+                    chunk.EnableChunkRendering();
+                }
+            }
+            activeChunks.Clear();
             // Сбрасываем эффект и возвращаем клетки в исходное положение
             currentHoveredCell = null;
             // Очищаем целевые позиции, чтобы все клетки начали возвращаться
@@ -68,6 +130,15 @@ public class CellHoverElevator : MonoBehaviour
         // Проверяем, не находится ли курсор над UI элементом
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
         {
+            // Отключаем все активные чанки
+            foreach (CellChunk chunk in activeChunks)
+            {
+                if (chunk != null)
+                {
+                    chunk.EnableChunkRendering();
+                }
+            }
+            activeChunks.Clear();
             // Если курсор над UI, сбрасываем эффект
             currentHoveredCell = null;
             // Очищаем целевые позиции, чтобы все клетки начали возвращаться
@@ -142,13 +213,19 @@ public class CellHoverElevator : MonoBehaviour
     /// <param name="maxRow">Максимальная строка (выходной параметр)</param>
     private void GetSearchBounds(Vector2 cursorPos2D, out int minCol, out int maxCol, out int minRow, out int maxRow)
     {
-        // Получаем параметры сетки
-        float hexWidth = grid.GetHexWidth();
-        float hexHeight = grid.GetHexHeight();
-        float hexOffset = grid.GetHexOffset();
-        float startY = grid.GetStartY();
-        int gridWidth = grid.GetGridWidth();
-        int gridHeight = grid.GetGridHeight();
+        // Кешируем параметры сетки, если еще не закешированы
+        if (!gridParamsCached)
+        {
+            CacheGridParams();
+        }
+        
+        // Используем кешированные параметры сетки
+        float hexWidth = cachedHexWidth;
+        float hexHeight = cachedHexHeight;
+        float hexOffset = cachedHexOffset;
+        float startY = cachedStartY;
+        int gridWidth = cachedGridWidth;
+        int gridHeight = cachedGridHeight;
         
         // Запас для предотвращения отставания эффекта при движении курсора
         float searchMargin = hoverRadius * 0.2f; // 20% запас
@@ -189,11 +266,25 @@ public class CellHoverElevator : MonoBehaviour
         // Игнорируем Z координату курсора для расчета расстояния (используем только X и Y)
         Vector2 cursorPos2D = new Vector2(cursorWorldPos.x, cursorWorldPos.y);
         
-        // Вычисляем границы области поиска для оптимизации
+        // Кешируем параметры сетки, если еще не закешированы
+        if (!gridParamsCached)
+        {
+            CacheGridParams();
+        }
+        
+        // Вычисляем границы области поиска для оптимизации (используем кешированные параметры)
+        // GetSearchBounds определяет bounding box вокруг курсора - мы проверяем только клетки в этой области
         int minCol, maxCol, minRow, maxRow;
         GetSearchBounds(cursorPos2D, out minCol, out maxCol, out minRow, out maxRow);
         
-        // Перебираем только клетки в вычисленной области
+        HashSet<CellChunk> newActiveChunks = new HashSet<CellChunk>();
+        
+        // Вычисляем больший радиус поиска (используется для определения области опроса клеток)
+        float searchMargin = hoverRadius * 0.2f; // 20% запас
+        float searchRadius = hoverRadius + searchMargin; // Больший радиус для определения области поиска
+        
+        // Перебираем только клетки в вычисленной области (оптимизированная логика - не все клетки, не все чанки)
+        // Определяем чанки для всех клеток в области поиска (больший радиус searchRadius)
         for (int col = minCol; col <= maxCol; col++)
         {
             for (int row = minRow; row <= maxRow; row++)
@@ -210,7 +301,28 @@ public class CellHoverElevator : MonoBehaviour
                 // Вычисляем расстояние от курсора до изначальной позиции клетки (только по X и Y, игнорируя Z)
                 float distance = Vector2.Distance(cursorPos2D, cellPos2D);
                 
-                // Проверяем, попадает ли клетка в круг
+                // Для определения чанков используем больший радиус (searchRadius) - область поиска
+                // Если хотя бы одна клетка чанка попадает в область поиска, выключаем чанк (включаем индивидуальный рендеринг)
+                // Радиус поднятия (hoverRadius) НЕ участвует в логике определения чанков
+                if (distance <= searchRadius)
+                {
+                    // Получаем чанк из CellInfo (клетка знает свой чанк) - быстро, без опроса всех чанков
+                    CellChunk cellChunk = cell.GetChunk();
+                    if (cellChunk != null)
+                    {
+                        // Добавляем чанк в набор активных чанков (HashSet автоматически обрабатывает дубликаты)
+                        newActiveChunks.Add(cellChunk);
+                        
+                        // Выключаем чанк: включаем индивидуальный рендеринг для всех клеток этого чанка и выключаем рендеринг чанка
+                        // Проверяем, не включен ли уже (оптимизация - не вызываем лишний раз)
+                        if (!cellChunk.IsIndividualRenderingEnabled())
+                        {
+                            cellChunk.EnableIndividualRendering();
+                        }
+                    }
+                }
+                
+                // Логика поднятия клетки использует меньший радиус (hoverRadius) - отдельно, не связана с чанками
                 if (distance <= hoverRadius)
                 {
                     // Вычисляем коэффициент от 1.0 (центр) до 0.0 (край)
@@ -231,6 +343,22 @@ public class CellHoverElevator : MonoBehaviour
                 }
             }
         }
+        
+        // Возвращаем рендеринг для чанков, чьи клетки покинули область поиска (searchRadius)
+        // Проверяем только те чанки, которые были активны ранее (не все чанки на карте)
+        foreach (CellChunk oldChunk in activeChunks)
+        {
+            if (!newActiveChunks.Contains(oldChunk))
+            {
+                // Возвращаем рендеринг чанка: выключаем индивидуальный рендеринг всех клеток чанка, включаем рендеринг чанка
+                if (oldChunk != null)
+                {
+                    oldChunk.EnableChunkRendering();
+                }
+            }
+        }
+        
+        activeChunks = newActiveChunks;
     }
     
     /// <summary>

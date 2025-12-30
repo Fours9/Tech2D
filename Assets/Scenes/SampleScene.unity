@@ -295,6 +295,7 @@ MonoBehaviour:
   cellsPerFrame: 50
   useCoroutines: 1
   pauseGameDuringGeneration: 1
+  chunksPerFrame: 5
 --- !u!4 &141372081
 Transform:
   m_ObjectHideFlags: 0
@@ -394,7 +395,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6086b380fa0cbc6479805f354ab74f8d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
-  fogOfWarEnabled: 1
+  fogOfWarEnabled: 0
   fogOfWarVignetteEnabled: 1
   worldSpaceTextureVignetteEnabled: 1
   vignetteHexRadius: 1

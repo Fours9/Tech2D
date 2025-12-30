@@ -99,11 +99,26 @@ namespace CellNameSpace
         private List<GameObject> cells = new List<GameObject>();
         private float savedTimeScale = 1f; // Сохраненное значение timeScale
         
+        // Список чанков для системы оптимизации рендеринга
+        private List<CellChunk> chunks = new List<CellChunk>();
+        private Dictionary<Vector2Int, CellChunk> chunkByChunkCoord = new Dictionary<Vector2Int, CellChunk>();
+        
+        // Система пересборки чанков
+        private HashSet<CellChunk> dirtyChunks = new HashSet<CellChunk>(); // Чанки, требующие пересборки
+        private Coroutine rebuildChunksCoroutine = null; // Корутина для пересборки чанков
+        [SerializeField] private int chunksPerFrame = 5; // Количество чанков для пересборки за кадр
+        
+        // Система запекания текстур чанков
+        private Coroutine bakeChunksCoroutine = null; // Корутина для асинхронного запекания чанков
+        [SerializeField] private int bakeChunksPerFrame = 2; // Количество чанков для запекания за кадр
+        private Coroutine memoryCleanupCoroutine = null; // Корутина для периодической очистки памяти
+        
         // Кэшированные значения для расчета ширины карты
         private float cachedHexWidth = 0f;
         private float cachedHexHeight = 0f;
         private float cachedHexOffset = 0f;
         private float cachedActualCellSize = 0f;
+        private float cachedStartY = 0f; // Кешированное значение startY для оптимизации
         
         /// <summary>
         /// Флаг, показывающий, что генерация сетки и типов клеток завершена.
@@ -134,7 +149,8 @@ namespace CellNameSpace
                 Time.timeScale = 0f;
             }
             
-            // Очищаем существующие клетки
+            // Очищаем существующие клетки и чанки
+            ClearChunks();
             ClearGrid();
             
             // Получаем реальный размер префаба для правильного расчета расстояний и масштабирования
@@ -173,6 +189,7 @@ namespace CellNameSpace
             // То есть row = 0 — это ВЕРХНЯЯ строка на карте,
             // row = gridHeight - 1 — нижняя строка.
             float startY = (gridHeight - 1) * hexHeight;
+            cachedStartY = startY; // Кешируем startY
             for (int row = 0; row < gridHeight; row++)
             {
                 for (int col = 0; col < gridWidth; col++)
@@ -200,6 +217,8 @@ namespace CellNameSpace
                         // Пока не передаем менеджеры, они будут найдены позже при SetCellType
                         // Это оптимизирует процесс, так как менеджеры могут еще не быть инициализированы
                         cellInfo.Initialize(col, row, CellType.shallow);
+                        // Устанавливаем ссылку на Grid для оптимизации (избегает FindFirstObjectByType в UpdateMainRendererActualState)
+                        cellInfo.SetGrid(this);
                     }
                     else
                     {
@@ -327,6 +346,8 @@ namespace CellNameSpace
                     {
                         // Устанавливаем менеджеры для оптимизации (если они найдены)
                         cellInfo.SetManagers(materialManager, overlayManager);
+                        // Устанавливаем ссылку на Grid для оптимизации (избегает FindFirstObjectByType в UpdateMainRendererActualState)
+                        cellInfo.SetGrid(this);
                         // Отключаем обновление оверлеев при массовом создании для оптимизации
                         cellInfo.SetCellType(grid[col, row], updateOverlays: false);
                     }
@@ -334,8 +355,12 @@ namespace CellNameSpace
             }
             
             // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
+            
+            // Создаем чанки после применения типов клеток
+            CreateChunks();
+            
             // Возобновляем игру после завершения генерации
-                ResumeGame();
+            ResumeGame();
 
             // Типы всех клеток применены — считаем генерацию завершённой
             IsGenerationComplete = true;
@@ -358,6 +383,8 @@ namespace CellNameSpace
                     {
                         // Устанавливаем менеджеры для оптимизации (если они найдены)
                         cellInfo.SetManagers(materialManager, overlayManager);
+                        // Устанавливаем ссылку на Grid для оптимизации (избегает FindFirstObjectByType в UpdateMainRendererActualState)
+                        cellInfo.SetGrid(this);
                         // Отключаем обновление оверлеев при массовом создании для оптимизации
                         cellInfo.SetCellType(grid[col, row], updateOverlays: false);
                         processed++;
@@ -374,11 +401,252 @@ namespace CellNameSpace
             }
             
             // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
+            
+            // Создаем чанки после применения типов клеток
+            CreateChunks();
+            
             // Типы всех клеток применены — считаем генерацию завершённой
             IsGenerationComplete = true;
             
             // Возобновляем игру после завершения генерации
             ResumeGame();
+        }
+        
+        /// <summary>
+        /// Создает чанки и объединяет меши клеток для оптимизации рендеринга
+        /// </summary>
+        private void CreateChunks()
+        {
+            // Вычисляем размер чанка
+            int chunkSize = CalculateChunkSize(gridWidth, gridHeight);
+            
+            // Вычисляем количество чанков по ширине и высоте
+            int chunksX = Mathf.CeilToInt((float)gridWidth / chunkSize);
+            int chunksY = Mathf.CeilToInt((float)gridHeight / chunkSize);
+            
+            // Очищаем предыдущие чанки (если есть)
+            ClearChunks();
+            
+            // Вычисляем разрешение текстуры один раз для всех чанков (они одинакового размера)
+            int estimatedCellsPerChunk = chunkSize * chunkSize;
+            int textureResolution = ChunkTextureBaker.CalculateChunkTextureResolution(estimatedCellsPerChunk);
+            
+            // Список объектов чанков для создания
+            List<GameObject> chunkObjects = new List<GameObject>();
+            
+            // Группируем клетки по чанкам и создаем объединенные меши
+            for (int chunkY = 0; chunkY < chunksY; chunkY++)
+            {
+                for (int chunkX = 0; chunkX < chunksX; chunkX++)
+                {
+                    List<GameObject> cellsInChunk = new List<GameObject>();
+                    
+                    // Собираем все клетки, принадлежащие этому чанку
+                    int startRow = chunkY * chunkSize;
+                    int endRow = Mathf.Min(startRow + chunkSize, gridHeight);
+                    int startCol = chunkX * chunkSize;
+                    int endCol = Mathf.Min(startCol + chunkSize, gridWidth);
+                    
+                    for (int row = startRow; row < endRow; row++)
+                    {
+                        for (int col = startCol; col < endCol; col++)
+                        {
+                            GameObject cell = GetCellAt(col, row);
+                            if (cell != null)
+                            {
+                                cellsInChunk.Add(cell);
+                            }
+                        }
+                    }
+                    
+                    if (cellsInChunk.Count == 0)
+                        continue;
+                    
+                    // Создаем GameObject для чанка
+                    GameObject chunkObject = new GameObject($"Chunk_{chunkX}_{chunkY}");
+                    chunkObject.transform.SetParent(transform);
+                    chunkObject.transform.localPosition = Vector3.zero; // Важно: позиция (0,0,0) относительно родителя
+                    
+                    // Объединяем меши клеток чанка и создаем текстуру
+                    CellMeshCombiner.CombineResult result = CellMeshCombiner.CombineCellMeshesWithTexture(cellsInChunk, textureResolution);
+                    
+                    if (result.mesh != null && result.chunkTexture != null)
+                    {
+                        // Добавляем MeshFilter и MeshRenderer к чанку
+                        MeshFilter chunkMeshFilter = chunkObject.AddComponent<MeshFilter>();
+                        chunkMeshFilter.sharedMesh = result.mesh;
+                        
+                        MeshRenderer chunkRenderer = chunkObject.AddComponent<MeshRenderer>();
+                        
+                        // Для чанка с baked-текстурой используем простой URP Unlit шейдер
+                        // WorldSpaceTexture шейдер не подходит, так как он использует world-space UV
+                        // и игнорирует UV 0..1, которые мы специально вычислили для baked-текстуры
+                        Shader unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
+                        if (unlitShader == null)
+                        {
+                            // Fallback на стандартный Unlit, если URP Unlit не найден
+                            unlitShader = Shader.Find("Unlit/Texture");
+                        }
+                        
+                        if (unlitShader != null)
+                        {
+                            Material chunkMaterial = new Material(unlitShader);
+                            
+                            // Настраиваем текстуру для правильного отображения
+                            result.chunkTexture.wrapMode = TextureWrapMode.Clamp;
+                            result.chunkTexture.filterMode = FilterMode.Bilinear;
+                            
+                            // URP Unlit ожидает _BaseMap
+                            chunkMaterial.SetTexture("_BaseMap", result.chunkTexture);
+                            // На всякий случай устанавливаем и mainTexture (для совместимости)
+                            chunkMaterial.mainTexture = result.chunkTexture;
+                            
+                            chunkRenderer.sharedMaterial = chunkMaterial;
+                            chunkRenderer.enabled = true;
+                        }
+                        else
+                        {
+                            Debug.LogError("Grid: Не удалось найти URP Unlit или Unlit/Texture шейдер для baked-текстуры чанка!");
+                        }
+                        
+                        // Добавляем компонент CellChunk и инициализируем его
+                        CellChunk chunk = chunkObject.AddComponent<CellChunk>();
+                        chunk.Initialize(cellsInChunk, chunkRenderer, chunkMeshFilter);
+                        
+                        // Сохраняем ссылку на чанк
+                        Vector2Int chunkCoord = new Vector2Int(chunkX, chunkY);
+                        chunks.Add(chunk);
+                        chunkByChunkCoord[chunkCoord] = chunk;
+                        
+                        // Добавляем в список для отслеживания
+                        chunkObjects.Add(chunkObject);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Не удалось создать меш и текстуру для чанка ({chunkX}, {chunkY})");
+                        // Удаляем GameObject чанка, если не удалось создать
+                        DestroyImmediate(chunkObject);
+                    }
+                }
+            }
+            
+            // Отключаем основной MeshRenderer на всех клетках (рендеринг через чанки)
+            foreach (GameObject cell in cells)
+            {
+                CellInfo cellInfo = cell.GetComponent<CellInfo>();
+                if (cellInfo != null)
+                {
+                    cellInfo.SetMainRendererState(false); // Отключаем рендеринг через чанк
+                }
+            }
+            
+            // Запускаем корутину периодической очистки памяти
+            if (memoryCleanupCoroutine == null)
+            {
+                memoryCleanupCoroutine = StartCoroutine(PeriodicMemoryCleanup());
+            }
+        }
+        
+        /// <summary>
+        /// Корутина для периодической очистки памяти
+        /// </summary>
+        private IEnumerator PeriodicMemoryCleanup()
+        {
+            while (true)
+            {
+                yield return new WaitForSeconds(30f); // Каждые 30 секунд
+                Resources.UnloadUnusedAssets();
+            }
+        }
+        
+        /// <summary>
+        /// Очищает все чанки (используется при регенерации карты)
+        /// </summary>
+        private void ClearChunks()
+        {
+            // Останавливаем корутину пересборки, если она выполняется
+            if (rebuildChunksCoroutine != null)
+            {
+                StopCoroutine(rebuildChunksCoroutine);
+                rebuildChunksCoroutine = null;
+            }
+            
+            foreach (CellChunk chunk in chunks)
+            {
+                if (chunk != null && chunk.gameObject != null)
+                {
+                    DestroyImmediate(chunk.gameObject);
+                }
+            }
+            chunks.Clear();
+            chunkByChunkCoord.Clear();
+            dirtyChunks.Clear();
+        }
+        
+        /// <summary>
+        /// Запускает корутину для пересборки грязных чанков (если есть)
+        /// </summary>
+        private void StartRebuildDirtyChunks()
+        {
+            // Останавливаем предыдущую корутину, если она еще выполняется
+            if (rebuildChunksCoroutine != null)
+            {
+                StopCoroutine(rebuildChunksCoroutine);
+            }
+            
+            // Запускаем новую корутину для пересборки
+            rebuildChunksCoroutine = StartCoroutine(RebuildDirtyChunksCoroutine());
+        }
+        
+        /// <summary>
+        /// Корутина для пересборки грязных чанков с распределением по кадрам
+        /// </summary>
+        private IEnumerator RebuildDirtyChunksCoroutine()
+        {
+            List<CellChunk> chunksToRebuild = new List<CellChunk>(dirtyChunks);
+            dirtyChunks.Clear();
+            
+            int processed = 0;
+            
+            foreach (CellChunk chunk in chunksToRebuild)
+            {
+                if (chunk == null || !chunk.IsDirty())
+                    continue;
+                
+                // Пересобираем меш чанка с текстурой
+                // Вычисляем разрешение текстуры (используем то же, что при создании)
+                int chunkSize = CalculateChunkSize(gridWidth, gridHeight);
+                int estimatedCellsPerChunk = chunkSize * chunkSize;
+                int textureResolution = ChunkTextureBaker.CalculateChunkTextureResolution(estimatedCellsPerChunk);
+                chunk.RebuildMesh(textureResolution);
+                processed++;
+                
+                // Каждые chunksPerFrame чанков делаем паузу на один кадр
+                if (processed >= chunksPerFrame)
+                {
+                    processed = 0;
+                    yield return null; // Ждем один кадр
+                }
+            }
+            
+            rebuildChunksCoroutine = null;
+        }
+        
+        /// <summary>
+        /// Помечает чанк как "грязный" и запускает пересборку (вызывается из CellInfo при изменении типа)
+        /// </summary>
+        public void MarkChunkDirty(CellChunk chunk)
+        {
+            if (chunk != null && chunk.IsDirty())
+            {
+                dirtyChunks.Add(chunk);
+                
+                // Запускаем пересборку, если она еще не запущена
+                if (rebuildChunksCoroutine == null)
+                {
+                    StartRebuildDirtyChunks();
+                }
+            }
         }
         
         /// <summary>
@@ -390,6 +658,14 @@ namespace CellNameSpace
             {
                 Time.timeScale = savedTimeScale;
             }
+        }
+        
+        /// <summary>
+        /// Получает количество чанков (для тестирования и отладки)
+        /// </summary>
+        public int GetChunkCount()
+        {
+            return chunks.Count;
         }
         
         private void ClearGrid()
@@ -571,7 +847,30 @@ namespace CellNameSpace
         /// </summary>
         public float GetStartY()
         {
+            // Используем кешированное значение, если оно доступно
+            if (cachedStartY != 0f)
+            {
+                return cachedStartY;
+            }
+            // Иначе вычисляем (для обратной совместимости, если кеш еще не инициализирован)
             return (gridHeight - 1) * GetHexHeight();
+        }
+        
+        /// <summary>
+        /// Вычисляет адаптивный размер чанка на основе размера карты (целевое количество ~250 чанков)
+        /// </summary>
+        /// <param name="gridWidth">Ширина сетки</param>
+        /// <param name="gridHeight">Высота сетки</param>
+        /// <returns>Размер чанка (количество клеток по ширине и высоте)</returns>
+        private int CalculateChunkSize(int gridWidth, int gridHeight)
+        {
+            const int TARGET_CHUNK_COUNT = 250;
+            const int MIN_CHUNK_SIZE = 4;
+            
+            int totalCells = gridWidth * gridHeight;
+            float cellsPerChunk = (float)totalCells / TARGET_CHUNK_COUNT;
+            int chunkSize = Mathf.Max(MIN_CHUNK_SIZE, Mathf.RoundToInt(Mathf.Sqrt(cellsPerChunk)));
+            return chunkSize;
         }
         
         /// <summary>
