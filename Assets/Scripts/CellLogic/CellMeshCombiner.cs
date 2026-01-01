@@ -3,24 +3,111 @@ using System.Collections.Generic;
 using CellNameSpace;
 
 /// <summary>
-/// Утилита для объединения мешей клеток в чанки
-/// Использует transform.localToWorldMatrix из каждого GameObject'а для корректного позиционирования
-/// И пересчитывает UV координаты для работы с world-space шейдером или текстурой чанка
+/// Утилита для объединения мешей клеток в чанки + UV под baked-текстуру
 /// </summary>
 public static class CellMeshCombiner
 {
-    /// <summary>
-    /// Результат объединения мешей с текстурой
-    /// </summary>
     public struct CombineResult
     {
         public Mesh mesh;
         public Texture2D chunkTexture;
-        public Material baseMaterial; // Базовый материал для применения текстуры
-        public Bounds chunkBounds; // Bounds чанка для UV координат
+        public Material baseMaterial;
+        public Bounds chunkBounds;
     }
+
+    public static CombineResult CombineCellMeshesWithTexture(List<GameObject> cells, int textureResolution)
+    {
+        CombineResult result = new CombineResult();
+
+        if (cells == null || cells.Count == 0)
+            return result;
+
+        result.chunkBounds = ChunkTextureBaker.CalculateChunkBounds(cells);
+
+        if (result.chunkBounds.size.magnitude < 0.001f)
+        {
+            Debug.LogWarning("CellMeshCombiner: Некорректные bounds чанка");
+            return result;
+        }
+
+        result.chunkTexture = ChunkTextureBaker.BakeChunkTexture(cells, result.chunkBounds, textureResolution);
+        if (result.chunkTexture == null)
+        {
+            Debug.LogWarning("CellMeshCombiner: Не удалось создать текстуру чанка");
+            return result;
+        }
+
+        // ВАЖНО: камера запекает квадрат max(x,y), значит UV тоже должны использовать квадрат
+        float squareSize = Mathf.Max(result.chunkBounds.size.x, result.chunkBounds.size.y);
+        Vector2 squareMin = new Vector2(
+            result.chunkBounds.center.x - squareSize * 0.5f,
+            result.chunkBounds.center.y - squareSize * 0.5f
+        );
+
+        List<CombineInstance> combineInstances = new List<CombineInstance>();
+
+        foreach (GameObject cell in cells)
+        {
+            if (cell == null) continue;
+
+            MeshFilter mf = cell.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) continue;
+
+            Mesh meshCopy = Object.Instantiate(mf.sharedMesh);
+
+            Vector3[] vertices = meshCopy.vertices;
+            Vector2[] uvs = new Vector2[vertices.Length];
+
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Vector3 worldVertex = cell.transform.TransformPoint(vertices[i]);
+
+                float u = (worldVertex.x - squareMin.x) / squareSize;
+                float v = (worldVertex.y - squareMin.y) / squareSize;
+
+                uvs[i] = new Vector2(u, v);
+            }
+
+            meshCopy.uv = uvs;
+
+            CombineInstance ci = new CombineInstance
+            {
+                mesh = meshCopy,
+                subMeshIndex = 0,
+                transform = cell.transform.localToWorldMatrix
+            };
+
+            combineInstances.Add(ci);
+        }
+
+        if (combineInstances.Count == 0)
+        {
+            Debug.LogWarning("CellMeshCombiner: Не удалось создать combine instances");
+            return result;
+        }
+
+        result.mesh = new Mesh();
+        result.mesh.CombineMeshes(combineInstances.ToArray(), true, true);
+
+        foreach (var ci in combineInstances)
+        {
+            if (ci.mesh != null)
+            {
+                if (Application.isPlaying) Object.Destroy(ci.mesh);
+                else Object.DestroyImmediate(ci.mesh);
+            }
+        }
+
+        // Базовый материал берём с первой клетки
+        var firstMR = cells[0].GetComponent<MeshRenderer>();
+        if (firstMR != null && firstMR.sharedMaterial != null)
+            result.baseMaterial = firstMR.sharedMaterial;
+
+        return result;
+    }
+
     /// <summary>
-    /// Объединяет меши клеток в один меш для чанка
+    /// Объединяет меши клеток в один меш для чанка (без текстуры, для обратной совместимости)
     /// Использует transform.localToWorldMatrix из каждого GameObject'а для корректного позиционирования
     /// </summary>
     /// <param name="cells">Список GameObject клеток для объединения</param>
@@ -112,115 +199,4 @@ public static class CellMeshCombiner
         
         return combinedMesh;
     }
-    
-    /// <summary>
-    /// Объединяет меши клеток и создает текстуру чанка
-    /// </summary>
-    /// <param name="cells">Список GameObject клеток для объединения</param>
-    /// <param name="textureResolution">Разрешение текстуры чанка</param>
-    /// <returns>Результат объединения с мешем и текстурой</returns>
-    public static CombineResult CombineCellMeshesWithTexture(List<GameObject> cells, int textureResolution)
-    {
-        CombineResult result = new CombineResult();
-        
-        if (cells == null || cells.Count == 0)
-            return result;
-        
-        // Вычисляем bounds чанка
-        result.chunkBounds = ChunkTextureBaker.CalculateChunkBounds(cells);
-        
-        if (result.chunkBounds.size.magnitude < 0.001f)
-        {
-            Debug.LogWarning("CellMeshCombiner: Некорректные bounds чанка");
-            return result;
-        }
-        
-        // Создаем текстуру чанка
-        result.chunkTexture = ChunkTextureBaker.BakeChunkTexture(cells, result.chunkBounds, textureResolution);
-        
-        if (result.chunkTexture == null)
-        {
-            Debug.LogWarning("CellMeshCombiner: Не удалось создать текстуру чанка");
-            return result;
-        }
-        
-        // Объединяем меши клеток с новыми UV координатами для текстуры чанка
-        List<CombineInstance> combineInstances = new List<CombineInstance>();
-        
-        foreach (GameObject cell in cells)
-        {
-            if (cell == null)
-                continue;
-            
-            MeshFilter meshFilter = cell.GetComponent<MeshFilter>();
-            if (meshFilter != null && meshFilter.sharedMesh != null)
-            {
-                // Создаем копию меша для модификации UV координат
-                Mesh meshCopy = Object.Instantiate(meshFilter.sharedMesh);
-                
-                // Получаем вершины и пересчитываем UV координаты для текстуры чанка
-                Vector3[] vertices = meshCopy.vertices;
-                Vector2[] uvs = new Vector2[vertices.Length];
-                
-                // Пересчитываем UV координаты относительно текстуры чанка
-                // UV = (worldPos.xy - chunkBounds.min.xy) / chunkBounds.size.xy
-                for (int i = 0; i < vertices.Length; i++)
-                {
-                    // Преобразуем локальную вершину в мировую позицию
-                    Vector3 worldVertex = cell.transform.TransformPoint(vertices[i]);
-                    
-                    // Вычисляем UV относительно bounds чанка
-                    Vector3 relativePos = worldVertex - result.chunkBounds.min;
-                    uvs[i] = new Vector2(
-                        relativePos.x / result.chunkBounds.size.x,
-                        relativePos.y / result.chunkBounds.size.y
-                    );
-                }
-                
-                meshCopy.uv = uvs;
-                
-                CombineInstance combine = new CombineInstance();
-                combine.mesh = meshCopy;
-                combine.subMeshIndex = 0;
-                combine.transform = cell.transform.localToWorldMatrix;
-                combineInstances.Add(combine);
-            }
-        }
-        
-        if (combineInstances.Count == 0)
-        {
-            Debug.LogWarning("CellMeshCombiner: Не удалось создать combine instances");
-            return result;
-        }
-        
-        // Объединяем меши
-        result.mesh = new Mesh();
-        result.mesh.CombineMeshes(combineInstances.ToArray());
-        
-        // Очищаем временные копии мешей
-        foreach (CombineInstance combine in combineInstances)
-        {
-            if (combine.mesh != null && Application.isPlaying)
-            {
-                Object.Destroy(combine.mesh);
-            }
-            else if (combine.mesh != null)
-            {
-                Object.DestroyImmediate(combine.mesh);
-            }
-        }
-        
-        // Получаем базовый материал из первой клетки
-        if (cells.Count > 0)
-        {
-            MeshRenderer firstCellRenderer = cells[0].GetComponent<MeshRenderer>();
-            if (firstCellRenderer != null && firstCellRenderer.sharedMaterial != null)
-            {
-                result.baseMaterial = firstCellRenderer.sharedMaterial;
-            }
-        }
-        
-        return result;
-    }
 }
-

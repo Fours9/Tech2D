@@ -3,35 +3,35 @@ using System.Collections.Generic;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Утилита для запекания текстур чанков из клеток через CommandBuffer (SRP/URP-friendly)
+/// Утилита для запекания текстур чанков из клеток через временную камеру (SRP-safe)
 /// </summary>
 public static class ChunkTextureBaker
 {
     // Настройки
     private static float pixelsPerCell = 64f;
-    
+
     /// <summary>
     /// Вычисляет разрешение текстуры один раз для всех чанков (они одинакового размера)
     /// </summary>
     public static int CalculateChunkTextureResolution(int estimatedCellsPerChunk)
     {
         int calculatedResolution = Mathf.RoundToInt(Mathf.Sqrt(estimatedCellsPerChunk) * pixelsPerCell);
-        
+
         // Округляем до степени двойки
         calculatedResolution = Mathf.Clamp(
             Mathf.NextPowerOfTwo(calculatedResolution),
             256,
             Mathf.Min(4096, SystemInfo.maxTextureSize)
         );
-        
+
         return calculatedResolution;
     }
-    
+
     /// <summary>
-    /// Запекает текстуру чанка из всех клеток через CommandBuffer (SRP/URP-safe)
+    /// Запекает текстуру чанка из всех клеток через временную камеру и временные GameObjects
     /// </summary>
     public static Texture2D BakeChunkTexture(
-        List<GameObject> cells, 
+        List<GameObject> cells,
         Bounds chunkBounds,
         int textureResolution)
     {
@@ -47,39 +47,8 @@ public static class ChunkTextureBaker
             return null;
         }
 
-        // Собираем информацию о мешах и материалах
-        List<MeshRenderData> renderData = new List<MeshRenderData>();
-        foreach (GameObject cell in cells)
-        {
-            if (cell == null) continue;
-
-            MeshFilter mf = cell.GetComponent<MeshFilter>();
-            MeshRenderer mr = cell.GetComponent<MeshRenderer>();
-            if (mf == null || mf.sharedMesh == null || mr == null || mr.sharedMaterial == null) continue;
-
-            MaterialPropertyBlock mpb = null;
-            if (mr.HasPropertyBlock())
-            {
-                mpb = new MaterialPropertyBlock();
-                mr.GetPropertyBlock(mpb);
-            }
-
-            renderData.Add(new MeshRenderData
-            {
-                mesh = mf.sharedMesh,
-                material = mr.sharedMaterial,
-                matrix = cell.transform.localToWorldMatrix,
-                propertyBlock = mpb
-            });
-        }
-
-        Debug.Log($"ChunkTextureBaker: Starting bake, tempRT = {textureResolution}x{textureResolution}, cells count = {cells.Count}, renderData count = {renderData.Count}, chunkBounds = {chunkBounds}");
-
-        if (renderData.Count == 0)
-        {
-            Debug.LogWarning("ChunkTextureBaker: Нет валидных MeshRenderer/MeshFilter для запекания");
-            return null;
-        }
+        // ВАЖНО: камера рисует КВАДРАТ max(x,y) — это должно совпадать с UV
+        float squareSize = Mathf.Max(chunkBounds.size.x, chunkBounds.size.y);
 
         RenderTexture tempRT = RenderTexture.GetTemporary(
             textureResolution,
@@ -87,99 +56,121 @@ public static class ChunkTextureBaker
             24,
             RenderTextureFormat.ARGB32
         );
-        tempRT.filterMode = FilterMode.Bilinear;
-        tempRT.wrapMode = TextureWrapMode.Clamp;
 
-        // Настройка временной камеры ТОЛЬКО для матриц (мы не рендерим через Render())
+        // Собираем инфу для рендера
+        List<MeshRenderData> renderData = new List<MeshRenderData>();
+        foreach (GameObject cell in cells)
+        {
+            if (cell == null) continue;
+
+            MeshFilter mf = cell.GetComponent<MeshFilter>();
+            MeshRenderer mr = cell.GetComponent<MeshRenderer>();
+
+            if (mf != null && mf.sharedMesh != null && mr != null && mr.sharedMaterial != null)
+            {
+                MaterialPropertyBlock pb = null;
+                if (mr.HasPropertyBlock())
+                {
+                    pb = new MaterialPropertyBlock();
+                    mr.GetPropertyBlock(pb);
+                }
+
+                renderData.Add(new MeshRenderData
+                {
+                    mesh = mf.sharedMesh,
+                    material = mr.sharedMaterial,
+                    matrix = cell.transform.localToWorldMatrix,
+                    propertyBlock = pb
+                });
+            }
+        }
+
+        Debug.Log($"ChunkTextureBaker: Starting bake, tempRT={textureResolution}x{textureResolution}, cells={cells.Count}, renderData={renderData.Count}, chunkBounds={chunkBounds}, squareSize={squareSize}");
+
+        // Камера
         Vector3 center = chunkBounds.center;
-        float zMin = chunkBounds.min.z;
-        float zMax = chunkBounds.max.z;
+        float cameraDistance = Mathf.Max(chunkBounds.size.z * 2f, 10f);
 
-        float camZ = zMin - 10f;
+        GameObject tempCameraGO = new GameObject("TempBakeCamera");
+        tempCameraGO.hideFlags = HideFlags.HideAndDontSave;
 
-        GameObject tempCameraGO = new GameObject("TempBakeCamera_MatricesOnly");
         Camera cam = tempCameraGO.AddComponent<Camera>();
         cam.enabled = false;
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = Color.clear;
         cam.orthographic = true;
-        cam.orthographicSize = Mathf.Max(chunkBounds.size.x, chunkBounds.size.y) * 0.5f;
+
+        // ВАЖНО: орто-размер = squareSize / 2
+        cam.orthographicSize = squareSize * 0.5f;
+
         cam.nearClipPlane = 0.01f;
-        cam.farClipPlane = (zMax - camZ) + 5f;
+        cam.farClipPlane = cameraDistance * 2f + chunkBounds.size.z;
+        cam.targetTexture = tempRT;
+        cam.cullingMask = -1;
+        cam.allowMSAA = false;
+        cam.allowHDR = false;
 
-        tempCameraGO.transform.position = new Vector3(center.x, center.y, camZ);
-        tempCameraGO.transform.rotation = Quaternion.identity; // смотрим вдоль +Z
+        tempCameraGO.transform.position = new Vector3(center.x, center.y, center.z - cameraDistance);
+        tempCameraGO.transform.rotation = Quaternion.identity;
 
-        Debug.Log($"ChunkTextureBaker: Camera matrices - zMin={zMin}, zMax={zMax}, camZ={camZ}, near={cam.nearClipPlane}, far={cam.farClipPlane}, orthoSize={cam.orthographicSize}");
+        // Временные объекты в сцене (SRP)
+        GameObject tempParent = new GameObject("TempRenderParent");
+        tempParent.hideFlags = HideFlags.HideAndDontSave;
+        tempParent.SetActive(true);
 
-        // Командный буфер: SRP/URP-safe рендер в RT
-        CommandBuffer cb = new CommandBuffer { name = "ChunkTextureBaker_Bake" };
-
-        cb.SetRenderTarget(tempRT);
-        cb.ClearRenderTarget(true, true, Color.clear);
-
-        // ВАЖНО: задаём матрицы вида/проекции, иначе DrawMesh рисует "непонятно куда"
-        Matrix4x4 view = cam.worldToCameraMatrix;
-        Matrix4x4 proj = cam.projectionMatrix;
-        cb.SetViewProjectionMatrices(view, proj);
-
-        // Рисуем все меши
-        for (int i = 0; i < renderData.Count; i++)
+        List<GameObject> tempRenderObjects = new List<GameObject>();
+        foreach (var data in renderData)
         {
-            var d = renderData[i];
-            if (d.mesh == null || d.material == null) continue;
+            GameObject tempObj = new GameObject("TempRenderCell");
+            tempObj.transform.SetParent(tempParent.transform, false);
 
-            cb.DrawMesh(
-                d.mesh,
-                d.matrix,
-                d.material,
-                0,
-                -1,
-                d.propertyBlock
-            );
+            Vector3 pos = data.matrix.GetColumn(3);
+            Quaternion rot = data.matrix.rotation;
+            Vector3 scl = data.matrix.lossyScale;
+
+            tempObj.transform.position = pos;
+            tempObj.transform.rotation = rot;
+            tempObj.transform.localScale = scl;
+
+            MeshFilter tmf = tempObj.AddComponent<MeshFilter>();
+            tmf.sharedMesh = data.mesh;
+
+            MeshRenderer tmr = tempObj.AddComponent<MeshRenderer>();
+            tmr.sharedMaterial = data.material;
+            if (data.propertyBlock != null)
+                tmr.SetPropertyBlock(data.propertyBlock);
+
+            tempRenderObjects.Add(tempObj);
         }
 
-        // Возвращаем матрицы обратно, чтобы не ломать другие рендеры
-        cb.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
-
-        Graphics.ExecuteCommandBuffer(cb);
-        cb.Release();
-
-        Object.DestroyImmediate(tempCameraGO);
+        cam.Render();
 
         // Читаем пиксели
         RenderTexture prev = RenderTexture.active;
         RenderTexture.active = tempRT;
 
-        Texture2D chunkTexture = new Texture2D(textureResolution, textureResolution, TextureFormat.RGBA32, false);
-        chunkTexture.ReadPixels(new Rect(0, 0, textureResolution, textureResolution), 0, 0);
-        chunkTexture.Apply(false, false);
+        Texture2D tex = new Texture2D(textureResolution, textureResolution, TextureFormat.RGBA32, false);
+        tex.ReadPixels(new Rect(0, 0, textureResolution, textureResolution), 0, 0);
+        tex.Apply(false, false);
 
         RenderTexture.active = prev;
 
-        // Быстрая проверка "не пустая ли"
-        Color[] samplePixels = chunkTexture.GetPixels(0, 0, Mathf.Min(10, textureResolution), Mathf.Min(10, textureResolution));
-        bool hasNonTransparent = false;
-        for (int i = 0; i < samplePixels.Length; i++)
-        {
-            if (samplePixels[i].a > 0.01f)
-            {
-                hasNonTransparent = true;
-                break;
-            }
-        }
+        // ВАЖНО: чтобы при UV чуть <0 или >1 не было повторов/полос
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Point;
 
-        Debug.Log($"ChunkTextureBaker: Texture read complete, hasNonTransparentPixels = {hasNonTransparent}, sample pixels count = {samplePixels.Length}");
-        if (!hasNonTransparent)
-            Debug.LogWarning("ChunkTextureBaker: WARNING - Texture appears to be empty/transparent after reading from RenderTexture!");
+        // Cleanup
+        foreach (var o in tempRenderObjects)
+            if (o != null) Object.DestroyImmediate(o);
+
+        Object.DestroyImmediate(tempParent);
+        Object.DestroyImmediate(tempCameraGO);
 
         RenderTexture.ReleaseTemporary(tempRT);
-        return chunkTexture;
+
+        return tex;
     }
-    
-    /// <summary>
-    /// Структура данных для рендеринга меша
-    /// </summary>
+
     private struct MeshRenderData
     {
         public Mesh mesh;
@@ -187,34 +178,36 @@ public static class ChunkTextureBaker
         public Matrix4x4 matrix;
         public MaterialPropertyBlock propertyBlock;
     }
-    
+
     /// <summary>
-    /// Вычисляет bounds чанка на основе всех клеток
+    /// Bounds чанка — лучше считать по Renderer.bounds (он уже в world и учитывает всё)
     /// </summary>
     public static Bounds CalculateChunkBounds(List<GameObject> cells)
     {
-        if (cells == null || cells.Count == 0) return new Bounds();
+        if (cells == null || cells.Count == 0)
+            return new Bounds();
 
-        Bounds bounds = new Bounds();
-        bool inited = false;
+        bool init = false;
+        Bounds b = new Bounds();
 
-        foreach (GameObject cell in cells)
+        foreach (var cell in cells)
         {
             if (cell == null) continue;
 
-            MeshFilter mf = cell.GetComponent<MeshFilter>();
-            if (mf == null || mf.sharedMesh == null) continue;
+            var mr = cell.GetComponent<MeshRenderer>();
+            if (mr == null) continue;
 
-            Bounds local = mf.sharedMesh.bounds;
-            Vector3 worldCenter = cell.transform.TransformPoint(local.center);
-            Vector3 worldSize = Vector3.Scale(local.size, cell.transform.lossyScale);
-            Bounds world = new Bounds(worldCenter, worldSize);
-
-            if (!inited) { bounds = world; inited = true; }
-            else bounds.Encapsulate(world);
+            if (!init)
+            {
+                b = mr.bounds;
+                init = true;
+            }
+            else
+            {
+                b.Encapsulate(mr.bounds);
+            }
         }
 
-        return bounds;
+        return b;
     }
 }
-
