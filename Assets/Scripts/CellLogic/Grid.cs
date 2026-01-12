@@ -468,6 +468,8 @@ namespace CellNameSpace
                     // Объединяем меши клеток чанка и создаем текстуру
                     CellMeshCombiner.CombineResult result = CellMeshCombiner.CombineCellMeshesWithTexture(cellsInChunk, textureResolution);
                     
+                    Debug.Log($"Chunk build: tex null? {result.chunkTexture == null}, mesh null? {result.mesh == null}, matTemplate null? {chunkMaterialTemplate == null}");
+                    
                     if (result.mesh != null && result.chunkTexture != null)
                     {
                         // Добавляем MeshFilter и MeshRenderer к чанку
@@ -483,7 +485,6 @@ namespace CellNameSpace
                             
                             // Настраиваем текстуру для правильного отображения
                             result.chunkTexture.wrapMode = TextureWrapMode.Clamp;
-                            result.chunkTexture.filterMode = FilterMode.Bilinear;
                             
                             // Устанавливаем текстуру в материал
                             chunkMaterial.SetTexture("_BaseMap", result.chunkTexture);
@@ -513,7 +514,8 @@ namespace CellNameSpace
                     {
                         Debug.LogWarning($"Не удалось создать меш и текстуру для чанка ({chunkX}, {chunkY})");
                         // Удаляем GameObject чанка, если не удалось создать
-                        DestroyImmediate(chunkObject);
+                        if (Application.isPlaying) Destroy(chunkObject);
+                        else DestroyImmediate(chunkObject);
                     }
                     
                     processed++;
@@ -579,7 +581,8 @@ namespace CellNameSpace
             {
                 if (chunk != null && chunk.gameObject != null)
                 {
-                    DestroyImmediate(chunk.gameObject);
+                    if (Application.isPlaying) Destroy(chunk.gameObject);
+                    else DestroyImmediate(chunk.gameObject);
                 }
             }
             chunks.Clear();
@@ -680,7 +683,8 @@ namespace CellNameSpace
             {
                 if (cell != null)
                 {
-                    DestroyImmediate(cell);
+                    if (Application.isPlaying) Destroy(cell);
+                    else DestroyImmediate(cell);
                 }
             }
             cells.Clear();

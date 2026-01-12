@@ -143,7 +143,30 @@ public static class ChunkTextureBaker
             tempRenderObjects.Add(tempObj);
         }
 
-        cam.Render();
+        // --- РЕНДЕР В RT БЕЗ Camera.Render() (URP-safe) ---
+        var cb = new UnityEngine.Rendering.CommandBuffer();
+        cb.name = "ChunkBake";
+
+        cb.SetRenderTarget(tempRT);
+        cb.ClearRenderTarget(true, true, new Color(0,0,0,1));
+
+        // Матрицы камеры
+        cb.SetViewProjectionMatrices(cam.worldToCameraMatrix, cam.projectionMatrix);
+
+        // Рисуем все меши
+        for (int i = 0; i < renderData.Count; i++)
+        {
+            var d = renderData[i];
+            if (d.mesh == null || d.material == null) continue;
+
+            cb.DrawMesh(d.mesh, d.matrix, d.material, 0, -1, d.propertyBlock);
+        }
+
+        // Важно: вернуть матрицы, чтобы не ломать остальной рендер
+        cb.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+
+        Graphics.ExecuteCommandBuffer(cb);
+        cb.Release();
 
         // Читаем пиксели
         RenderTexture prev = RenderTexture.active;
@@ -159,12 +182,25 @@ public static class ChunkTextureBaker
         tex.wrapMode = TextureWrapMode.Clamp;
         tex.filterMode = FilterMode.Point;
 
+        // Тест пикселя для проверки альфа-канала
+        var c = tex.GetPixel(textureResolution / 2, textureResolution / 2);
+        Debug.Log($"BAKE SAMPLE PIXEL: {c}"); // особенно смотри на alpha
+
         // Cleanup
         foreach (var o in tempRenderObjects)
-            if (o != null) Object.DestroyImmediate(o);
+        {
+            if (o != null)
+            {
+                if (Application.isPlaying) Object.Destroy(o);
+                else Object.DestroyImmediate(o);
+            }
+        }
 
-        Object.DestroyImmediate(tempParent);
-        Object.DestroyImmediate(tempCameraGO);
+        if (Application.isPlaying) Object.Destroy(tempParent);
+        else Object.DestroyImmediate(tempParent);
+        
+        if (Application.isPlaying) Object.Destroy(tempCameraGO);
+        else Object.DestroyImmediate(tempCameraGO);
 
         RenderTexture.ReleaseTemporary(tempRT);
 

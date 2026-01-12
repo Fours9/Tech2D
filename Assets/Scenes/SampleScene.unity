@@ -973,7 +973,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CameraController
   zoomSpeed: 21
-  minOrthoSize: 5
+  minOrthoSize: 15
   maxOrthoSize: 100
   maxClickTime: 0.3
   maxClickDistance: 5
