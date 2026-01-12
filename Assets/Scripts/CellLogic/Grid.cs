@@ -107,10 +107,12 @@ namespace CellNameSpace
         private HashSet<CellChunk> dirtyChunks = new HashSet<CellChunk>(); // Чанки, требующие пересборки
         private Coroutine rebuildChunksCoroutine = null; // Корутина для пересборки чанков
         [SerializeField] private int chunksPerFrame = 5; // Количество чанков для пересборки за кадр
+        [SerializeField] private int createChunksPerFrame = 2; // Количество чанков для создания за кадр
         
         // Система запекания текстур чанков
         private Coroutine bakeChunksCoroutine = null; // Корутина для асинхронного запекания чанков
         [SerializeField] private int bakeChunksPerFrame = 2; // Количество чанков для запекания за кадр
+        [SerializeField] private Material chunkMaterialTemplate; // Шаблон материала для чанков
         private Coroutine memoryCleanupCoroutine = null; // Корутина для периодической очистки памяти
         
         // Кэшированные значения для расчета ширины карты
@@ -357,13 +359,8 @@ namespace CellNameSpace
             // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
             
             // Создаем чанки после применения типов клеток
-            CreateChunks();
-            
-            // Возобновляем игру после завершения генерации
-            ResumeGame();
-
-            // Типы всех клеток применены — считаем генерацию завершённой
-            IsGenerationComplete = true;
+            // Игра будет возобновлена и IsGenerationComplete установлен после завершения создания всех чанков
+            StartCoroutine(CreateChunksCoroutine());
         }
         
         /// <summary>
@@ -403,19 +400,16 @@ namespace CellNameSpace
             // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
             
             // Создаем чанки после применения типов клеток
-            CreateChunks();
+            // Ждем завершения создания всех чанков перед возобновлением игры
+            yield return StartCoroutine(CreateChunksCoroutine());
             
-            // Типы всех клеток применены — считаем генерацию завершённой
-            IsGenerationComplete = true;
-            
-            // Возобновляем игру после завершения генерации
-            ResumeGame();
+            // Игра будет возобновлена и IsGenerationComplete установлен в CreateChunksCoroutine()
         }
         
         /// <summary>
-        /// Создает чанки и объединяет меши клеток для оптимизации рендеринга
+        /// Корутина для создания чанков с распределением по кадрам
         /// </summary>
-        private void CreateChunks()
+        private IEnumerator CreateChunksCoroutine()
         {
             // Вычисляем размер чанка
             int chunkSize = CalculateChunkSize(gridWidth, gridHeight);
@@ -427,12 +421,16 @@ namespace CellNameSpace
             // Очищаем предыдущие чанки (если есть)
             ClearChunks();
             
-            // Вычисляем разрешение текстуры один раз для всех чанков (они одинакового размера)
-            int estimatedCellsPerChunk = chunkSize * chunkSize;
-            int textureResolution = ChunkTextureBaker.CalculateChunkTextureResolution(estimatedCellsPerChunk);
+            // Вычисляем разрешение текстуры на основе размера чанка
+            const int PIXELS_PER_CELL = 128; // ключевая цифра
+            int textureResolution = Mathf.NextPowerOfTwo(chunkSize * PIXELS_PER_CELL);
+            // ограничение по железу
+            textureResolution = Mathf.Clamp(textureResolution, 256, 2048);
             
             // Список объектов чанков для создания
             List<GameObject> chunkObjects = new List<GameObject>();
+            
+            int processed = 0;
             
             // Группируем клетки по чанкам и создаем объединенные меши
             for (int chunkY = 0; chunkY < chunksY; chunkY++)
@@ -478,27 +476,17 @@ namespace CellNameSpace
                         
                         MeshRenderer chunkRenderer = chunkObject.AddComponent<MeshRenderer>();
                         
-                        // Для чанка с baked-текстурой используем простой URP Unlit шейдер
-                        // WorldSpaceTexture шейдер не подходит, так как он использует world-space UV
-                        // и игнорирует UV 0..1, которые мы специально вычислили для baked-текстуры
-                        Shader unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
-                        if (unlitShader == null)
+                        if (chunkMaterialTemplate != null)
                         {
-                            // Fallback на стандартный Unlit, если URP Unlit не найден
-                            unlitShader = Shader.Find("Unlit/Texture");
-                        }
-                        
-                        if (unlitShader != null)
-                        {
-                            Material chunkMaterial = new Material(unlitShader);
+                            // Создаем материал на основе шаблона
+                            Material chunkMaterial = new Material(chunkMaterialTemplate);
                             
                             // Настраиваем текстуру для правильного отображения
                             result.chunkTexture.wrapMode = TextureWrapMode.Clamp;
                             result.chunkTexture.filterMode = FilterMode.Bilinear;
                             
-                            // URP Unlit ожидает _BaseMap
+                            // Устанавливаем текстуру в материал
                             chunkMaterial.SetTexture("_BaseMap", result.chunkTexture);
-                            // На всякий случай устанавливаем и mainTexture (для совместимости)
                             chunkMaterial.mainTexture = result.chunkTexture;
                             
                             chunkRenderer.sharedMaterial = chunkMaterial;
@@ -506,7 +494,7 @@ namespace CellNameSpace
                         }
                         else
                         {
-                            Debug.LogError("Grid: Не удалось найти URP Unlit или Unlit/Texture шейдер для baked-текстуры чанка!");
+                            Debug.LogError("Grid: chunkMaterialTemplate не назначен! Назначьте шаблон материала в инспекторе.");
                         }
                         
                         // Добавляем компонент CellChunk и инициализируем его
@@ -527,6 +515,16 @@ namespace CellNameSpace
                         // Удаляем GameObject чанка, если не удалось создать
                         DestroyImmediate(chunkObject);
                     }
+                    
+                    processed++;
+                    
+                    // Каждые createChunksPerFrame чанков делаем паузу на один кадр
+                    if (processed >= createChunksPerFrame)
+                    {
+                        processed = 0;
+                        // Используем WaitForEndOfFrame для работы при timeScale = 0
+                        yield return new WaitForEndOfFrame();
+                    }
                 }
             }
             
@@ -545,6 +543,12 @@ namespace CellNameSpace
             {
                 memoryCleanupCoroutine = StartCoroutine(PeriodicMemoryCleanup());
             }
+            
+            // Все чанки созданы — считаем генерацию завершённой
+            IsGenerationComplete = true;
+            
+            // Возобновляем игру после завершения создания всех чанков
+            ResumeGame();
         }
         
         /// <summary>
@@ -614,10 +618,12 @@ namespace CellNameSpace
                     continue;
                 
                 // Пересобираем меш чанка с текстурой
-                // Вычисляем разрешение текстуры (используем то же, что при создании)
+                // Вычисляем разрешение текстуры на основе размера чанка
                 int chunkSize = CalculateChunkSize(gridWidth, gridHeight);
-                int estimatedCellsPerChunk = chunkSize * chunkSize;
-                int textureResolution = ChunkTextureBaker.CalculateChunkTextureResolution(estimatedCellsPerChunk);
+                const int PIXELS_PER_CELL = 128; // ключевая цифра
+                int textureResolution = Mathf.NextPowerOfTwo(chunkSize * PIXELS_PER_CELL);
+                // ограничение по железу
+                textureResolution = Mathf.Clamp(textureResolution, 256, 2048);
                 chunk.RebuildMesh(textureResolution);
                 processed++;
                 
@@ -857,14 +863,14 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Вычисляет адаптивный размер чанка на основе размера карты (целевое количество ~250 чанков)
+        /// Вычисляет адаптивный размер чанка на основе размера карты (целевое количество ~500 чанков)
         /// </summary>
         /// <param name="gridWidth">Ширина сетки</param>
         /// <param name="gridHeight">Высота сетки</param>
         /// <returns>Размер чанка (количество клеток по ширине и высоте)</returns>
         private int CalculateChunkSize(int gridWidth, int gridHeight)
         {
-            const int TARGET_CHUNK_COUNT = 250;
+            const int TARGET_CHUNK_COUNT = 500;
             const int MIN_CHUNK_SIZE = 4;
             
             int totalCells = gridWidth * gridHeight;

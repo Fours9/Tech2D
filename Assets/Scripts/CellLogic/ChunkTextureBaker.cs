@@ -9,29 +9,29 @@ public static class ChunkTextureBaker
 {
     // Настройки
     private static float pixelsPerCell = 64f;
-
+    
     /// <summary>
     /// Вычисляет разрешение текстуры один раз для всех чанков (они одинакового размера)
     /// </summary>
     public static int CalculateChunkTextureResolution(int estimatedCellsPerChunk)
     {
         int calculatedResolution = Mathf.RoundToInt(Mathf.Sqrt(estimatedCellsPerChunk) * pixelsPerCell);
-
+        
         // Округляем до степени двойки
         calculatedResolution = Mathf.Clamp(
             Mathf.NextPowerOfTwo(calculatedResolution),
             256,
             Mathf.Min(4096, SystemInfo.maxTextureSize)
         );
-
+        
         return calculatedResolution;
     }
-
+    
     /// <summary>
     /// Запекает текстуру чанка из всех клеток через временную камеру и временные GameObjects
     /// </summary>
     public static Texture2D BakeChunkTexture(
-        List<GameObject> cells,
+        List<GameObject> cells, 
         Bounds chunkBounds,
         int textureResolution)
     {
@@ -69,19 +69,19 @@ public static class ChunkTextureBaker
             if (mf != null && mf.sharedMesh != null && mr != null && mr.sharedMaterial != null)
             {
                 MaterialPropertyBlock pb = null;
-                if (mr.HasPropertyBlock())
-                {
+            if (mr.HasPropertyBlock())
+            {
                     pb = new MaterialPropertyBlock();
                     mr.GetPropertyBlock(pb);
-                }
+            }
 
-                renderData.Add(new MeshRenderData
-                {
-                    mesh = mf.sharedMesh,
-                    material = mr.sharedMaterial,
-                    matrix = cell.transform.localToWorldMatrix,
+            renderData.Add(new MeshRenderData
+            {
+                mesh = mf.sharedMesh,
+                material = mr.sharedMaterial,
+                matrix = cell.transform.localToWorldMatrix,
                     propertyBlock = pb
-                });
+            });
             }
         }
 
@@ -170,7 +170,7 @@ public static class ChunkTextureBaker
 
         return tex;
     }
-
+    
     private struct MeshRenderData
     {
         public Mesh mesh;
@@ -178,7 +178,7 @@ public static class ChunkTextureBaker
         public Matrix4x4 matrix;
         public MaterialPropertyBlock propertyBlock;
     }
-
+    
     /// <summary>
     /// Bounds чанка — лучше считать по Renderer.bounds (он уже в world и учитывает всё)
     /// </summary>

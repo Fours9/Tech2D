@@ -296,6 +296,9 @@ MonoBehaviour:
   useCoroutines: 1
   pauseGameDuringGeneration: 1
   chunksPerFrame: 5
+  createChunksPerFrame: 2
+  bakeChunksPerFrame: 2
+  chunkMaterialTemplate: {fileID: 2100000, guid: 965872d87c4f89444a3aeb0eebaa8e6e, type: 2}
 --- !u!4 &141372081
 Transform:
   m_ObjectHideFlags: 0
