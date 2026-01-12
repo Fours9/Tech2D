@@ -173,18 +173,25 @@ public class CellChunk : MonoBehaviour
                     
                     if (unlitShader != null)
                     {
-                        Material chunkMaterial = new Material(unlitShader);
+                        // Используем общий материал (создаем один раз, если еще не создан)
+                        if (chunkRenderer.sharedMaterial == null || chunkRenderer.sharedMaterial.shader != unlitShader)
+                        {
+                            // Создаем материал только если его еще нет или шейдер не совпадает
+                            Material sharedChunkMaterial = new Material(unlitShader);
+                            chunkRenderer.sharedMaterial = sharedChunkMaterial;
+                        }
                         
                         // Настраиваем текстуру для правильного отображения
                         chunkTexture.wrapMode = TextureWrapMode.Clamp;
                         chunkTexture.filterMode = FilterMode.Bilinear;
                         
+                        // Используем MaterialPropertyBlock для установки текстуры без создания нового материала
+                        MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
                         // URP Unlit ожидает _BaseMap
-                        chunkMaterial.SetTexture("_BaseMap", chunkTexture);
-                        // На всякий случай устанавливаем и mainTexture (для совместимости)
-                        chunkMaterial.mainTexture = chunkTexture;
-                        
-                        chunkRenderer.sharedMaterial = chunkMaterial;
+                        propertyBlock.SetTexture("_BaseMap", chunkTexture);
+                        // На всякий случай устанавливаем и _MainTex (для совместимости)
+                        propertyBlock.SetTexture("_MainTex", chunkTexture);
+                        chunkRenderer.SetPropertyBlock(propertyBlock);
                     }
                     else
                     {

@@ -480,17 +480,18 @@ namespace CellNameSpace
                         
                         if (chunkMaterialTemplate != null)
                         {
-                            // Создаем материал на основе шаблона
-                            Material chunkMaterial = new Material(chunkMaterialTemplate);
+                            // Используем общий материал для всех чанков (не создаем новый экземпляр)
+                            chunkRenderer.sharedMaterial = chunkMaterialTemplate;
                             
                             // Настраиваем текстуру для правильного отображения
                             result.chunkTexture.wrapMode = TextureWrapMode.Clamp;
                             
-                            // Устанавливаем текстуру в материал
-                            chunkMaterial.SetTexture("_BaseMap", result.chunkTexture);
-                            chunkMaterial.mainTexture = result.chunkTexture;
+                            // Используем MaterialPropertyBlock для установки текстуры без создания нового материала
+                            MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
+                            propertyBlock.SetTexture("_BaseMap", result.chunkTexture);
+                            propertyBlock.SetTexture("_MainTex", result.chunkTexture); // Для совместимости
+                            chunkRenderer.SetPropertyBlock(propertyBlock);
                             
-                            chunkRenderer.sharedMaterial = chunkMaterial;
                             chunkRenderer.enabled = true;
                         }
                         else
