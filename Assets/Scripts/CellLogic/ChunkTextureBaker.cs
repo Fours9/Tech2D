@@ -176,6 +176,9 @@ public static class ChunkTextureBaker
         tex.ReadPixels(new Rect(0, 0, textureResolution, textureResolution), 0, 0);
         tex.Apply(false, false);
 
+        // Защищаем текстуру от автоматической выгрузки через Resources.UnloadUnusedAssets()
+        tex.hideFlags = HideFlags.DontUnloadUnusedAsset;
+
         RenderTexture.active = prev;
 
         // ВАЖНО: чтобы при UV чуть <0 или >1 не было повторов/полос

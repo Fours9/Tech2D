@@ -85,4 +85,10 @@ crashlytics-build.properties
 [Aa]ssets/[Ss]treamingAssets/aa.meta
 [Aa]ssets/[Ss]treamingAssets/aa/*
 
+# Unity Documentation (offline documentation)
+[Dd]ocumentation/
+
+# Assets archive
+[Aa]ssets.zip
+
 

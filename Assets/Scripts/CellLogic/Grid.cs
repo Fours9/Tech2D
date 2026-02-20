@@ -202,7 +202,8 @@ namespace CellNameSpace
                     // Строим сетку сверху вниз: первая строка (row = 0) — самая верхняя
                     float y = startY - row * hexHeight;
                     // Z координата: верхние ряды имеют больший Z, нижние — меньший
-                    float z = gridHeight - row;
+                    // float z = gridHeight - row;
+                    float z = 0f; // Временно все клетки на одном уровне по Z
                     
                     Vector3 position = new Vector3(x, y, z);
                     // Поворот префаба на 180 градусов по оси Y

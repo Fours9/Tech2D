@@ -161,6 +161,9 @@ public class CellChunk : MonoBehaviour
                     chunkMeshFilter.sharedMesh = result.mesh;
                     chunkTexture = result.chunkTexture;
                     
+                    // Защищаем текстуру от автоматической выгрузки через Resources.UnloadUnusedAssets()
+                    chunkTexture.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                    
                     // Для чанка с baked-текстурой используем простой URP Unlit шейдер
                     // WorldSpaceTexture шейдер не подходит, так как он использует world-space UV
                     // и игнорирует UV 0..1, которые мы специально вычислили для baked-текстуры
