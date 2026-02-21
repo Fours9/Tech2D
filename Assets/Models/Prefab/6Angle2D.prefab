@@ -26,7 +26,7 @@ Transform:
   m_GameObject: {fileID: 714223826034731863}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0.0003}
   m_LocalScale: {x: 0.8660254, y: 0.8660254, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -554,9 +554,9 @@ MonoBehaviour:
   tintingLayerMaterial: {fileID: 2100000, guid: 4daafa2f0030f3646a72c8233ee25432, type: 2}
   fogState: 0
   fogOfWarRenderer: {fileID: 4093594445276026817}
-  outlineEnabled: 1
+  outlineEnabled: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
-  outlineWidth: 2
+  outlineWidth: 6
 --- !u!4 &6368091232878326168 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 67944a0f426ddad4588f48ae4c962944, type: 3}

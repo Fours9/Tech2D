@@ -181,7 +181,7 @@ public class ReachableCellsHighlighter : MonoBehaviour
             if (cell == startCell)
                 continue;
 
-            cell.SetMovementHighlight(true);
+            cell.SetOutline(true, new Color(0f, 1f, 0f, 1f)); // Зелёный контур для достижимых клеток
             highlightedCells.Add(cell);
         }
     }
@@ -195,7 +195,7 @@ public class ReachableCellsHighlighter : MonoBehaviour
         {
             if (cell != null)
             {
-                cell.SetMovementHighlight(false);
+                cell.SetOutline(false);
             }
         }
         highlightedCells.Clear();

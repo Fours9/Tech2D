@@ -81,10 +81,6 @@ namespace CellNameSpace
         
         void Start()
         {
-            // НЕ применяем настройки обводки из инспектора при запуске игры
-            // Обводка должна включаться только явно через SetOutline()
-            // ApplyOutlineFromInspector(); // Отключено, чтобы обводка не была видна при создании карты
-            
             // Инициализируем видимость компонентов в зависимости от начального состояния тумана войны
             // Это нужно, чтобы при создании карты клетки с состоянием Hidden имели отключенные компоненты
             if (fogState == FogOfWarState.Hidden)
@@ -100,12 +96,8 @@ namespace CellNameSpace
             // Убеждаемся, что видимость оверлеев соответствует текущему состоянию тумана
             UpdateFogOfWarVisual();
             
-            // Отключаем обводку при создании, если она была включена в префабе
-            if (outlineOverlay != null)
-            {
-                outlineOverlay.enabled = false;
-            }
-            outlineEnabled = false;
+            // Применяем настройки обводки из полей CellInfo
+            ApplyOutlineFromInspector();
         }
 
         /// <summary>
@@ -734,7 +726,7 @@ namespace CellNameSpace
             if (ownershipOverlayPropertyBlock == null)
                 ownershipOverlayPropertyBlock = new MaterialPropertyBlock();
             ownershipOverlay.GetPropertyBlock(ownershipOverlayPropertyBlock);
-            Color tintColor = new Color(playerColor.r, playerColor.g, playerColor.b, 0.25f);
+            Color tintColor = new Color(playerColor.r, playerColor.g, playerColor.b, 0f);
             ownershipOverlayPropertyBlock.SetColor("_Color", tintColor);
             ownershipOverlayPropertyBlock.SetColor("_EdgeColor", new Color(playerColor.r, playerColor.g, playerColor.b, 1f)); // Обводка в цвет игрока, alpha=1
             ownershipOverlay.SetPropertyBlock(ownershipOverlayPropertyBlock);
@@ -770,6 +762,9 @@ namespace CellNameSpace
             return owningCity != null;
         }
 
+        // Закомментировано — подсветка движения теперь через SetOutline (ReachableCellsHighlighter)
+        // Планируется удалить, оставлено на случай если понадобится fallback на cityBorderOverlay
+        /*
         /// <summary>
         /// Подсветить клетку как достижимую для текущего хода юнита.
         /// В приоритете используем cityBorderOverlay как маркер контура.
@@ -782,7 +777,6 @@ namespace CellNameSpace
                 if (enabled)
                 {
                     cityBorderOverlay.enabled = true;
-                    // Яркий циановый контур
                     cityBorderOverlay.color = new Color(0f, 1f, 1f, 0.8f);
                 }
                 else
@@ -792,48 +786,29 @@ namespace CellNameSpace
             }
             else
             {
-                // Fallback: подсвечиваем саму клетку
                 if (cellRenderer == null)
                     cellRenderer = GetComponent<Renderer>();
-
                 if (cellRenderer == null)
                     return;
-
                 if (enabled)
                 {
-                    // Для SpriteRenderer
                     SpriteRenderer spriteRenderer = cellRenderer as SpriteRenderer;
                     if (spriteRenderer != null)
-                    {
-                        // Яркий цвет, хорошо видимый поверх террейна
                         spriteRenderer.color = Color.cyan;
-                    }
-                    // Для MeshRenderer используем MaterialPropertyBlock (не создает material instance)
                     else if (cellRenderer is MeshRenderer meshRenderer && meshRenderer.sharedMaterial != null)
                     {
-                        // Создаем MaterialPropertyBlock, если его еще нет
                         if (materialPropertyBlock == null)
-                        {
                             materialPropertyBlock = new MaterialPropertyBlock();
-                        }
-                        
-                        // Получаем текущие свойства (чтобы не потерять другие параметры)
                         meshRenderer.GetPropertyBlock(materialPropertyBlock);
-                        
-                        // Устанавливаем цвет подсветки через MaterialPropertyBlock
                         materialPropertyBlock.SetColor("_Color", Color.cyan);
-                        
-                        // Применяем MaterialPropertyBlock к рендереру
                         meshRenderer.SetPropertyBlock(materialPropertyBlock);
                     }
                 }
                 else
-                {
-                    // Сбрасываем цвет к базовому типу клетки
                     UpdateCellColor(false);
-                }
             }
         }
+        */
         
         /// <summary>
         /// Включает/выключает обводку для клетки

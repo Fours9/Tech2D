@@ -88,17 +88,11 @@ namespace CellNameSpace
                 // Получаем цвет игрока из города (город наследует цвет от игрока-владельца)
                 Color playerColor = CityManager.GetCityColor(owningCity);
                 
-                // Применяем границы через обводку
-                cell.SetOutline(true, playerColor, 2.5f);
-                
-                // Применяем overlay-тинтинг
+                // Применяем overlay-тинтинг (OutlineOverlay теперь только для движения юнита)
                 cell.ApplyOwnershipTinting(playerColor);
             }
             else
             {
-                // Убираем визуализацию принадлежности
-                cell.SetOutline(false);
-                
                 // Отключаем overlay-тинтинг
                 cell.DisableOwnershipTinting();
             }
