@@ -16,6 +16,7 @@ namespace CellNameSpace
         [SerializeField] private SpriteRenderer outlineOverlay; // Оверлей для обводки клетки (опционально)
         [SerializeField] private SpriteRenderer ownershipOverlay; // Оверлей для тинтинга принадлежности (TintingLayer)
         [SerializeField] private Sprite hexagonSprite; // Спрайт-шестиугольник для тинтинга (созданный из модели)
+        [SerializeField] private Material tintingLayerMaterial; // Материал для TintingLayer (общий для всех клеток, PropertyBlock — для параметров)
         
         [Header("Туман войны")]
         [SerializeField] private FogOfWarState fogState = FogOfWarState.Hidden; // Состояние видимости клетки
@@ -40,6 +41,7 @@ namespace CellNameSpace
         private bool originalPositionSet = false; // Флаг, что изначальная позиция уже установлена
         private MaterialPropertyBlock materialPropertyBlock = null; // MaterialPropertyBlock для передачи параметров в шейдер
         private MaterialPropertyBlock fogOfWarPropertyBlock = null; // MaterialPropertyBlock для тумана войны
+        private MaterialPropertyBlock ownershipOverlayPropertyBlock = null; // MaterialPropertyBlock для TintingLayer (тинтинг через _Color материала)
         // Локальный радиус гекса для этой клетки (из sharedMesh.bounds.extents.y),
         // кэшируется один раз и может использоваться для любых эффектов вокруг клетки.
         private float hexRadiusForCell = 0f;
@@ -721,17 +723,33 @@ namespace CellNameSpace
                 return;
             }
             
-            // Устанавливаем спрайт
+            if (tintingLayerMaterial == null)
+            {
+                Debug.LogWarning($"CellInfo: tintingLayerMaterial не назначен на клетке {gameObject.name}.");
+                return;
+            }
+            
+            // Устанавливаем спрайт и shared материал (без дублирования — PropertyBlock для параметров)
             ownershipOverlay.sprite = hexagonSprite;
+            ownershipOverlay.sharedMaterial = tintingLayerMaterial;
             ownershipOverlay.enabled = true;
             
-            // Применяем цвет игрока с прозрачностью 20-30% для легкого тинтинга
+            // SpriteRenderer.color оставляем белым (alpha=1), чтобы не влиять на обводку в шейдере
+            ownershipOverlay.color = Color.white;
+            
+            // Параметры через PropertyBlock — не дублируем материал, каждая клетка со своим цветом
+            if (ownershipOverlayPropertyBlock == null)
+                ownershipOverlayPropertyBlock = new MaterialPropertyBlock();
+            ownershipOverlay.GetPropertyBlock(ownershipOverlayPropertyBlock);
             Color tintColor = new Color(playerColor.r, playerColor.g, playerColor.b, 0.25f);
-            ownershipOverlay.color = tintColor;
+            ownershipOverlayPropertyBlock.SetColor("_Color", tintColor);
+            ownershipOverlayPropertyBlock.SetColor("_EdgeColor", new Color(playerColor.r, playerColor.g, playerColor.b, 1f)); // Обводка в цвет игрока, alpha=1
+            ownershipOverlay.SetPropertyBlock(ownershipOverlayPropertyBlock);
             
             // Масштабируем спрайт под размер клетки (как для ресурсов и зданий)
-            Vector2 cellSize = GetCellSize();
-            ScaleSpriteToCellSize(ownershipOverlay, hexagonSprite, cellSize);
+            // Временно отключено — размер подобран вручную в префабе
+            // Vector2 cellSize = GetCellSize();
+            // ScaleSpriteToCellSize(ownershipOverlay, hexagonSprite, cellSize);
         }
         
         /// <summary>
