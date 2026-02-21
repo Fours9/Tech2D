@@ -93,9 +93,6 @@ namespace CellNameSpace
                 
                 // Применяем overlay-тинтинг
                 cell.ApplyOwnershipTinting(playerColor);
-                
-                // Применяем цвет Edge в шейдере
-                cell.ApplyEdgeColor(playerColor);
             }
             else
             {
@@ -104,9 +101,6 @@ namespace CellNameSpace
                 
                 // Отключаем overlay-тинтинг
                 cell.DisableOwnershipTinting();
-                
-                // Сбрасываем цвет Edge обратно на черный
-                cell.ApplyEdgeColor(Color.black);
             }
         }
         

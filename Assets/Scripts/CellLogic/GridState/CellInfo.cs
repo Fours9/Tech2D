@@ -458,13 +458,6 @@ namespace CellNameSpace
             Vector4 originalPos = new Vector4(originalPosition.x, originalPosition.y, originalPosition.z, 0f);
             materialPropertyBlock.SetVector("_OriginalPosition", originalPos);
             
-            // Устанавливаем цвет Edge в черный по умолчанию, если клетка не принадлежит городу
-            // Если клетка принадлежит городу, цвет Edge будет установлен в ApplyOwnershipVisualization
-            if (owningCity == null)
-            {
-                materialPropertyBlock.SetColor("_EdgeColor", Color.black);
-            }
-            
             // Применяем MaterialPropertyBlock к рендереру
             meshRenderer.SetPropertyBlock(materialPropertyBlock);
         }
@@ -750,35 +743,6 @@ namespace CellNameSpace
             // Временно отключено — размер подобран вручную в префабе
             // Vector2 cellSize = GetCellSize();
             // ScaleSpriteToCellSize(ownershipOverlay, hexagonSprite, cellSize);
-        }
-        
-        /// <summary>
-        /// Применяет цвет Edge в шейдере через MaterialPropertyBlock
-        /// </summary>
-        /// <param name="edgeColor">Цвет края клетки</param>
-        public void ApplyEdgeColor(Color edgeColor)
-        {
-            if (cellRenderer == null)
-                return;
-            
-            MeshRenderer meshRenderer = cellRenderer as MeshRenderer;
-            if (meshRenderer == null)
-                return;
-            
-            // Создаем MaterialPropertyBlock, если его еще нет
-            if (materialPropertyBlock == null)
-            {
-                materialPropertyBlock = new MaterialPropertyBlock();
-            }
-            
-            // Получаем текущие свойства (если они уже были установлены)
-            meshRenderer.GetPropertyBlock(materialPropertyBlock);
-            
-            // Устанавливаем цвет Edge в шейдер
-            materialPropertyBlock.SetColor("_EdgeColor", edgeColor);
-            
-            // Применяем MaterialPropertyBlock к рендереру
-            meshRenderer.SetPropertyBlock(materialPropertyBlock);
         }
         
         /// <summary>
