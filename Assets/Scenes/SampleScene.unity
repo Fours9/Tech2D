@@ -338,11 +338,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 10bbf5b49f61f134dbe7bb87b28a5885, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CellOverlayManager
-  resourceMappings:
+  featureMappings:
   - cellType: 3
-    resourceStats: {fileID: 11400000, guid: 80b53c240911454449333841a83db63e, type: 2}
+    featureStats: {fileID: 11400000, guid: 3b19da14748787846862c4e8493b11d9, type: 2}
   - cellType: 5
-    resourceStats: {fileID: 11400000, guid: 2d107b9b749db084cb35fa70e355b959, type: 2}
+    featureStats: {fileID: 11400000, guid: 9546706d59091db4b9fba96a7e602fc7, type: 2}
   buildingMappings: []
 --- !u!114 &141372084
 MonoBehaviour:
@@ -353,22 +353,22 @@ MonoBehaviour:
   m_GameObject: {fileID: 141372079}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 785a02850b3176f408a78cda5f95cf86, type: 3}
+  m_Script: {fileID: 11500000, guid: 97f1c6cbc734df74399f5047f66a4d9e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellStatsManager
-  cellStatsMappings:
+  cellTypeStatsMappings:
   - cellType: 0
-    cellStats: {fileID: 11400000, guid: 40618c5c460be63429cdde8e76a5d334, type: 2}
+    cellTypeStats: {fileID: 11400000, guid: 40618c5c460be63429cdde8e76a5d334, type: 2}
   - cellType: 1
-    cellStats: {fileID: 11400000, guid: 57a45f904439f7041bb5cc1b11dc0e28, type: 2}
+    cellTypeStats: {fileID: 11400000, guid: 57a45f904439f7041bb5cc1b11dc0e28, type: 2}
   - cellType: 2
-    cellStats: {fileID: 11400000, guid: a27dfc918d136ca43a2317f9edabda01, type: 2}
+    cellTypeStats: {fileID: 11400000, guid: a27dfc918d136ca43a2317f9edabda01, type: 2}
   - cellType: 3
-    cellStats: {fileID: 11400000, guid: 4bd84b5305030bc4180269dbdbe4fe35, type: 2}
+    cellTypeStats: {fileID: 11400000, guid: 4bd84b5305030bc4180269dbdbe4fe35, type: 2}
   - cellType: 4
-    cellStats: {fileID: 11400000, guid: 499ca0f124f0a794785ae8847fedf1c9, type: 2}
+    cellTypeStats: {fileID: 11400000, guid: 499ca0f124f0a794785ae8847fedf1c9, type: 2}
   - cellType: 5
-    cellStats: {fileID: 11400000, guid: 9aa4e015217e92e439ea95475ac4577e, type: 2}
+    cellTypeStats: {fileID: 11400000, guid: 9aa4e015217e92e439ea95475ac4577e, type: 2}
 --- !u!114 &141372085
 MonoBehaviour:
   m_ObjectHideFlags: 0

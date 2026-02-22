@@ -10,10 +10,11 @@ namespace CellNameSpace
     public class CellOverlayManager : MonoBehaviour
     {
         [System.Serializable]
-        public class ResourceOverlayMapping
+        public class FeatureOverlayMapping
         {
             public CellType cellType;
-            public ResourceStats resourceStats;
+            [UnityEngine.Serialization.FormerlySerializedAs("resourceStats")]
+            public FeatureStats featureStats;
         }
         
         [System.Serializable]
@@ -23,13 +24,14 @@ namespace CellNameSpace
             public BuildingStats buildingStats;
         }
         
-        [Header("Ресурсы для типов клеток")]
-        [SerializeField] private List<ResourceOverlayMapping> resourceMappings = new List<ResourceOverlayMapping>();
+        [Header("Фичи для типов клеток")]
+        [UnityEngine.Serialization.FormerlySerializedAs("resourceMappings")]
+        [SerializeField] private List<FeatureOverlayMapping> featureMappings = new List<FeatureOverlayMapping>();
         
         [Header("Постройки для типов клеток")]
         [SerializeField] private List<BuildingOverlayMapping> buildingMappings = new List<BuildingOverlayMapping>();
         
-        private Dictionary<CellType, ResourceStats> resourceDictionary;
+        private Dictionary<CellType, FeatureStats> featureDictionary;
         private Dictionary<CellType, BuildingStats> buildingDictionary;
         
         private void Awake()
@@ -42,14 +44,14 @@ namespace CellNameSpace
         /// </summary>
         private void InitializeDictionaries()
         {
-            resourceDictionary = new Dictionary<CellType, ResourceStats>();
+            featureDictionary = new Dictionary<CellType, FeatureStats>();
             buildingDictionary = new Dictionary<CellType, BuildingStats>();
             
-            foreach (var mapping in resourceMappings)
+            foreach (var mapping in featureMappings)
             {
-                if (mapping.resourceStats != null)
+                if (mapping.featureStats != null)
                 {
-                    resourceDictionary[mapping.cellType] = mapping.resourceStats;
+                    featureDictionary[mapping.cellType] = mapping.featureStats;
                 }
             }
             
@@ -63,18 +65,18 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Получает ResourceStats для указанного типа клетки
+        /// Получает FeatureStats для указанного типа клетки
         /// </summary>
         /// <param name="cellType">Тип клетки</param>
-        /// <returns>ResourceStats для данного типа, или null если не найден</returns>
-        public ResourceStats GetResourceStats(CellType cellType)
-                    {
-            if (resourceDictionary == null)
+        /// <returns>FeatureStats для данного типа, или null если не найден</returns>
+        public FeatureStats GetFeatureStats(CellType cellType)
+        {
+            if (featureDictionary == null)
             {
                 InitializeDictionaries();
             }
             
-            if (resourceDictionary.TryGetValue(cellType, out ResourceStats stats))
+            if (featureDictionary.TryGetValue(cellType, out FeatureStats stats))
             {
                 return stats;
             }
@@ -117,12 +119,12 @@ namespace CellNameSpace
         public void RefreshOverlaysPublic()
         {
             InitializeDictionaries();
-            Debug.Log($"[CellOverlayManager] Overlays refreshed. Resources: {resourceDictionary.Count}, Buildings: {buildingDictionary.Count}");
+            Debug.Log($"[CellOverlayManager] Overlays refreshed. Features: {featureDictionary.Count}, Buildings: {buildingDictionary.Count}");
             
-            // Выводим информацию о всех ресурсах
-            foreach (var kvp in resourceDictionary)
+            // Выводим информацию о всех фичах
+            foreach (var kvp in featureDictionary)
             {
-                Debug.Log($"[CellOverlayManager] Resource: {kvp.Key} -> {(kvp.Value != null ? kvp.Value.displayName : "NULL")}");
+                Debug.Log($"[CellOverlayManager] Feature: {kvp.Key} -> {(kvp.Value != null ? kvp.Value.displayName : "NULL")}");
             }
             
             // Выводим информацию о всех постройках
@@ -138,7 +140,7 @@ namespace CellNameSpace
         private void OnValidate()
         {
             // В Editor режиме обновляем словари при изменении в Inspector
-            if (!Application.isPlaying && (resourceMappings != null || buildingMappings != null))
+            if (!Application.isPlaying && (featureMappings != null || buildingMappings != null))
             {
                 // Не вызываем InitializeDictionaries здесь, чтобы не создавать словари в Editor
             }

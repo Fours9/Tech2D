@@ -35,6 +35,10 @@ public class BuildingStats : ScriptableObject
     [Header("Требования")]
     [Tooltip("Типы клеток, на которых можно строить эту постройку. Пустой список = можно строить везде.")]
     public List<CellType> allowedCellTypes = new List<CellType>();
+
+    [Header("Ресурсы (потребление/производство)")]
+    [Tooltip("Потребление и производство: напр. -5 wood, +5 board")]
+    public List<ResourceStatEntry> resourceEntries = new List<ResourceStatEntry>();
 }
 
 

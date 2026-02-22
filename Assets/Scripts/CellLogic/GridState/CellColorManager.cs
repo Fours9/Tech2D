@@ -11,16 +11,16 @@ namespace CellNameSpace
         // Для предотвращения избыточного логирования
         private static HashSet<CellType> _loggedErrors = new HashSet<CellType>();
         /// <summary>
-        /// Получает цвет для указанного типа клетки (из CellStats или fallback значения)
+        /// Получает цвет для указанного типа клетки (из CellTypeStats или fallback значения)
         /// </summary>
         /// <param name="cellType">Тип клетки</param>
         /// <returns>Цвет для данного типа</returns>
         public static Color GetColorForType(CellType cellType)
         {
-            // Пытаемся получить цвет из CellStats
-            if (CellStatsManager.Instance != null)
+            // Пытаемся получить цвет из CellTypeStats
+            if (CellTypeStatsManager.Instance != null)
             {
-                CellStats stats = CellStatsManager.Instance.GetCellStats(cellType);
+                CellTypeStats stats = CellTypeStatsManager.Instance.GetCellTypeStats(cellType);
                 if (stats != null)
                 {
                     return stats.baseColor;

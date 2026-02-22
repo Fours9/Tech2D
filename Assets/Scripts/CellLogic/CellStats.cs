@@ -1,30 +1,26 @@
-using UnityEngine;
-using CellNameSpace;
+using System.Collections.Generic;
 
-/// <summary>
-/// Данные типа клетки: статы движения, проходимость, визуал.
-/// Хранится как ScriptableObject-ассет.
-/// </summary>
-[CreateAssetMenu(fileName = "CellStats", menuName = "Tech2D/Cell Stats", order = 1)]
-public class CellStats : ScriptableObject
+namespace CellNameSpace
 {
-    [Header("Идентификатор")]
-    public string id;              // Внутренний ID (уникальный ключ, латиницей)
-    public string displayName;     // Имя для UI
-    [TextArea]
-    public string description;     // Описание
+    /// <summary>
+    /// Runtime-кеш рассчитанных статов клетки.
+    /// Результат агрегации CellTypeStats + FeatureStats + BuildingStats через StatsCalculator.
+    /// </summary>
+    public class CellStats
+    {
+        public int movementCost;
+        public bool isWalkable;
+        public Dictionary<string, float> resources = new Dictionary<string, float>();
 
-    [Header("Тип клетки")]
-    public CellType cellType;      // Enum тип для обратной совместимости
+        public CellStats()
+        {
+        }
 
-    [Header("Движение")]
-    public int movementCost = 1;   // Стоимость перемещения по клетке
-    public bool isWalkable = true; // Проходима ли клетка для юнитов
-
-    [Header("Визуал")]
-    public Material material;      // Материал для этого типа клетки (опционально)
-    public Color baseColor = Color.white; // Базовый цвет (используется, если material не задан)
+        public CellStats(int movementCost, bool isWalkable, Dictionary<string, float> resources = null)
+        {
+            this.movementCost = movementCost;
+            this.isWalkable = isWalkable;
+            this.resources = resources ?? new Dictionary<string, float>();
+        }
+    }
 }
-
-
-

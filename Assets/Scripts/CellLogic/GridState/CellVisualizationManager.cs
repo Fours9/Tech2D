@@ -112,21 +112,21 @@ namespace CellNameSpace
             if (cell.GetFogOfWarState() != FogOfWarState.Visible)
                 return;
             
-            ResourceStats resourceStats = cell.GetResourceStats();
+            FeatureStats featureStats = cell.GetFeatureStats();
             SpriteRenderer resourcesOverlay = cell.GetResourcesOverlay();
             
             if (resourcesOverlay == null)
                 return;
             
-            if (resourceStats != null && resourceStats.sprite != null)
+            if (featureStats != null && featureStats.sprite != null)
             {
-                // Применяем спрайт ресурса
-                resourcesOverlay.sprite = resourceStats.sprite;
+                // Применяем спрайт фичи
+                resourcesOverlay.sprite = featureStats.sprite;
                 resourcesOverlay.enabled = true;
                 
                 // Масштабируем спрайт под размер клетки
                 Vector2 cellSize = cell.GetCellSize();
-                cell.ScaleSpriteToCellSize(resourcesOverlay, resourceStats.sprite, cellSize);
+                cell.ScaleSpriteToCellSize(resourcesOverlay, featureStats.sprite, cellSize);
                 
                 // Обновляем позицию и масштаб ресурсов
                 cell.UpdateResourcePositionAndScale();

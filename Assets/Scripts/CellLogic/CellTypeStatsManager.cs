@@ -3,24 +3,24 @@ using System.Collections.Generic;
 using CellNameSpace;
 
 /// <summary>
-/// Централизованный менеджер для управления CellStats (ScriptableObject ассетами типов клеток).
+/// Централизованный менеджер для управления CellTypeStats (ScriptableObject ассетами типов клеток).
 /// Обеспечивает доступ к статам клеток по их типу (enum).
 /// </summary>
-public class CellStatsManager : MonoBehaviour
+public class CellTypeStatsManager : MonoBehaviour
 {
-    public static CellStatsManager Instance { get; private set; }
+    public static CellTypeStatsManager Instance { get; private set; }
 
     [System.Serializable]
-    public class CellStatsMapping
+    public class CellTypeStatsMapping
     {
         public CellType cellType;
-        public CellStats cellStats;
+        public CellTypeStats cellTypeStats;
     }
 
     [Header("Статы типов клеток")]
-    [SerializeField] private List<CellStatsMapping> cellStatsMappings = new List<CellStatsMapping>();
+    [SerializeField] private List<CellTypeStatsMapping> cellTypeStatsMappings = new List<CellTypeStatsMapping>();
 
-    private Dictionary<CellType, CellStats> cellStatsDictionary;
+    private Dictionary<CellType, CellTypeStats> cellTypeStatsDictionary;
 
     private void Awake()
     {
@@ -31,13 +31,13 @@ public class CellStatsManager : MonoBehaviour
         }
 
         Instance = this;
-        
+
         // Перемещаем GameObject в корень, если он дочерний (DontDestroyOnLoad работает только для корневых объектов)
         if (transform.parent != null)
         {
             transform.SetParent(null);
         }
-        
+
         DontDestroyOnLoad(gameObject);
         InitializeDictionary();
     }
@@ -47,30 +47,30 @@ public class CellStatsManager : MonoBehaviour
     /// </summary>
     private void InitializeDictionary()
     {
-        cellStatsDictionary = new Dictionary<CellType, CellStats>();
+        cellTypeStatsDictionary = new Dictionary<CellType, CellTypeStats>();
 
-        foreach (var mapping in cellStatsMappings)
+        foreach (var mapping in cellTypeStatsMappings)
         {
-            if (mapping.cellStats != null)
+            if (mapping.cellTypeStats != null)
             {
-                cellStatsDictionary[mapping.cellType] = mapping.cellStats;
+                cellTypeStatsDictionary[mapping.cellType] = mapping.cellTypeStats;
             }
         }
     }
 
     /// <summary>
-    /// Получает CellStats для указанного типа клетки
+    /// Получает CellTypeStats для указанного типа клетки
     /// </summary>
     /// <param name="cellType">Тип клетки</param>
-    /// <returns>CellStats для данного типа, или null если не найден</returns>
-    public CellStats GetCellStats(CellType cellType)
+    /// <returns>CellTypeStats для данного типа, или null если не найден</returns>
+    public CellTypeStats GetCellTypeStats(CellType cellType)
     {
-        if (cellStatsDictionary == null)
+        if (cellTypeStatsDictionary == null)
         {
             InitializeDictionary();
         }
 
-        if (cellStatsDictionary.TryGetValue(cellType, out CellStats stats))
+        if (cellTypeStatsDictionary.TryGetValue(cellType, out CellTypeStats stats))
         {
             return stats;
         }
@@ -79,11 +79,11 @@ public class CellStatsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Получает стоимость движения для типа клетки (из CellStats или fallback значения)
+    /// Получает стоимость движения для типа клетки (из CellTypeStats или fallback значения)
     /// </summary>
     public int GetMovementCost(CellType cellType)
     {
-        CellStats stats = GetCellStats(cellType);
+        CellTypeStats stats = GetCellTypeStats(cellType);
         if (stats != null)
         {
             return stats.movementCost;
@@ -108,11 +108,11 @@ public class CellStatsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Проверяет, проходима ли клетка (из CellStats или fallback значения)
+    /// Проверяет, проходима ли клетка (из CellTypeStats или fallback значения)
     /// </summary>
     public bool IsWalkable(CellType cellType)
     {
-        CellStats stats = GetCellStats(cellType);
+        CellTypeStats stats = GetCellTypeStats(cellType);
         if (stats != null)
         {
             return stats.isWalkable;
@@ -123,13 +123,10 @@ public class CellStatsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Обновляет словарь статов (вызывать после изменения cellStatsMappings в Inspector)
+    /// Обновляет словарь статов (вызывать после изменения cellTypeStatsMappings в Inspector)
     /// </summary>
-    public void RefreshCellStats()
+    public void RefreshCellTypeStats()
     {
         InitializeDictionary();
     }
 }
-
-
-

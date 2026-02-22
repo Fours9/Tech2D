@@ -199,37 +199,24 @@ public static class Pathfinder
     }
     
     /// <summary>
-    /// Проверяет, проходима ли клетка
-    /// Использует CellStatsManager, если доступен, иначе fallback на старые значения
-    /// Также учитывает список запрещенных типов клеток для конкретного юнита
+    /// Проверяет, проходима ли клетка.
+    /// Берёт данные из CellInfo (кеш).
+    /// Также учитывает список запрещенных типов клеток для конкретного юнита.
     /// </summary>
     private static bool IsWalkable(CellInfo cell, List<CellType> forbiddenCellTypes = null)
     {
         if (cell == null)
             return false;
-        
+
         CellType cellType = cell.GetCellType();
-        
+
         // Проверяем, не запрещен ли этот тип клетки для юнита
         if (forbiddenCellTypes != null && forbiddenCellTypes.Count > 0 && forbiddenCellTypes.Contains(cellType))
         {
             return false;
         }
-        
-        // Пытаемся использовать CellStatsManager
-        if (CellStatsManager.Instance != null)
-        {
-            return CellStatsManager.Instance.IsWalkable(cellType);
-        }
-        
-        // Fallback: Непроходимые типы клеток
-        List<CellType> unwalkableTypes = new List<CellType>
-        {
-            CellType.deep_water,
-            CellType.shallow
-        };
-        
-        return !unwalkableTypes.Contains(cellType);
+
+        return cell.GetIsWalkable();
     }
 
     /// <summary>
@@ -259,41 +246,14 @@ public static class Pathfinder
 
     /// <summary>
     /// Общая внутренняя реализация стоимости перемещения.
-    /// Использует CellStatsManager, если доступен, иначе fallback на старые значения
+    /// Берёт данные из CellInfo (кеш).
     /// </summary>
     private static int GetMovementCostInternal(CellInfo cell)
     {
         if (cell == null)
             return int.MaxValue;
 
-        CellType cellType = cell.GetCellType();
-        
-        // Пытаемся использовать CellStatsManager
-        if (CellStatsManager.Instance != null)
-        {
-            return CellStatsManager.Instance.GetMovementCost(cellType);
-        }
-
-        // Fallback: старые жестко прописанные значения
-        switch (cellType)
-        {
-            case CellType.field:
-                return 1; // Обычная земля
-            case CellType.forest:
-                return 2; // Лес — дороже
-            case CellType.desert:
-                return 2; // Пустыня — дороже
-            case CellType.mountain:
-                return 3; // Горы — самые дорогие (если вообще проходимы)
-
-            // Воды по идее непроходимы, но на всякий случай ставим очень большую цену
-            case CellType.deep_water:
-            case CellType.shallow:
-                return 1000;
-
-            default:
-                return 1;
-        }
+        return cell.GetMovementCost();
     }
     
     /// <summary>

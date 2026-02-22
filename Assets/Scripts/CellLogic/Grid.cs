@@ -357,7 +357,7 @@ namespace CellNameSpace
                 }
             }
             
-            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
+            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetFeature() / SetBuildingStats()
             
             // Создаем чанки после применения типов клеток
             // Игра будет возобновлена и IsGenerationComplete установлен после завершения создания всех чанков
@@ -398,7 +398,7 @@ namespace CellNameSpace
                 }
             }
             
-            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetResourceStats() / SetBuildingStats()
+            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetFeature() / SetBuildingStats()
             
             // Создаем чанки после применения типов клеток
             // Ждем завершения создания всех чанков перед возобновлением игры

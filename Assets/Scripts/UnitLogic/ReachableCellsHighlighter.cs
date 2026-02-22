@@ -210,22 +210,13 @@ public class ReachableCellsHighlighter : MonoBehaviour
         if (cell == null)
             return false;
 
-        CellType type = cell.GetCellType();
-        
         // Проверяем, не запрещен ли этот тип клетки для юнита
-        if (forbiddenCellTypes != null && forbiddenCellTypes.Contains(type))
+        if (forbiddenCellTypes != null && forbiddenCellTypes.Contains(cell.GetCellType()))
         {
             return false;
         }
-        
-        // Используем CellStatsManager, если доступен
-        if (CellStatsManager.Instance != null)
-        {
-            return CellStatsManager.Instance.IsWalkable(type);
-        }
-        
-        // Fallback: проверяем непроходимые типы
-        return type != CellType.deep_water && type != CellType.shallow;
+
+        return cell.GetIsWalkable();
     }
 }
 

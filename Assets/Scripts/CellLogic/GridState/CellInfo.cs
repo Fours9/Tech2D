@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using FogOfWar;
 
 namespace CellNameSpace
@@ -36,7 +37,8 @@ namespace CellNameSpace
         
         [Header("Данные клетки (не визуализация)")]
         private BuildingStats buildingStats = null; // Данные о постройке на клетке (может быть null)
-        private ResourceStats resourceStats = null; // Данные о ресурсе на клетке (может быть null)
+        private FeatureStats featureStats = null;   // Данные о фиче на клетке (может быть null)
+        private CellStats cachedCellStats = null;   // Кеш рассчитанных статов (пересчитывается при изменении CellType/Feature/Building)
         private Vector3 originalPosition; // Изначальная позиция клетки в мире
         private bool originalPositionSet = false; // Флаг, что изначальная позиция уже установлена
         private MaterialPropertyBlock materialPropertyBlock = null; // MaterialPropertyBlock для передачи параметров в шейдер
@@ -370,8 +372,25 @@ namespace CellNameSpace
             
             // Обновляем цвет при изменении типа
             UpdateCellColor(updateOverlays);
+
+            RecalculateStats();
         }
-        
+
+        /// <summary>
+        /// Пересчитывает CellStats из CellTypeStats, FeatureStats, BuildingStats.
+        /// Вызывается только из SetCellType, SetFeature, SetBuildingStats.
+        /// </summary>
+        private void RecalculateStats()
+        {
+            CellTypeStats cellTypeStats = null;
+            if (CellTypeStatsManager.Instance != null)
+            {
+                cellTypeStats = CellTypeStatsManager.Instance.GetCellTypeStats(cellType);
+            }
+
+            cachedCellStats = StatsCalculator.Calculate(cellTypeStats, featureStats, buildingStats);
+        }
+
         /// <summary>
         /// Обновляет цвет клетки в зависимости от её типа
         /// Вызывается автоматически при Initialize и SetCellType,
@@ -406,7 +425,7 @@ namespace CellNameSpace
                 CellVisualizationManager.ApplyOwnershipVisualization(this);
             }
             
-            // Устанавливаем ResourceStats и BuildingStats из CellOverlayManager
+            // Устанавливаем FeatureStats и BuildingStats из CellOverlayManager
             // Вызываем всегда, независимо от updateOverlays (это установка данных, не визуализация)
             // Визуализация применяется через CellVisualizationManager с учетом тумана войны
             if (cachedOverlayManager == null || !cachedOverlayManager.gameObject.activeInHierarchy)
@@ -416,10 +435,10 @@ namespace CellNameSpace
             
             if (cachedOverlayManager != null)
             {
-                ResourceStats resourceStats = cachedOverlayManager.GetResourceStats(cellType);
+                FeatureStats featureStats = cachedOverlayManager.GetFeatureStats(cellType);
                 BuildingStats buildingStats = cachedOverlayManager.GetBuildingStats(cellType);
                 
-                SetResourceStats(resourceStats);
+                SetFeature(featureStats);
                 SetBuildingStats(buildingStats);
             }
         }
@@ -616,7 +635,9 @@ namespace CellNameSpace
         public void SetBuildingStats(BuildingStats stats)
         {
             buildingStats = stats;
-            
+
+            RecalculateStats();
+
             // Визуализация применяется через CellVisualizationManager с учетом тумана войны
             CellVisualizationManager.ApplyBuildingVisualization(this);
         }
@@ -630,24 +651,58 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Устанавливает данные о ресурсе на клетке (данные, не визуализация)
+        /// Устанавливает фичу на клетке (данные, не визуализация)
         /// Вызывает визуализацию через CellVisualizationManager
         /// </summary>
-        /// <param name="stats">ResourceStats ресурса (может быть null для удаления)</param>
-        public void SetResourceStats(ResourceStats stats)
+        /// <param name="stats">FeatureStats фичи (может быть null для удаления)</param>
+        public void SetFeature(FeatureStats stats)
         {
-            resourceStats = stats;
-                
+            featureStats = stats;
+
+            RecalculateStats();
+
             // Визуализация применяется через CellVisualizationManager с учетом тумана войны
             CellVisualizationManager.ApplyResourceVisualization(this);
         }
-        
+
         /// <summary>
-        /// Получает данные о ресурсе на клетке
+        /// Получает фичу на клетке
         /// </summary>
-        public ResourceStats GetResourceStats()
+        public FeatureStats GetFeatureStats()
         {
-            return resourceStats;
+            return featureStats;
+        }
+
+        /// <summary>
+        /// Возвращает, проходима ли клетка (из кеша).
+        /// </summary>
+        public bool GetIsWalkable()
+        {
+            if (cachedCellStats == null)
+                RecalculateStats();
+            return cachedCellStats != null && cachedCellStats.isWalkable;
+        }
+
+        /// <summary>
+        /// Возвращает стоимость перемещения по клетке (из кеша).
+        /// </summary>
+        public int GetMovementCost()
+        {
+            if (cachedCellStats == null)
+                RecalculateStats();
+            return cachedCellStats != null ? cachedCellStats.movementCost : 1;
+        }
+
+        /// <summary>
+        /// Возвращает все ресурсы для дохода (из кеша, type != None).
+        /// </summary>
+        public Dictionary<string, float> GetResourcesForIncome()
+        {
+            if (cachedCellStats == null)
+                RecalculateStats();
+            if (cachedCellStats == null || cachedCellStats.resources == null)
+                return new Dictionary<string, float>();
+            return new Dictionary<string, float>(cachedCellStats.resources);
         }
         
         /// <summary>
