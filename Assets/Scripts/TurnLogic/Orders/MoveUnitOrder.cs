@@ -13,10 +13,9 @@ public class MoveUnitOrder : TurnOrder
     {
         this.unitController = unitController;
         this.targetCell = targetCell;
-
-        // Перемещения обычно должны выполняться одними из первых
-        Priority = 0;
     }
+
+    public override int OwnerId => unitController?.GetComponent<UnitInfo>()?.GetOwnerId() ?? 0;
 
     public override string GetDescription()
     {

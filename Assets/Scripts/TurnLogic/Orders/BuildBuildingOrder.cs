@@ -8,15 +8,16 @@ public class BuildBuildingOrder : TurnOrder
 {
     private readonly Vector2Int cellPosition;
     private readonly BuildingInfo buildingInfo;
+    private readonly int ownerId;
 
-    public BuildBuildingOrder(Vector2Int cellPosition, BuildingInfo buildingInfo)
+    public BuildBuildingOrder(Vector2Int cellPosition, BuildingInfo buildingInfo, int ownerId)
     {
         this.cellPosition = cellPosition;
         this.buildingInfo = buildingInfo;
-
-        // Строительство обычно происходит после перемещений/боёв
-        Priority = 10;
+        this.ownerId = ownerId;
     }
+
+    public override int OwnerId => ownerId;
 
     public override string GetDescription()
     {

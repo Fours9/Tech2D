@@ -10,6 +10,8 @@ public class PlayerSetupConfig
     public int id = 0;
     public string displayName = "Player";
     public Color color = Color.white;
+    [Tooltip("Раса игрока (обязательно).")]
+    public PlayerStats playerStats;
 }
 
 /// <summary>
@@ -31,11 +33,11 @@ public class GameSetup : MonoBehaviour
         var players = new List<PlayerInfo>();
         foreach (var c in playersConfig ?? new List<PlayerSetupConfig>())
         {
-            players.Add(new PlayerInfo(c.id, c.displayName ?? "Player", c.color));
+            players.Add(new PlayerInfo(c.id, c.displayName ?? "Player", c.color, c.playerStats));
         }
         if (players.Count == 0)
         {
-            players.Add(new PlayerInfo(0, "Player 1", new Color(0.2f, 0.4f, 0.9f)));
+            players.Add(new PlayerInfo(0, "Player 1", new Color(0.2f, 0.4f, 0.9f), null));
         }
 
         // Инициализируем кеши статов из FirstStatsManager

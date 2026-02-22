@@ -13,10 +13,9 @@ public abstract class TurnOrder
     public Guid Id { get; private set; } = Guid.NewGuid();
 
     /// <summary>
-    /// Приоритет исполнения приказа.
-    /// Меньшее значение = выполняется раньше.
+    /// Владелец приказа (ownerId = playerId).
     /// </summary>
-    public int Priority { get; protected set; } = 0;
+    public abstract int OwnerId { get; }
 
     /// <summary>
     /// Краткое описание приказа (для отладки/отображения в UI планирования).

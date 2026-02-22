@@ -1899,8 +1899,9 @@ GameObject:
   - component: {fileID: 1794283271}
   - component: {fileID: 1794283272}
   - component: {fileID: 1794283276}
-  - component: {fileID: 1794283274}
+  - component: {fileID: 1794283277}
   - component: {fileID: 1794283273}
+  - component: {fileID: 1794283274}
   - component: {fileID: 1794283275}
   m_Layer: 0
   m_Name: FirstStatsManager
@@ -1963,6 +1964,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1217c3ef107037847bf173f3b8d73da7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameSetup
+  playersConfig:
+  - id: 0
+    displayName: Player 1
+    color: {r: 1, g: 0.05197561, b: 0.0141509175, a: 1}
+    playerStats: {fileID: 11400000, guid: fd696382b26418c47a2b193dd84fd5e7, type: 2}
 --- !u!114 &1794283274
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2012,6 +2018,20 @@ MonoBehaviour:
     cellTypeStats: {fileID: 11400000, guid: 499ca0f124f0a794785ae8847fedf1c9, type: 2}
   - cellType: 5
     cellTypeStats: {fileID: 11400000, guid: 9aa4e015217e92e439ea95475ac4577e, type: 2}
+--- !u!114 &1794283277
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1794283270}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d967bf1497b8ba4bb6a9f712aa45075, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerStatsManager
+  playerStatsList:
+  - {fileID: 11400000, guid: fd696382b26418c47a2b193dd84fd5e7, type: 2}
 --- !u!1 &1887661415
 GameObject:
   m_ObjectHideFlags: 0

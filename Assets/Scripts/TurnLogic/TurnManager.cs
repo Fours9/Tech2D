@@ -38,10 +38,9 @@ public class TurnManager : MonoBehaviour
     [SerializeField] private ResourceManager resourceManager;
 
     /// <summary>
-    /// Очередь приказов текущего хода.
-    /// Пока один список; позже можно разделить по типам/приоритетам.
+    /// Приказы текущего хода по игрокам (ownerId → список приказов).
     /// </summary>
-    private readonly List<TurnOrder> currentOrders = new List<TurnOrder>();
+    private Dictionary<int, List<TurnOrder>> ordersByPlayer = new Dictionary<int, List<TurnOrder>>();
 
     private void Awake()
     {
@@ -119,23 +118,35 @@ public class TurnManager : MonoBehaviour
             return;
         }
 
-        // Если это приказ на перемещение юнита, удаляем предыдущие приказы
-        // перемещения для того же юнита из очереди текущего хода.
+        int ownerId = order.OwnerId;
+        PlayerInfo player = GetPlayerByOwnerId(ownerId);
+        int slots = player?.GetActionSlots() ?? 5;
+
+        if (!ordersByPlayer.TryGetValue(ownerId, out var list))
+        {
+            list = new List<TurnOrder>();
+            ordersByPlayer[ownerId] = list;
+        }
+
+        // Для MoveUnitOrder: заменяем предыдущий приказ того же юнита (освобождаем слот)
         if (order is MoveUnitOrder moveOrder)
         {
-            // Мы не хотим, чтобы один и тот же юнит имел несколько приказов движения:
-            // должна выполняться только последняя команда игрока.
-            int removed = currentOrders.RemoveAll(existing =>
+            list.RemoveAll(existing =>
                 existing is MoveUnitOrder existingMove &&
                 ReferenceEquals(
                     GetUnitControllerFromMove(existingMove),
                     GetUnitControllerFromMove(moveOrder)
                 )
             );
-
         }
 
-        currentOrders.Add(order);
+        if (list.Count >= slots)
+        {
+            Debug.Log($"TurnManager: Игрок {ownerId} исчерпал слоты ({slots}), приказ отклонён.");
+            return;
+        }
+
+        list.Add(order);
     }
 
     /// <summary>
@@ -200,33 +211,44 @@ public class TurnManager : MonoBehaviour
 
     /// <summary>
     /// Подготавливает очередь приказов текущего хода к исполнению.
-    /// Сами приказы исполняются по одному в Update.
+    /// Раунды по индексу действия, внутри раунда — по priorityPoints игроков (убывание).
     /// </summary>
     private void ResolveOrders()
     {
-        // Очищаем состояние прошлой фазы исполнения
         _pendingOrders.Clear();
         _activeOrder = null;
         _isResolvingOrders = false;
 
-        if (currentOrders.Count == 0)
+        if (ordersByPlayer.Count == 0)
         {
-            // Даже если приказов нет, окончание хода обработаем в Update,
-            // когда увидим, что очередь пуста.
             _isResolvingOrders = true;
             return;
         }
 
-        // Сортируем приказы по приоритету (чем меньше, тем раньше)
-        currentOrders.Sort((a, b) => a.Priority.CompareTo(b.Priority));
+        int maxRounds = 0;
+        foreach (var kvp in ordersByPlayer)
+            maxRounds = Mathf.Max(maxRounds, kvp.Value.Count);
 
-        // Переносим приказы в очередь для поочерёдного исполнения
-        _pendingOrders.AddRange(currentOrders);
-        currentOrders.Clear();
+        for (int round = 0; round < maxRounds; round++)
+        {
+            var playersInRound = new List<int>();
+            foreach (var kvp in ordersByPlayer)
+            {
+                if (kvp.Value.Count > round)
+                    playersInRound.Add(kvp.Key);
+            }
 
+            playersInRound.Sort((a, b) =>
+                (GetPlayerByOwnerId(b)?.GetPriorityPoints() ?? 0).CompareTo(
+                    GetPlayerByOwnerId(a)?.GetPriorityPoints() ?? 0));
+
+            foreach (int pid in playersInRound)
+                _pendingOrders.Add(ordersByPlayer[pid][round]);
+        }
+
+        ordersByPlayer.Clear();
         _activeOrder = null;
         _isResolvingOrders = true;
-
     }
 
     // ---- Новая логика поочерёдного исполнения приказов ----

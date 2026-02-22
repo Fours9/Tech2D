@@ -254,16 +254,23 @@ namespace CellNameSpace
             BuildingManager buildingManager = FindFirstObjectByType<BuildingManager>();
             if (buildingManager == null)
                 return;
-            
+
+            CityManager cityManager = FindFirstObjectByType<CityManager>();
+            CityInfo city = cityManager?.GetCityOwningCell(cellPosition);
+            if (city == null)
+                return; // Клетка не в территории города — строить нельзя
+
+            int ownerId = city.ownerId;
+
             // Проверяем, выбрана ли постройка
             BuildingInfo selectedBuilding = buildingManager.GetSelectedBuilding();
             if (selectedBuilding == null)
                 return;
-            
+
             // Если есть TurnManager и мы в фазе планирования — создаём приказ на строительство
             if (TurnManager.Instance != null && TurnManager.Instance.GetCurrentState() == TurnState.Planning)
             {
-                BuildBuildingOrder buildOrder = new BuildBuildingOrder(cellPosition, selectedBuilding);
+                BuildBuildingOrder buildOrder = new BuildBuildingOrder(cellPosition, selectedBuilding, ownerId);
                 TurnManager.Instance.EnqueueOrder(buildOrder);
                 Debug.Log($"CellClick: Приказ на строительство '{selectedBuilding.name}' добавлен в очередь для клетки ({cellPosition.x}, {cellPosition.y})");
             }

@@ -14,11 +14,22 @@ public class PlayerInfo
     [Header("Визуал")]
     public Color playerColor = Color.white; // Цвет игрока для визуализации территории
 
+    [Header("Очередь исполнения")]
+    public int priorityPoints = 0;
+    public int actionSlots = 5;
+
     [Header("Бонусы (Cell/City/Player)")]
     public List<ResourceBonus> bonuses = new List<ResourceBonus>();
 
+    [Header("Особые юниты расы")]
+    public List<UnitStats> specialUnits = new List<UnitStats>();
+
     /// <summary> Список бонусов игрока (Cell/City/Player). </summary>
     public List<ResourceBonus> Bonuses => bonuses;
+
+    public int GetActionSlots() => actionSlots;
+    public int GetPriorityPoints() => priorityPoints;
+    public System.Collections.Generic.IReadOnlyList<UnitStats> GetSpecialUnits() => specialUnits;
 
     // Кеши копий статов (не общие — у каждого игрока свои)
     private Dictionary<string, BuildingStats> buildingCache;
@@ -26,23 +37,46 @@ public class PlayerInfo
     private Dictionary<string, CellTypeStats> cellTypeCache;
 
     /// <summary>
-    /// Конструктор для создания игрока
+    /// Конструктор для создания игрока.
+    /// playerStats — раса (обязательно); если null — используются дефолты priorityPoints=0, actionSlots=5.
     /// </summary>
-    public PlayerInfo(int id, string name, Color color)
+    public PlayerInfo(int id, string name, Color color, PlayerStats playerStats)
     {
         playerId = id;
         playerName = name;
         playerColor = color;
+
+        if (playerStats != null)
+        {
+            priorityPoints = playerStats.priorityPoints;
+            actionSlots = playerStats.actionSlots;
+            if (playerStats.resourceBonuses != null)
+                bonuses = new List<ResourceBonus>(playerStats.resourceBonuses);
+            if (playerStats.specialUnits != null)
+                specialUnits = new List<UnitStats>(playerStats.specialUnits);
+        }
+        else
+        {
+            Debug.LogWarning($"PlayerInfo: игрок {id} без PlayerStats, используются дефолты.");
+            priorityPoints = 0;
+            actionSlots = 5;
+        }
+    }
+
+    /// <summary> Конструктор без PlayerStats (legacy). </summary>
+    public PlayerInfo(int id, string name, Color color)
+        : this(id, name, color, null)
+    {
     }
     
-    /// <summary>
-    /// Конструктор по умолчанию
-    /// </summary>
+    /// <summary> Конструктор по умолчанию. </summary>
     public PlayerInfo()
     {
         playerId = 0;
         playerName = "Player";
         playerColor = Color.white;
+        priorityPoints = 0;
+        actionSlots = 5;
     }
 
     // --- BuildingStats ---
