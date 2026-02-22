@@ -3,14 +3,13 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Менеджер ресурсов по владельцам (ownerId = игрок, варвары, независимые).
-/// Пул хранится по resourceId из ResourceStats.
+/// Пул хранится по resourceId из ResourceStats. Всегда передавайте ownerId.
 /// </summary>
 public class ResourceManager : MonoBehaviour
 {
     public static ResourceManager Instance { get; private set; }
 
     private Dictionary<int, Dictionary<string, float>> pools = new Dictionary<int, Dictionary<string, float>>();
-    private const int DefaultOwnerId = 0;
 
     private void Awake()
     {
@@ -66,10 +65,38 @@ public class ResourceManager : MonoBehaviour
         return true;
     }
 
-    public float Get(string resourceId) => Get(DefaultOwnerId, resourceId);
-    public void Add(string resourceId, float amount) => Add(DefaultOwnerId, resourceId, amount);
-    public bool CanAfford(string resourceId, float amount) => CanAfford(DefaultOwnerId, resourceId, amount);
-    public bool Spend(string resourceId, float amount) => Spend(DefaultOwnerId, resourceId, amount);
+    /// <summary>
+    /// Проверяет, хватает ли у ownerId ресурсов для списка затрат (build cost, unit cost).
+    /// value в записи — количество к трате (положительное).
+    /// </summary>
+    public bool CanAffordCost(int ownerId, List<ResourceStatEntry> cost)
+    {
+        if (cost == null) return true;
+        foreach (var e in cost)
+        {
+            if (e.resourceRef == null || string.IsNullOrEmpty(e.resourceRef.id)) continue;
+            float need = Mathf.Abs(e.value);
+            if (need <= 0f) continue;
+            if (Get(ownerId, e.resourceRef.id) < need) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Списывает ресурсы по списку затрат (build cost, unit cost, upkeep).
+    /// Вызывать только если CanAffordCost вернул true.
+    /// </summary>
+    public void SpendCost(int ownerId, List<ResourceStatEntry> cost)
+    {
+        if (cost == null) return;
+        foreach (var e in cost)
+        {
+            if (e.resourceRef == null || string.IsNullOrEmpty(e.resourceRef.id)) continue;
+            float amount = Mathf.Abs(e.value);
+            if (amount <= 0f) continue;
+            Spend(ownerId, e.resourceRef.id, amount);
+        }
+    }
 }
 
 
