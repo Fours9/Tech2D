@@ -90,14 +90,15 @@ public class CityManager : MonoBehaviour
             Debug.LogWarning("CityManager: BuildingStats центра города не назначен!");
         }
         
-        // Создаем информацию о городе
+        // Создаем информацию о городе; владелец = владелец юнита
         CityInfo cityInfo = new CityInfo
         {
             position = cityPosition,
             cell = targetCell,
             name = $"Город {cities.Count + 1}",
             expansionRadius = 1,
-            visionRadius = defaultCityVisionRadius
+            visionRadius = defaultCityVisionRadius,
+            ownerId = unit.GetOwnerId()
         };
         
         // Добавляем центр города в список принадлежащих клеток
@@ -418,6 +419,15 @@ public class CityManager : MonoBehaviour
 }
 
 /// <summary>
+/// Результат опроса города: агрегированные ресурсы и бонусы уровня Player для передачи игроку.
+/// </summary>
+public class CityResourceIncomeResult
+{
+    public List<ResourceIncomeEntry> resources = new List<ResourceIncomeEntry>();
+    public List<ResourceBonus> playerBonusesToPass = new List<ResourceBonus>();
+}
+
+/// <summary>
 /// Информация о городе
 /// </summary>
 [System.Serializable]
@@ -429,6 +439,75 @@ public class CityInfo
     public HashSet<Vector2Int> ownedCells = new HashSet<Vector2Int>(); // Клетки, принадлежащие городу
     public int expansionRadius = 1; // Текущий радиус расширения (1 = только центр, 2 = центр + соседи, и т.д.)
     public int visionRadius = 2; // Радиус видимости для тумана войны (в клетках от каждой клетки города)
-    public PlayerInfo player; // Игрок, которому принадлежит город
+    public PlayerInfo player; // Игрок, которому принадлежит город (для UI, цвета)
+    public int ownerId = 0; // Владелец города (игрок, варвары, независимые); при создании из settler = unit.ownerId
+    public List<ResourceBonus> resourceBonuses = new List<ResourceBonus>(); // Бонусы уровня City (и Cell при опросе клеток)
+
+    /// <summary>
+    /// Опрашивает клетки города, применяет бонусы по уровням, возвращает агрегированные ресурсы и player-бонусы.
+    /// </summary>
+    public CityResourceIncomeResult GetResourceIncome(CellNameSpace.Grid grid)
+    {
+        var result = new CityResourceIncomeResult();
+        if (grid == null) return result;
+
+        var aggregated = new Dictionary<string, ResourceIncomeEntry>(); // resourceId -> entry (we'll sum amount)
+        var cityBonusesFromCells = new List<ResourceBonus>();
+
+        foreach (Vector2Int pos in ownedCells)
+        {
+            CellInfo cell = grid.GetCellInfoAt(pos.x, pos.y);
+            if (cell == null) continue;
+
+            List<ResourceIncomeEntry> cellResources = cell.GetResourceIncomeList();
+            List<ResourceBonus> cellBonuses = cell.GetBonusList();
+
+            // Cell-level: apply to each resource from cell bonuses + player + city (Cell-level only)
+            var cellLevelBonuses = new List<ResourceBonus>();
+            foreach (var b in cellBonuses) if (b.applicationLevel == BonusApplicationLevel.Cell) cellLevelBonuses.Add(b);
+            if (player?.Bonuses != null) foreach (var b in player.Bonuses) if (b.applicationLevel == BonusApplicationLevel.Cell) cellLevelBonuses.Add(b);
+            foreach (var b in resourceBonuses) if (b.applicationLevel == BonusApplicationLevel.Cell) cellLevelBonuses.Add(b);
+
+            foreach (var entry in cellResources)
+            {
+                float amount = ApplyBonusesToAmount(entry.amount, entry.resourceId, entry.resourceStatType, cellLevelBonuses);
+                if (!aggregated.TryGetValue(entry.resourceId, out ResourceIncomeEntry existing))
+                    aggregated[entry.resourceId] = new ResourceIncomeEntry(entry.resourceId, amount, entry.displayName, entry.resourceStatType, entry.resourceStats);
+                else
+                    aggregated[entry.resourceId] = new ResourceIncomeEntry(entry.resourceId, existing.amount + amount, existing.displayName, existing.resourceStatType, existing.resourceStats);
+            }
+
+            foreach (var b in cellBonuses)
+            {
+                if (b.applicationLevel == BonusApplicationLevel.City) cityBonusesFromCells.Add(b);
+                if (b.applicationLevel == BonusApplicationLevel.Player) result.playerBonusesToPass.Add(b);
+            }
+        }
+
+        // City-level: apply to aggregated (cityBonusesFromCells + city's own resourceBonuses with City level)
+        var cityLevelBonuses = new List<ResourceBonus>(cityBonusesFromCells);
+        foreach (var b in resourceBonuses) if (b.applicationLevel == BonusApplicationLevel.City) cityLevelBonuses.Add(b);
+
+        result.resources = new List<ResourceIncomeEntry>();
+        foreach (var kvp in aggregated)
+        {
+            float amount = ApplyBonusesToAmount(kvp.Value.amount, kvp.Key, kvp.Value.resourceStatType, cityLevelBonuses);
+            result.resources.Add(new ResourceIncomeEntry(kvp.Value.resourceId, amount, kvp.Value.displayName, kvp.Value.resourceStatType, kvp.Value.resourceStats));
+        }
+
+        return result;
+    }
+
+    private static float ApplyBonusesToAmount(float amount, string resourceId, ResourceStatType resourceStatType, List<ResourceBonus> bonuses)
+    {
+        if (bonuses == null || bonuses.Count == 0) return amount;
+        float sumMod = 0f;
+        foreach (var b in bonuses)
+        {
+            bool match = b.targetResource != null ? (b.targetResource.id == resourceId) : b.targetType == resourceStatType;
+            if (match) sumMod += b.modifier;
+        }
+        return amount * (1f + sumMod);
+    }
 }
 

@@ -23,6 +23,12 @@ public class FeatureStats : ScriptableObject
     public List<ResourceStatEntry> resourceEntries = new List<ResourceStatEntry>();
 
     [Header("Модификаторы ресурсов")]
-    [Tooltip("Модификатор в [-1, ∞), напр. -0.15 для -15% к указанному ресурсу")]
+    [Tooltip("В каждой записи: ИЛИ ссылка на ассет (resourceRef), ИЛИ тип (targetType). Модификатор в [-1, ∞).")]
     public List<ResourceStatModifier> resourceModifiers = new List<ResourceStatModifier>();
+
+    [Header("Бонусы (Cell/City/Player)")]
+    [Tooltip("В каждой записи: ИЛИ ссылка на ассет (targetResource), ИЛИ тип (targetType). Передаются при опросе городами.")]
+    public List<ResourceBonus> resourceBonuses = new List<ResourceBonus>();
+
+    public List<ResourceBonus> GetResourceBonuses() => resourceBonuses ?? new List<ResourceBonus>();
 }

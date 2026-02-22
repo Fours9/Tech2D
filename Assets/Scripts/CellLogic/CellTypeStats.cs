@@ -27,12 +27,18 @@ public class CellTypeStats : ScriptableObject
     public Color baseColor = Color.white; // Базовый цвет (используется, если material не задан)
 
     [Header("Модификаторы ресурсов")]
-    [Tooltip("Модификатор в диапазоне [-1, ∞), напр. -0.15 для -15% к ресурсам типа Plant")]
+    [Tooltip("В каждой записи указать ИЛИ ссылку на ассет ресурса (resourceRef), ИЛИ тип (targetType). Модификатор в [-1, ∞).")]
     public List<ResourceStatModifier> resourceModifiers = new List<ResourceStatModifier>();
 
     [Header("Ресурсы по умолчанию")]
     [Tooltip("Базовые значения ресурсов для пустой клетки, напр. food +10")]
     public List<ResourceStatEntry> defaultResources = new List<ResourceStatEntry>();
+
+    [Header("Бонусы (Cell/City/Player)")]
+    [Tooltip("В каждой записи: ИЛИ ссылка на ассет (targetResource), ИЛИ тип (targetType). Передаются при опросе городами.")]
+    public List<ResourceBonus> resourceBonuses = new List<ResourceBonus>();
+
+    public List<ResourceBonus> GetResourceBonuses() => resourceBonuses ?? new List<ResourceBonus>();
 }
 
 /// <summary>

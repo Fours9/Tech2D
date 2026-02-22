@@ -13,6 +13,9 @@ public class UnitInfo : MonoBehaviour
     [Header("Тип юнита и статы")]
     [SerializeField] private UnitStats unitStats; // ScriptableObject с данными типа юнита
 
+    [Header("Владение")]
+    [SerializeField] private int ownerId = 0; // Владелец (игрок, варвары, независимые); можно передавать другому
+
     [Header("Состояние движения")]
     [SerializeField] private int currentMovementPoints = 0; // Оставшиеся очки движения на текущий ход
     
@@ -66,6 +69,12 @@ public class UnitInfo : MonoBehaviour
     {
         return gridX >= 0 && gridY >= 0;
     }
+
+    /// <summary> Получить владельца юнита (ownerId). </summary>
+    public int GetOwnerId() => ownerId;
+
+    /// <summary> Установить владельца юнита. </summary>
+    public void SetOwnerId(int id) { ownerId = id; }
 
     /// <summary>
     /// Получить статы / тип юнита (ScriptableObject).

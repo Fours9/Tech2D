@@ -13,9 +13,9 @@ public static class StatsCalculator
     /// totalModifier = сумма модификаторов из CellTypeStats, FeatureStats, BuildingStats по resourceRef.id
     /// Формула для movementCost: cellType_base + buildingStats.movementCostDelta
     /// </summary>
-    public static CellNameSpace.CellStats Calculate(CellTypeStats cellTypeStats, FeatureStats featureStats, BuildingStats buildingStats)
+    public static CellNameSpace.CachedCellStats Calculate(CellTypeStats cellTypeStats, FeatureStats featureStats, BuildingStats buildingStats)
     {
-        var result = new CellNameSpace.CellStats();
+        var result = new CellNameSpace.CachedCellStats();
 
         if (cellTypeStats == null)
         {
@@ -63,11 +63,19 @@ public static class StatsCalculator
             float cellTypeDefault = GetValueFromList(cellTypeStats.defaultResources, resourceId);
             float buildingDelta = GetValueFromList(buildingStats?.resourceEntries, resourceId);
 
-            float totalModifier = GetModifierForResource(cellTypeStats, featureStats, buildingStats, resourceId);
+            ResourceStatType resourceType = GetResourceTypeForId(cellTypeStats, featureStats, buildingStats, resourceId);
+            float totalModifier = GetModifierForResource(cellTypeStats, featureStats, buildingStats, resourceId, resourceType);
             float baseValue = featureValue + cellTypeDefault;
             float value = baseValue * (1f + totalModifier) + buildingDelta;
             result.resources[resourceId] = value;
         }
+
+        // Агрегируем бонусы (Cell/City/Player) из трёх источников
+        if (result.bonuses == null) result.bonuses = new List<ResourceBonus>();
+        result.bonuses.Clear();
+        AddBonusesFrom(result.bonuses, cellTypeStats?.GetResourceBonuses());
+        AddBonusesFrom(result.bonuses, featureStats?.GetResourceBonuses());
+        AddBonusesFrom(result.bonuses, buildingStats?.GetResourceBonuses());
 
         // movementCost: cellType_base + buildingStats.movementCostDelta
         int movementBase = cellTypeStats.movementCost;
@@ -75,6 +83,27 @@ public static class StatsCalculator
         result.movementCost = Mathf.Max(1, movementBase + movementDelta);
 
         return result;
+    }
+
+    private static void AddBonusesFrom(List<ResourceBonus> target, List<ResourceBonus> source)
+    {
+        if (source == null) return;
+        foreach (var b in source)
+            target.Add(b);
+    }
+
+    private static ResourceStatType GetResourceTypeForId(CellTypeStats cellTypeStats, FeatureStats featureStats, BuildingStats buildingStats, string resourceId)
+    {
+        if (cellTypeStats?.defaultResources != null)
+            foreach (var e in cellTypeStats.defaultResources)
+                if (e.resourceRef != null && e.resourceRef.id == resourceId) return e.resourceRef.type;
+        if (featureStats?.resourceEntries != null)
+            foreach (var e in featureStats.resourceEntries)
+                if (e.resourceRef != null && e.resourceRef.id == resourceId) return e.resourceRef.type;
+        if (buildingStats?.resourceEntries != null)
+            foreach (var e in buildingStats.resourceEntries)
+                if (e.resourceRef != null && e.resourceRef.id == resourceId) return e.resourceRef.type;
+        return ResourceStatType.None;
     }
 
     private static float GetValueFromList(List<ResourceStatEntry> list, string resourceId)
@@ -89,14 +118,14 @@ public static class StatsCalculator
         return sum;
     }
 
-    private static float GetModifierForResource(CellTypeStats cellTypeStats, FeatureStats featureStats, BuildingStats buildingStats, string resourceId)
+    private static float GetModifierForResource(CellTypeStats cellTypeStats, FeatureStats featureStats, BuildingStats buildingStats, string resourceId, ResourceStatType resourceType)
     {
         float total = 0f;
         if (cellTypeStats?.resourceModifiers != null)
         {
             foreach (var m in cellTypeStats.resourceModifiers)
             {
-                if (m.resourceRef != null && m.resourceRef.id == resourceId)
+                if (AppliesToResource(m, resourceId, resourceType))
                     total += m.modifier;
             }
         }
@@ -104,7 +133,7 @@ public static class StatsCalculator
         {
             foreach (var m in featureStats.resourceModifiers)
             {
-                if (m.resourceRef != null && m.resourceRef.id == resourceId)
+                if (AppliesToResource(m, resourceId, resourceType))
                     total += m.modifier;
             }
         }
@@ -112,10 +141,36 @@ public static class StatsCalculator
         {
             foreach (var m in buildingStats.resourceModifiers)
             {
-                if (m.resourceRef != null && m.resourceRef.id == resourceId)
+                if (AppliesToResource(m, resourceId, resourceType))
                     total += m.modifier;
             }
         }
         return total;
+    }
+
+    private static bool AppliesToResource(ResourceStatModifier m, string resourceId, ResourceStatType resourceType)
+    {
+        if (m.resourceRef != null && !string.IsNullOrEmpty(m.resourceRef.id))
+            return m.resourceRef.id == resourceId;
+        if (m.targetType != ResourceStatType.None)
+            return m.targetType == resourceType;
+        return false;
+    }
+
+    /// <summary>
+    /// Возвращает ResourceStats для resourceId из первых трёх источников (для displayName, type в ResourceIncomeEntry).
+    /// </summary>
+    public static ResourceStats GetResourceStatsForId(CellTypeStats cellTypeStats, FeatureStats featureStats, BuildingStats buildingStats, string resourceId)
+    {
+        if (cellTypeStats?.defaultResources != null)
+            foreach (var e in cellTypeStats.defaultResources)
+                if (e.resourceRef != null && e.resourceRef.id == resourceId) return e.resourceRef;
+        if (featureStats?.resourceEntries != null)
+            foreach (var e in featureStats.resourceEntries)
+                if (e.resourceRef != null && e.resourceRef.id == resourceId) return e.resourceRef;
+        if (buildingStats?.resourceEntries != null)
+            foreach (var e in buildingStats.resourceEntries)
+                if (e.resourceRef != null && e.resourceRef.id == resourceId) return e.resourceRef;
+        return null;
     }
 }

@@ -38,7 +38,7 @@ namespace CellNameSpace
         [Header("Данные клетки (не визуализация)")]
         private BuildingStats buildingStats = null; // Данные о постройке на клетке (может быть null)
         private FeatureStats featureStats = null;   // Данные о фиче на клетке (может быть null)
-        private CellStats cachedCellStats = null;   // Кеш рассчитанных статов (пересчитывается при изменении CellType/Feature/Building)
+        private CachedCellStats cachedCellStats = null;   // Кеш рассчитанных статов (пересчитывается при изменении CellType/Feature/Building)
         private Vector3 originalPosition; // Изначальная позиция клетки в мире
         private bool originalPositionSet = false; // Флаг, что изначальная позиция уже установлена
         private MaterialPropertyBlock materialPropertyBlock = null; // MaterialPropertyBlock для передачи параметров в шейдер
@@ -703,6 +703,41 @@ namespace CellNameSpace
             if (cachedCellStats == null || cachedCellStats.resources == null)
                 return new Dictionary<string, float>();
             return new Dictionary<string, float>(cachedCellStats.resources);
+        }
+
+        /// <summary>
+        /// Возвращает список ресурсов для дохода (resourceId, amount, displayName, resourceStatType, resourceStats) из кеша.
+        /// </summary>
+        public List<ResourceIncomeEntry> GetResourceIncomeList()
+        {
+            if (cachedCellStats == null)
+                RecalculateStats();
+            if (cachedCellStats == null || cachedCellStats.resources == null)
+                return new List<ResourceIncomeEntry>();
+            CellTypeStats cellTypeStats = (CellTypeStatsManager.Instance != null) ? CellTypeStatsManager.Instance.GetCellTypeStats(cellType) : null;
+            var list = new List<ResourceIncomeEntry>();
+            foreach (var kvp in cachedCellStats.resources)
+            {
+                string rid = kvp.Key;
+                float amount = kvp.Value;
+                ResourceStats rs = StatsCalculator.GetResourceStatsForId(cellTypeStats, featureStats, buildingStats, rid);
+                string displayName = rs != null ? rs.displayName : "";
+                ResourceStatType rtype = rs != null ? rs.type : ResourceStatType.None;
+                list.Add(new ResourceIncomeEntry(rid, amount, displayName, rtype, rs));
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Возвращает список бонусов (Cell/City/Player) из кеша клетки.
+        /// </summary>
+        public List<ResourceBonus> GetBonusList()
+        {
+            if (cachedCellStats == null)
+                RecalculateStats();
+            if (cachedCellStats == null || cachedCellStats.bonuses == null)
+                return new List<ResourceBonus>();
+            return new List<ResourceBonus>(cachedCellStats.bonuses);
         }
         
         /// <summary>

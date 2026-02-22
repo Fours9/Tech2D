@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using UnityEngine;
+using CellNameSpace;
 
 /// <summary>
 /// Состояния хода
@@ -275,91 +276,105 @@ public class TurnManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Применяет экономику конца хода: доход от городов и построек.
+    /// Применяет экономику конца хода: городоцентричная модель — города опрашивают клетки, доход начисляется владельцам с учётом бонусов.
     /// </summary>
     private void ApplyEndTurnEconomy()
     {
         if (resourceManager == null)
-        {
             resourceManager = FindFirstObjectByType<ResourceManager>();
-        }
-
         if (resourceManager == null)
         {
             Debug.LogWarning("TurnManager: ResourceManager не найден, экономика конца хода пропущена");
             return;
         }
 
-        int goldIncome = 0;
-        int foodIncome = 0;
-        int materialsIncome = 0;
+        if (cityManager == null)
+            cityManager = FindFirstObjectByType<CityManager>();
+        if (cityManager == null) return;
 
-        // Доход от городов: по 1 золоту за город (для начала)
-        if (cityManager != null)
+        CellNameSpace.Grid grid = FindFirstObjectByType<CellNameSpace.Grid>();
+        if (grid == null)
         {
-            var allCities = cityManager.GetAllCities();
-            goldIncome += allCities.Count;
+            Debug.LogWarning("TurnManager: Grid не найден, экономика конца хода пропущена");
+            return;
         }
 
-        // Доход от построек
-        if (buildingManager != null)
+        var allCities = cityManager.GetAllCities();
+        var resourcesByOwner = new Dictionary<int, List<ResourceIncomeEntry>>();
+        var playerBonusesByOwner = new Dictionary<int, List<ResourceBonus>>();
+
+        foreach (var kvp in allCities)
         {
-            var placed = buildingManager.GetAllPlacedBuildings();
-            foreach (var kvp in placed)
+            CityInfo city = kvp.Value;
+            if (city == null) continue;
+
+            int ownerId = city.ownerId;
+            CityResourceIncomeResult cityResult = city.GetResourceIncome(grid);
+
+            if (!resourcesByOwner.ContainsKey(ownerId))
             {
-                BuildingInfo building = kvp.Value;
-                if (building == null)
-                    continue;
+                resourcesByOwner[ownerId] = new List<ResourceIncomeEntry>();
+                playerBonusesByOwner[ownerId] = new List<ResourceBonus>();
+            }
 
-                BuildingType buildingType = building.GetBuildingType();
+            foreach (var e in cityResult.resources)
+                resourcesByOwner[ownerId].Add(e);
+            foreach (var b in cityResult.playerBonusesToPass)
+                playerBonusesByOwner[ownerId].Add(b);
+        }
 
-                // Пытаемся использовать BuildingStats из самого BuildingInfo
-                if (building.buildingStats != null)
+        foreach (int ownerId in resourcesByOwner.Keys)
+        {
+            List<ResourceIncomeEntry> list = resourcesByOwner[ownerId];
+            var playerBonuses = new List<ResourceBonus>(playerBonusesByOwner[ownerId]);
+            PlayerInfo ownerPlayer = GetPlayerByOwnerId(ownerId);
+            if (ownerPlayer?.Bonuses != null)
+                foreach (var b in ownerPlayer.Bonuses)
+                    if (b.applicationLevel == BonusApplicationLevel.Player)
+                        playerBonuses.Add(b);
+
+            var sumByResourceId = new Dictionary<string, (float amount, ResourceStatType type)>();
+            foreach (var e in list)
+            {
+                if (!sumByResourceId.ContainsKey(e.resourceId))
+                    sumByResourceId[e.resourceId] = (0f, e.resourceStatType);
+                var t = sumByResourceId[e.resourceId];
+                sumByResourceId[e.resourceId] = (t.amount + e.amount, t.type);
+            }
+
+            var aggregated = new Dictionary<string, float>();
+            foreach (var kv in sumByResourceId)
+            {
+                float sumMod = 0f;
+                foreach (var b in playerBonuses)
                 {
-                    goldIncome += building.buildingStats.incomeGold;
-                    foodIncome += building.buildingStats.incomeFood;
-                    materialsIncome += building.buildingStats.incomeMaterials;
-                    continue;
+                    bool match = b.targetResource != null ? (b.targetResource.id == kv.Key) : b.targetType == kv.Value.type;
+                    if (match) sumMod += b.modifier;
                 }
+                aggregated[kv.Key] = kv.Value.amount * (1f + sumMod);
+            }
 
-                // Пытаемся использовать BuildingStatsManager
-                if (BuildingStatsManager.Instance != null)
+            foreach (var kv in aggregated)
+            {
+                if (ResourceManager.TryGetResourceType(kv.Key, out ResourceType type))
                 {
-                    BuildingStats stats = BuildingStatsManager.Instance.GetBuildingStats(buildingType);
-                    if (stats != null)
-                    {
-                        goldIncome += stats.incomeGold;
-                        foodIncome += stats.incomeFood;
-                        materialsIncome += stats.incomeMaterials;
-                        continue;
-                    }
-                }
-
-                // Fallback: старые жестко прописанные значения
-                switch (buildingType)
-                {
-                    case BuildingType.Farm:
-                        foodIncome += 1;
-                        break;
-                    case BuildingType.Mine:
-                    case BuildingType.LumberMill:
-                    case BuildingType.Quarry:
-                        materialsIncome += 1;
-                        break;
-                    case BuildingType.Windmill:
-                        foodIncome += 1;
-                        break;
+                    int rounded = Mathf.RoundToInt(kv.Value);
+                    if (rounded != 0)
+                        resourceManager.Add(ownerId, type, rounded);
                 }
             }
         }
+    }
 
-        if (goldIncome != 0)
-            resourceManager.Add(ResourceType.Gold, goldIncome);
-        if (foodIncome != 0)
-            resourceManager.Add(ResourceType.Food, foodIncome);
-        if (materialsIncome != 0)
-            resourceManager.Add(ResourceType.Materials, materialsIncome);
-
+    private PlayerInfo GetPlayerByOwnerId(int ownerId)
+    {
+        if (cityManager == null) return null;
+        foreach (var kvp in cityManager.GetAllCities())
+        {
+            if (kvp.Value?.player != null && kvp.Value.player.playerId == ownerId)
+                return kvp.Value.player;
+        }
+        return null;
     }
 
     /// <summary>
