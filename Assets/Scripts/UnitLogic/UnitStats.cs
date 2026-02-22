@@ -28,8 +28,10 @@ public class UnitStats : ScriptableObject
     public int visionRadius = 0; // 0 = использовать значение по умолчанию
 
     [Header("Экономика")]
-    public int costGold = 10;
-    public int upkeepGold = 1;
+    [Tooltip("Стоимость найма: ResourceStats + количество (напр. Food -10, Wood -5).")]
+    public List<ResourceStatEntry> cost = new List<ResourceStatEntry>();
+    [Tooltip("Содержание за ход: ResourceStats + количество (напр. Food -1).")]
+    public List<ResourceStatEntry> upkeep = new List<ResourceStatEntry>();
     
     [Header("Ограничения движения")]
     [Tooltip("Типы клеток, по которым этот юнит не может перемещаться. Пустой список = нет ограничений.")]

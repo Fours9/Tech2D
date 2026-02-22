@@ -45,7 +45,8 @@ public struct ResourceIncomeEntry
 }
 
 /// <summary>
-/// Бонус к ресурсу: цель — ИЛИ ссылка на ассет ресурса, ИЛИ тип (Plant/RawMaterial). Множитель и уровень применения.
+/// Бонус к ресурсу: цель — ИЛИ ссылка на ассет ресурса, ИЛИ тип (Plant/RawMaterial).
+/// Может быть плоским (+5), процентным (+15%) или обоими. Формула: (amount + sumFlat) * (1 + sumPercent).
 /// </summary>
 [Serializable]
 public struct ResourceBonus
@@ -54,16 +55,26 @@ public struct ResourceBonus
     public ResourceStats targetResource;
     [Tooltip("Тип ресурсов (Plant, RawMaterial). Используется, если targetResource не задан.")]
     public ResourceStatType targetType;
-    public float modifier;                // напр. 0.15 для +15%
+    [Tooltip("Плоский бонус: добавляется к значению (напр. +5).")]
+    public float flatValue;
+    [Tooltip("Процентный бонус: 0.15 = +15%. Применяется после flat.")]
+    public float percentValue;
+    [Tooltip("Устаревшее: если percentValue == 0, используется как процент (0.15 = +15%).")]
+    public float modifier;
     public BonusApplicationLevel applicationLevel;
 
-    public ResourceBonus(ResourceStats targetResource, ResourceStatType targetType, float modifier, BonusApplicationLevel applicationLevel)
+    public ResourceBonus(ResourceStats targetResource, ResourceStatType targetType, float flatValue, float percentValue, BonusApplicationLevel applicationLevel)
     {
         this.targetResource = targetResource;
         this.targetType = targetType;
-        this.modifier = modifier;
+        this.flatValue = flatValue;
+        this.percentValue = percentValue;
+        this.modifier = 0f;
         this.applicationLevel = applicationLevel;
     }
+
+    /// <summary> Эффективный процент для применения (percentValue или legacy modifier). </summary>
+    public float EffectivePercent => percentValue != 0f ? percentValue : modifier;
 }
 
 /// <summary>

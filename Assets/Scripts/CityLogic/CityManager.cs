@@ -524,13 +524,16 @@ public class CityInfo
     private static float ApplyBonusesToAmount(float amount, string resourceId, ResourceStatType resourceStatType, List<ResourceBonus> bonuses)
     {
         if (bonuses == null || bonuses.Count == 0) return amount;
-        float sumMod = 0f;
+        float sumFlat = 0f;
+        float sumPercent = 0f;
         foreach (var b in bonuses)
         {
             bool match = b.targetResource != null ? (b.targetResource.id == resourceId) : b.targetType == resourceStatType;
-            if (match) sumMod += b.modifier;
+            if (!match) continue;
+            sumFlat += b.flatValue;
+            sumPercent += b.EffectivePercent;
         }
-        return amount * (1f + sumMod);
+        return (amount + sumFlat) * (1f + sumPercent);
     }
 }
 

@@ -1264,7 +1264,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7543fd556a604ec449934a282d5e1051, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingPlacementButton
-  buildingType: 0
+  buildingId: house
+  buildingStatsDirect: {fileID: 0}
   button: {fileID: 668596955}
   buildingManager: {fileID: 16604956}
 --- !u!114 &668596955
@@ -1938,9 +1939,6 @@ MonoBehaviour:
   buildingStatsList:
   - {fileID: 11400000, guid: 7265159506c62de4e90c602201b6fec0, type: 2}
   - {fileID: 11400000, guid: 65a88b4427a95614f8baa336d6ff87c3, type: 2}
-  resourceStatsList:
-  - {fileID: 11400000, guid: ab35a71fce6eb194eaf2c2822a1df988, type: 2}
-  - {fileID: 11400000, guid: c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3, type: 2}
   featureStatsList:
   - {fileID: 11400000, guid: 7b6b8cd1d5a503946861ca25b9dfd7b7, type: 2}
   - {fileID: 11400000, guid: a3127a0fc30d3f84fa02f3b2da6c59b5, type: 2}
@@ -1951,6 +1949,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4bd84b5305030bc4180269dbdbe4fe35, type: 2}
   - {fileID: 11400000, guid: 9aa4e015217e92e439ea95475ac4577e, type: 2}
   - {fileID: 11400000, guid: 57a45f904439f7041bb5cc1b11dc0e28, type: 2}
+  resourceStatsList:
+  - {fileID: 11400000, guid: ab35a71fce6eb194eaf2c2822a1df988, type: 2}
 --- !u!114 &1794283273
 MonoBehaviour:
   m_ObjectHideFlags: 0

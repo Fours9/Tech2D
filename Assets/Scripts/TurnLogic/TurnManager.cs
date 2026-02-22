@@ -345,13 +345,16 @@ public class TurnManager : MonoBehaviour
             var aggregated = new Dictionary<string, float>();
             foreach (var kv in sumByResourceId)
             {
-                float sumMod = 0f;
+                float sumFlat = 0f;
+                float sumPercent = 0f;
                 foreach (var b in playerBonuses)
                 {
                     bool match = b.targetResource != null ? (b.targetResource.id == kv.Key) : b.targetType == kv.Value.type;
-                    if (match) sumMod += b.modifier;
+                    if (!match) continue;
+                    sumFlat += b.flatValue;
+                    sumPercent += b.EffectivePercent;
                 }
-                aggregated[kv.Key] = kv.Value.amount * (1f + sumMod);
+                aggregated[kv.Key] = (kv.Value.amount + sumFlat) * (1f + sumPercent);
             }
 
             foreach (var kv in aggregated)
