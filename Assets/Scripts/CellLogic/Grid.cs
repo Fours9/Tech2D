@@ -319,25 +319,24 @@ namespace CellNameSpace
             
             // Находим менеджеры один раз для оптимизации
             CellMaterialManager materialManager = FindFirstObjectByType<CellMaterialManager>();
-            CellOverlayManager overlayManager = FindFirstObjectByType<CellOverlayManager>();
             
             // Применяем результаты к GameObject'ам
             if (useCoroutines && Application.isPlaying)
             {
                 // Используем корутину для распределения работы по кадрам
-                StartCoroutine(ApplyCellTypesCoroutine(grid, materialManager, overlayManager));
+                StartCoroutine(ApplyCellTypesCoroutine(grid, materialManager));
             }
             else
             {
                 // Синхронное применение (для Editor или если корутины отключены)
-                ApplyCellTypesSync(grid, materialManager, overlayManager);
+                ApplyCellTypesSync(grid, materialManager);
             }
         }
         
         /// <summary>
         /// Синхронно применяет типы клеток к GameObject'ам
         /// </summary>
-        private void ApplyCellTypesSync(CellType[,] grid, CellMaterialManager materialManager, CellOverlayManager overlayManager)
+        private void ApplyCellTypesSync(CellType[,] grid, CellMaterialManager materialManager)
         {
             for (int row = 0; row < gridHeight; row++)
             {
@@ -348,7 +347,7 @@ namespace CellNameSpace
                     if (cellInfo != null)
                     {
                         // Устанавливаем менеджеры для оптимизации (если они найдены)
-                        cellInfo.SetManagers(materialManager, overlayManager);
+                        cellInfo.SetManagers(materialManager);
                         // Устанавливаем ссылку на Grid для оптимизации (избегает FindFirstObjectByType в UpdateMainRendererActualState)
                         cellInfo.SetGrid(this);
                         // Отключаем обновление оверлеев при массовом создании для оптимизации
@@ -357,7 +356,7 @@ namespace CellNameSpace
                 }
             }
             
-            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetFeature() / SetBuildingStats()
+            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetFeatureId() / SetBuildingId()
             
             // Создаем чанки после применения типов клеток
             // Игра будет возобновлена и IsGenerationComplete установлен после завершения создания всех чанков
@@ -367,7 +366,7 @@ namespace CellNameSpace
         /// <summary>
         /// Корутина для применения типов клеток с распределением по кадрам
         /// </summary>
-        private IEnumerator ApplyCellTypesCoroutine(CellType[,] grid, CellMaterialManager materialManager, CellOverlayManager overlayManager)
+        private IEnumerator ApplyCellTypesCoroutine(CellType[,] grid, CellMaterialManager materialManager)
         {
             int processed = 0;
             
@@ -380,7 +379,7 @@ namespace CellNameSpace
                     if (cellInfo != null)
                     {
                         // Устанавливаем менеджеры для оптимизации (если они найдены)
-                        cellInfo.SetManagers(materialManager, overlayManager);
+                        cellInfo.SetManagers(materialManager);
                         // Устанавливаем ссылку на Grid для оптимизации (избегает FindFirstObjectByType в UpdateMainRendererActualState)
                         cellInfo.SetGrid(this);
                         // Отключаем обновление оверлеев при массовом создании для оптимизации
@@ -398,7 +397,7 @@ namespace CellNameSpace
                 }
             }
             
-            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetFeature() / SetBuildingStats()
+            // Установка ресурсов и построек происходит автоматически через SetCellType() -> SetFeatureId() / SetBuildingId()
             
             // Создаем чанки после применения типов клеток
             // Ждем завершения создания всех чанков перед возобновлением игры

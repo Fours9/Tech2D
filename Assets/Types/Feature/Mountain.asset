@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52083c4c95183744d87faf2a1b10e39a, type: 3}
   m_Name: Mountain
   m_EditorClassIdentifier: Assembly-CSharp::FeatureStats
-  id: 
+  id: mountain
   displayName: 
   description: 
   icon: {fileID: 0}
   sprite: {fileID: -8273445311213168830, guid: cb0b3c4a47434ec4eba12b0930fbc238, type: 3}
   resourceEntries: []
   resourceModifiers: []
+  resourceBonuses: []

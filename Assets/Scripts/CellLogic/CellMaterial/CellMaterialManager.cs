@@ -12,6 +12,15 @@ namespace CellNameSpace
     public class CellMaterialManager : MonoBehaviour
     {
         /// <summary>
+        /// Получает материал из CellTypeStats (per-player) или fallback на CellTypeStatsManager по cellType.
+        /// </summary>
+        public Material GetMaterialFromStats(CellTypeStats cellTypeStats, CellType fallbackCellType)
+        {
+            if (cellTypeStats != null && cellTypeStats.material != null) return cellTypeStats.material;
+            return GetMaterialForType(fallbackCellType);
+        }
+
+        /// <summary>
         /// Получает материал для указанного типа клетки из CellTypeStats
         /// </summary>
         /// <param name="cellType">Тип клетки</param>

@@ -3,16 +3,17 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Скрипт для кнопки выбора постройки
-/// Теперь использует BuildingStats через BuildingStatsManager
+/// Использует BuildingStats через BuildingStatsManager по id или прямой ссылке
 /// </summary>
 public class BuildingPlacementButton : MonoBehaviour
 {
     [Header("Настройки")]
-    [SerializeField] private BuildingType buildingType = BuildingType.Farm; // Тип постройки из BuildingStatsManager
+    [SerializeField] private string buildingId = "house"; // Id постройки из BuildingStatsManager
+    [SerializeField] private BuildingStats buildingStatsDirect; // Прямая ссылка на BuildingStats (приоритет над buildingId)
     [SerializeField] private Button button; // Кнопка (найдет автоматически, если не указана)
     [SerializeField] private BuildingManager buildingManager; // Менеджер построек (найдет автоматически, если не указан)
     
-    private BuildingStats buildingStats; // Статы постройки (из BuildingStatsManager)
+    private BuildingStats buildingStats; // Статы постройки (из BuildingStatsManager или прямой ссылки)
     
     void Start()
     {
@@ -65,14 +66,14 @@ public class BuildingPlacementButton : MonoBehaviour
     {
         if (buildingStats == null)
         {
-            Debug.LogWarning($"BuildingPlacementButton: BuildingStats не найден для типа {buildingType}!");
+            Debug.LogWarning("BuildingPlacementButton: BuildingStats не найден!");
             return;
         }
         
         // Создаем BuildingInfo из BuildingStats и выбираем постройку для установки
         BuildingInfo buildingInfo = CreateBuildingInfoFromStats(buildingStats);
         buildingManager.SelectBuilding(buildingInfo);
-        Debug.Log($"BuildingPlacementButton: Выбрана постройка '{buildingStats.displayName}' (тип: {buildingType})");
+        Debug.Log($"BuildingPlacementButton: Выбрана постройка '{buildingStats.displayName}' (id: {buildingStats.id})");
     }
     
     /// <summary>
@@ -83,10 +84,8 @@ public class BuildingPlacementButton : MonoBehaviour
         BuildingInfo info = new BuildingInfo
         {
             buildingStats = stats,
-            // Поля для обратной совместимости заполняются автоматически через методы GetName(), GetSprite() и т.д.
             name = stats.displayName,
             sprite = stats.sprite,
-            buildingType = stats.buildingType,
             description = stats.description
         };
         return info;
@@ -120,31 +119,28 @@ public class BuildingPlacementButton : MonoBehaviour
     /// </summary>
     private void InitializeBuildingStats()
     {
-        if (BuildingStatsManager.Instance == null)
-        {
-            Debug.LogError($"BuildingPlacementButton: BuildingStatsManager.Instance равен null! Кнопка для типа {buildingType} не будет работать.");
-            button.interactable = false;
-            return;
-        }
-        
-        buildingStats = BuildingStatsManager.Instance.GetBuildingStats(buildingType);
+        buildingStats = buildingStatsDirect;
+        if (buildingStats == null && BuildingStatsManager.Instance != null && !string.IsNullOrEmpty(buildingId))
+            buildingStats = BuildingStatsManager.Instance.GetBuildingStatsById(buildingId);
+
         if (buildingStats == null)
         {
-            Debug.LogWarning($"BuildingPlacementButton: BuildingStats не найден для типа {buildingType}. Проверьте настройки в BuildingStatsManager.");
-            button.interactable = false;
+            Debug.LogWarning("BuildingPlacementButton: BuildingStats не найден. Укажите buildingStatsDirect или buildingId.");
+            if (button != null) button.interactable = false;
         }
-        else
+        else if (button != null)
         {
             button.interactable = true;
         }
     }
     
     /// <summary>
-    /// Устанавливает тип постройки (можно вызвать извне)
+    /// Устанавливает постройку по id (можно вызвать извне)
     /// </summary>
-    public void SetBuildingType(BuildingType type)
+    public void SetBuildingId(string id)
     {
-        buildingType = type;
+        buildingId = id ?? "";
+        buildingStatsDirect = null;
         InitializeBuildingStats();
         UpdateButtonUI();
     }

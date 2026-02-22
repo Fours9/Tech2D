@@ -12,21 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a999dc2b4820dfb4bb29962984be2381, type: 3}
   m_Name: Center
   m_EditorClassIdentifier: Assembly-CSharp::BuildingStats
-  id: 
+  id: center
   displayName: 
   description: 
-  buildingType: 0
   icon: {fileID: 0}
   sprite: {fileID: 7961463184084027955, guid: b6c80039455aacb42a12d4108ef4b34b, type: 3}
-  costGold: 10
-  costFood: 0
-  costMaterials: 0
-  incomeGold: 0
-  incomeFood: 0
-  incomeMaterials: 0
+  buildCost: []
   allowedCellTypes: 
-  movementCostDelta: 0
   resourceEntries:
   - resourceRef: {fileID: 0}
     value: 0
   resourceModifiers: []
+  resourceBonuses: []

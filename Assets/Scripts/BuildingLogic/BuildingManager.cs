@@ -84,7 +84,8 @@ public class BuildingManager : MonoBehaviour
         BuildingStats buildingStats = building.buildingStats;
         if (buildingStats != null)
         {
-            cell.SetBuildingStats(buildingStats);
+            string bid = buildingStats.id;
+            cell.SetBuildingId(bid);
             placedBuildings[cellPosition] = building;
             return true;
         }
@@ -114,7 +115,7 @@ public class BuildingManager : MonoBehaviour
             // Проверяем, не центр ли это города
             if (!cityManager.HasCityAt(cellPosition))
             {
-                cell.SetBuildingStats(null);
+                cell.SetBuildingId(null);
             }
             // Если это центр города, оставляем BuildingStats города
         }

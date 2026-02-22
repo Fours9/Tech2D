@@ -97,12 +97,59 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Применяет материал к рендереру клетки
+        /// Применяет материал к рендереру клетки. Использует cellTypeStats (per-player) или fallback на cellType.
         /// </summary>
-        /// <param name="renderer">Рендерер клетки</param>
-        /// <param name="cellType">Тип клетки</param>
-        /// <param name="materialManager">Менеджер материалов (может быть null)</param>
-        /// <param name="propertyBlock">MaterialPropertyBlock для использования (если null, будет создан новый)</param>
+        public static void ApplyMaterialToCell(Renderer renderer, CellTypeStats cellTypeStats, CellType fallbackCellType, CellMaterialManager materialManager = null, MaterialPropertyBlock propertyBlock = null)
+        {
+            if (renderer == null) return;
+            if (materialManager == null)
+            {
+                Color c = cellTypeStats != null ? cellTypeStats.baseColor : GetColorForType(fallbackCellType);
+                ApplyColorFromStats(renderer, c, propertyBlock);
+                return;
+            }
+            MeshRenderer meshRenderer = renderer as MeshRenderer;
+            if (meshRenderer == null)
+            {
+                Color c = cellTypeStats != null ? cellTypeStats.baseColor : GetColorForType(fallbackCellType);
+                ApplyColorFromStats(renderer, c, propertyBlock);
+                return;
+            }
+            Material material = materialManager.GetMaterialFromStats(cellTypeStats, fallbackCellType);
+            if (material != null)
+            {
+                meshRenderer.sharedMaterial = material;
+                if (propertyBlock != null)
+                {
+                    meshRenderer.GetPropertyBlock(propertyBlock);
+                    propertyBlock.SetColor("_Color", material.color);
+                    meshRenderer.SetPropertyBlock(propertyBlock);
+                }
+            }
+            else
+            {
+                Color c = cellTypeStats != null ? cellTypeStats.baseColor : GetColorForType(fallbackCellType);
+                ApplyColorFromStats(renderer, c, propertyBlock);
+            }
+        }
+
+        private static void ApplyColorFromStats(Renderer renderer, Color color, MaterialPropertyBlock propertyBlock)
+        {
+            SpriteRenderer sr = renderer as SpriteRenderer;
+            if (sr != null) { sr.color = color; return; }
+            MeshRenderer mr = renderer as MeshRenderer;
+            if (mr != null && mr.sharedMaterial != null && propertyBlock != null)
+            {
+                mr.GetPropertyBlock(propertyBlock);
+                Color orig = mr.sharedMaterial.color; color.a = orig.a;
+                propertyBlock.SetColor("_Color", color);
+                mr.SetPropertyBlock(propertyBlock);
+            }
+        }
+
+        /// <summary>
+        /// Применяет материал к рендереру клетки (legacy: только cellType).
+        /// </summary>
         public static void ApplyMaterialToCell(Renderer renderer, CellType cellType, CellMaterialManager materialManager = null, MaterialPropertyBlock propertyBlock = null)
         {
             if (renderer == null)

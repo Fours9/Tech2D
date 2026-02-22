@@ -31,13 +31,12 @@ namespace CellNameSpace
 
         private Renderer cellRenderer;
         private CellMaterialManager cachedMaterialManager = null;
-        private CellOverlayManager cachedOverlayManager = null;
         private Vector2? cachedCellSize = null; // Кэшированный размер клетки
         private CityInfo owningCity = null; // Город, которому принадлежит клетка
         
         [Header("Данные клетки (не визуализация)")]
-        private BuildingStats buildingStats = null; // Данные о постройке на клетке (может быть null)
-        private FeatureStats featureStats = null;   // Данные о фиче на клетке (может быть null)
+        private string buildingId = null;  // ID постройки (null = нет постройки)
+        private string featureId = null;   // ID фичи (null = нет фичи)
         private CachedCellStats cachedCellStats = null;   // Кеш рассчитанных статов (пересчитывается при изменении CellType/Feature/Building)
         private Vector3 originalPosition; // Изначальная позиция клетки в мире
         private bool originalPositionSet = false; // Флаг, что изначальная позиция уже установлена
@@ -203,8 +202,7 @@ namespace CellNameSpace
         /// <param name="y">Позиция Y в сетке</param>
         /// <param name="type">Тип клетки</param>
         /// <param name="materialManager">Менеджер материалов (опционально, для оптимизации)</param>
-        /// <param name="overlayManager">Менеджер оверлеев (опционально, для оптимизации)</param>
-        public void Initialize(int x, int y, CellType type, CellMaterialManager materialManager = null, CellOverlayManager overlayManager = null)
+        public void Initialize(int x, int y, CellType type, CellMaterialManager materialManager = null)
         {
             gridX = x;
             gridY = y;
@@ -221,8 +219,6 @@ namespace CellNameSpace
             // Кэшируем менеджеры для оптимизации
             if (materialManager != null)
                 cachedMaterialManager = materialManager;
-            if (overlayManager != null)
-                cachedOverlayManager = overlayManager;
             
             // При первом создании клеток не меняем материал - оставляем материал префаба
             // Материал/цвет будет применен позже при SetCellType
@@ -329,13 +325,10 @@ namespace CellNameSpace
         /// Устанавливает менеджеры для оптимизации (избегает поиска через FindFirstObjectByType)
         /// </summary>
         /// <param name="materialManager">Менеджер материалов</param>
-        /// <param name="overlayManager">Менеджер оверлеев</param>
-        public void SetManagers(CellMaterialManager materialManager, CellOverlayManager overlayManager)
+        public void SetManagers(CellMaterialManager materialManager)
         {
             if (materialManager != null)
                 cachedMaterialManager = materialManager;
-            if (overlayManager != null)
-                cachedOverlayManager = overlayManager;
         }
         
         /// <summary>
@@ -378,17 +371,10 @@ namespace CellNameSpace
 
         /// <summary>
         /// Пересчитывает CellStats из CellTypeStats, FeatureStats, BuildingStats.
-        /// Вызывается только из SetCellType, SetFeature, SetBuildingStats.
         /// </summary>
         private void RecalculateStats()
         {
-            CellTypeStats cellTypeStats = null;
-            if (CellTypeStatsManager.Instance != null)
-            {
-                cellTypeStats = CellTypeStatsManager.Instance.GetCellTypeStats(cellType);
-            }
-
-            cachedCellStats = StatsCalculator.Calculate(cellTypeStats, featureStats, buildingStats);
+            cachedCellStats = StatsCalculator.Calculate(GetCellTypeStats(), GetFeatureStats(), GetBuildingStats());
         }
 
         /// <summary>
@@ -412,7 +398,7 @@ namespace CellNameSpace
             }
             
             // Применяем материал или цвет (с защитой - если materialManager null, используется цвет)
-            // Используем существующий materialPropertyBlock для правильного восстановления цвета
+            // Пока используем cellType (CellColorManager применяет из CellTypeStatsManager)
             CellColorManager.ApplyMaterialToCell(cellRenderer, cellType, cachedMaterialManager, materialPropertyBlock);
             
             // Передаем originalPosition в шейдер через MaterialPropertyBlock
@@ -425,22 +411,11 @@ namespace CellNameSpace
                 CellVisualizationManager.ApplyOwnershipVisualization(this);
             }
             
-            // Устанавливаем FeatureStats и BuildingStats из CellOverlayManager
-            // Вызываем всегда, независимо от updateOverlays (это установка данных, не визуализация)
-            // Визуализация применяется через CellVisualizationManager с учетом тумана войны
-            if (cachedOverlayManager == null || !cachedOverlayManager.gameObject.activeInHierarchy)
-            {
-                cachedOverlayManager = FindOverlayManager();
-            }
-            
-            if (cachedOverlayManager != null)
-            {
-                FeatureStats featureStats = cachedOverlayManager.GetFeatureStats(cellType);
-                BuildingStats buildingStats = cachedOverlayManager.GetBuildingStats(cellType);
-                
-                SetFeature(featureStats);
-                SetBuildingStats(buildingStats);
-            }
+            // FeatureStats из CellTypeStats (featureOverlay); Building Mappings не используются
+            CellTypeStats cts = CellTypeStatsManager.Instance?.GetCellTypeStats(cellType);
+            FeatureStats fs = cts?.featureOverlay;
+            SetFeatureId(fs != null ? (!string.IsNullOrEmpty(fs.id) ? fs.id : fs.displayName ?? "unknown") : null);
+            SetBuildingId(null); // Постройки назначаются CityManager/BuildingManager
         }
         
         /// <summary>
@@ -612,65 +587,71 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Находит CellOverlayManager в сцене
+        /// Устанавливает ID постройки на клетке (null = удалить).
         /// </summary>
-        private CellOverlayManager FindOverlayManager()
+        public void SetBuildingId(string id)
         {
-            // Используем FindFirstObjectByType для поиска CellOverlayManager в сцене
-            // Но только в Play Mode, чтобы не зависать в Editor
-            if (Application.isPlaying)
-            {
-                return FindFirstObjectByType<CellOverlayManager>();
-            }
-            
-            // В Editor режиме возвращаем null
-            return null;
-        }
-        
-        /// <summary>
-        /// Устанавливает данные о постройке на клетке (данные, не визуализация)
-        /// Вызывает визуализацию через CellVisualizationManager
-        /// </summary>
-        /// <param name="stats">BuildingStats постройки (может быть null для удаления)</param>
-        public void SetBuildingStats(BuildingStats stats)
-        {
-            buildingStats = stats;
-
+            buildingId = string.IsNullOrEmpty(id) ? null : id;
             RecalculateStats();
-
-            // Визуализация применяется через CellVisualizationManager с учетом тумана войны
             CellVisualizationManager.ApplyBuildingVisualization(this);
         }
         
         /// <summary>
-        /// Получает данные о постройке на клетке
+        /// Получает BuildingStats — из City или fallback FirstStatsManager.
         /// </summary>
         public BuildingStats GetBuildingStats()
         {
-            return buildingStats;
+            if (owningCity != null && !string.IsNullOrEmpty(buildingId))
+                return owningCity.GetBuilding(buildingId);
+            if (FirstStatsManager.Instance != null)
+                return FirstStatsManager.Instance.GetBuildingStatsById(buildingId);
+            return null;
         }
         
         /// <summary>
-        /// Устанавливает фичу на клетке (данные, не визуализация)
-        /// Вызывает визуализацию через CellVisualizationManager
+        /// Устанавливает ID фичи на клетке (null = удалить).
         /// </summary>
-        /// <param name="stats">FeatureStats фичи (может быть null для удаления)</param>
-        public void SetFeature(FeatureStats stats)
+        public void SetFeatureId(string id)
         {
-            featureStats = stats;
-
+            featureId = string.IsNullOrEmpty(id) ? null : id;
             RecalculateStats();
-
-            // Визуализация применяется через CellVisualizationManager с учетом тумана войны
             CellVisualizationManager.ApplyResourceVisualization(this);
         }
 
         /// <summary>
-        /// Получает фичу на клетке
+        /// Получает FeatureStats — из City или fallback FirstStatsManager.
         /// </summary>
         public FeatureStats GetFeatureStats()
         {
-            return featureStats;
+            if (owningCity != null && !string.IsNullOrEmpty(featureId))
+                return owningCity.GetFeature(featureId);
+            if (FirstStatsManager.Instance != null)
+                return FirstStatsManager.Instance.GetFeatureStatsById(featureId);
+            return null;
+        }
+
+        /// <summary>
+        /// Получает CellTypeStats — из City или fallback CellTypeStatsManager/FirstStatsManager.
+        /// </summary>
+        public CellTypeStats GetCellTypeStats()
+        {
+            string cellTypeId = null;
+            if (CellTypeStatsManager.Instance != null)
+            {
+                var ct = CellTypeStatsManager.Instance.GetCellTypeStats(cellType);
+                cellTypeId = ct != null ? (!string.IsNullOrEmpty(ct.id) ? ct.id : cellType.ToString()) : cellType.ToString();
+            }
+            else
+            {
+                cellTypeId = cellType.ToString();
+            }
+            if (owningCity != null && !string.IsNullOrEmpty(cellTypeId))
+                return owningCity.GetCellTypeStats(cellTypeId);
+            if (FirstStatsManager.Instance != null)
+                return FirstStatsManager.Instance.GetCellTypeStatsById(cellTypeId);
+            if (CellTypeStatsManager.Instance != null)
+                return CellTypeStatsManager.Instance.GetCellTypeStats(cellType);
+            return null;
         }
 
         /// <summary>
@@ -720,7 +701,7 @@ namespace CellNameSpace
             {
                 string rid = kvp.Key;
                 float amount = kvp.Value;
-                ResourceStats rs = StatsCalculator.GetResourceStatsForId(cellTypeStats, featureStats, buildingStats, rid);
+                ResourceStats rs = StatsCalculator.GetResourceStatsForId(GetCellTypeStats(), GetFeatureStats(), GetBuildingStats(), rid);
                 string displayName = rs != null ? rs.displayName : "";
                 ResourceStatType rtype = rs != null ? rs.type : ResourceStatType.None;
                 list.Add(new ResourceIncomeEntry(rid, amount, displayName, rtype, rs));

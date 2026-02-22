@@ -3,23 +3,16 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Централизованный менеджер для управления BuildingStats (ScriptableObject ассетами типов построек).
-/// Обеспечивает доступ к статам построек по их типу (enum).
+/// Обеспечивает доступ к статам построек по id.
 /// </summary>
 public class BuildingStatsManager : MonoBehaviour
 {
     public static BuildingStatsManager Instance { get; private set; }
 
-    [System.Serializable]
-    public class BuildingStatsMapping
-    {
-        public BuildingType buildingType;
-        public BuildingStats buildingStats;
-    }
-
     [Header("Статы типов построек")]
-    [SerializeField] private List<BuildingStatsMapping> buildingStatsMappings = new List<BuildingStatsMapping>();
+    [SerializeField] private List<BuildingStats> buildingStatsList = new List<BuildingStats>();
 
-    private Dictionary<BuildingType, BuildingStats> buildingStatsDictionary;
+    private Dictionary<string, BuildingStats> buildingStatsDictionary;
 
     private void Awake()
     {
@@ -31,68 +24,49 @@ public class BuildingStatsManager : MonoBehaviour
 
         Instance = this;
         
-        // Перемещаем GameObject в корень, если он дочерний (DontDestroyOnLoad работает только для корневых объектов)
         if (transform.parent != null)
-        {
             transform.SetParent(null);
-        }
         
         DontDestroyOnLoad(gameObject);
         InitializeDictionary();
     }
 
-    /// <summary>
-    /// Инициализирует словарь статов из списка маппингов
-    /// </summary>
     private void InitializeDictionary()
     {
-        buildingStatsDictionary = new Dictionary<BuildingType, BuildingStats>();
+        buildingStatsDictionary = new Dictionary<string, BuildingStats>();
 
-        foreach (var mapping in buildingStatsMappings)
+        if (buildingStatsList == null) return;
+
+        foreach (var s in buildingStatsList)
         {
-            if (mapping.buildingStats != null)
-            {
-                buildingStatsDictionary[mapping.buildingType] = mapping.buildingStats;
-            }
+            if (s != null && !string.IsNullOrEmpty(s.id))
+                buildingStatsDictionary[s.id] = s;
         }
     }
 
     /// <summary>
-    /// Получает BuildingStats для указанного типа постройки
+    /// Получает BuildingStats по id постройки
     /// </summary>
-    /// <param name="buildingType">Тип постройки</param>
-    /// <returns>BuildingStats для данного типа, или null если не найден</returns>
-    public BuildingStats GetBuildingStats(BuildingType buildingType)
+    public BuildingStats GetBuildingStatsById(string id)
     {
         if (buildingStatsDictionary == null)
-        {
             InitializeDictionary();
-        }
 
-        if (buildingStatsDictionary.TryGetValue(buildingType, out BuildingStats stats))
-        {
-            return stats;
-        }
+        if (string.IsNullOrEmpty(id)) return null;
 
-        return null;
+        return buildingStatsDictionary.TryGetValue(id, out var stats) ? stats : null;
     }
 
     /// <summary>
-    /// Получает список всех доступных типов построек (для UI и других целей)
+    /// Возвращает все BuildingStats для UI и других целей
     /// </summary>
-    /// <returns>Список всех настроенных типов построек</returns>
-    public List<BuildingType> GetAvailableBuildingTypes()
+    public List<BuildingStats> GetAllBuildingStats()
     {
-        if (buildingStatsDictionary == null)
-        {
-            InitializeDictionary();
-        }
-
-        return new List<BuildingType>(buildingStatsDictionary.Keys);
+        return buildingStatsList != null ? new List<BuildingStats>(buildingStatsList) : new List<BuildingStats>();
     }
 
     /// <summary>
-    /// Обновляет словарь статов (вызывать после изменения buildingStatsMappings в Inspector)
+    /// Обновляет словарь (вызывать после изменения buildingStatsList в Inspector)
     /// </summary>
     public void RefreshBuildingStats()
     {

@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52083c4c95183744d87faf2a1b10e39a, type: 3}
   m_Name: Forest
   m_EditorClassIdentifier: Assembly-CSharp::FeatureStats
-  id: 
+  id: forest
   displayName: 
   description: 
   icon: {fileID: 0}
   sprite: {fileID: 21300000, guid: 04be6412910df7249b6bf172ebf43b6e, type: 3}
   resourceEntries: []
   resourceModifiers: []
+  resourceBonuses: []

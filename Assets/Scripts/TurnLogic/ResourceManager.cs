@@ -2,34 +2,14 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Типы ресурсов игрока.
-/// </summary>
-public enum ResourceType
-{
-    Gold,
-    Food,
-    Materials
-}
-
-/// <summary>
-/// Пул ресурсов одного владельца (игрок, варвары, независимые).
-/// </summary>
-[System.Serializable]
-public class ResourcePool
-{
-    public int gold;
-    public int food;
-    public int materials;
-}
-
-/// <summary>
 /// Менеджер ресурсов по владельцам (ownerId = игрок, варвары, независимые).
+/// Пул хранится по resourceId из ResourceStats.
 /// </summary>
 public class ResourceManager : MonoBehaviour
 {
     public static ResourceManager Instance { get; private set; }
 
-    private Dictionary<int, ResourcePool> pools = new Dictionary<int, ResourcePool>();
+    private Dictionary<int, Dictionary<string, float>> pools = new Dictionary<int, Dictionary<string, float>>();
     private const int DefaultOwnerId = 0;
 
     private void Awake()
@@ -48,76 +28,48 @@ public class ResourceManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    private ResourcePool GetOrCreatePool(int ownerId)
+    private Dictionary<string, float> GetOrCreatePool(int ownerId)
     {
-        if (!pools.TryGetValue(ownerId, out ResourcePool pool))
+        if (!pools.TryGetValue(ownerId, out var pool))
         {
-            pool = new ResourcePool();
+            pool = new Dictionary<string, float>();
             pools[ownerId] = pool;
         }
         return pool;
     }
 
-    public int Get(int ownerId, ResourceType type)
+    public float Get(int ownerId, string resourceId)
     {
         var pool = GetOrCreatePool(ownerId);
-        return type switch
-        {
-            ResourceType.Gold => pool.gold,
-            ResourceType.Food => pool.food,
-            ResourceType.Materials => pool.materials,
-            _ => 0
-        };
+        return pool.TryGetValue(resourceId, out var amount) ? amount : 0f;
     }
 
-    public void Add(int ownerId, ResourceType type, int amount)
+    public void Add(int ownerId, string resourceId, float amount)
     {
-        if (amount == 0) return;
+        if (amount == 0 || string.IsNullOrEmpty(resourceId)) return;
         var pool = GetOrCreatePool(ownerId);
-        switch (type)
-        {
-            case ResourceType.Gold: pool.gold += amount; break;
-            case ResourceType.Food: pool.food += amount; break;
-            case ResourceType.Materials: pool.materials += amount; break;
-        }
+        if (pool.TryGetValue(resourceId, out var current))
+            pool[resourceId] = current + amount;
+        else
+            pool[resourceId] = amount;
     }
 
-    public bool CanAfford(int ownerId, ResourceType type, int amount)
+    public bool CanAfford(int ownerId, string resourceId, float amount)
     {
-        return Get(ownerId, type) >= amount;
+        return Get(ownerId, resourceId) >= amount;
     }
 
-    public bool Spend(int ownerId, ResourceType type, int amount)
+    public bool Spend(int ownerId, string resourceId, float amount)
     {
-        if (!CanAfford(ownerId, type, amount)) return false;
-        Add(ownerId, type, -amount);
+        if (!CanAfford(ownerId, resourceId, amount)) return false;
+        Add(ownerId, resourceId, -amount);
         return true;
     }
 
-    /// <summary> Получить ресурс для владельца по умолчанию (обратная совместимость). </summary>
-    public int Get(ResourceType type) => Get(DefaultOwnerId, type);
-
-    /// <summary> Добавить ресурс владельцу по умолчанию (обратная совместимость). </summary>
-    public void Add(ResourceType type, int amount) => Add(DefaultOwnerId, type, amount);
-
-    public bool CanAfford(ResourceType type, int amount) => CanAfford(DefaultOwnerId, type, amount);
-
-    public bool Spend(ResourceType type, int amount) => Spend(DefaultOwnerId, type, amount);
-
-    /// <summary>
-    /// Маппинг resourceId (string) в ResourceType для начисления дохода.
-    /// </summary>
-    public static bool TryGetResourceType(string resourceId, out ResourceType type)
-    {
-        if (string.IsNullOrEmpty(resourceId)) { type = ResourceType.Gold; return false; }
-        switch (resourceId.ToLowerInvariant())
-        {
-            case "gold": type = ResourceType.Gold; return true;
-            case "food": type = ResourceType.Food; return true;
-            case "materials": type = ResourceType.Materials; return true;
-            default: type = ResourceType.Gold; return false;
-        }
-    }
+    public float Get(string resourceId) => Get(DefaultOwnerId, resourceId);
+    public void Add(string resourceId, float amount) => Add(DefaultOwnerId, resourceId, amount);
+    public bool CanAfford(string resourceId, float amount) => CanAfford(DefaultOwnerId, resourceId, amount);
+    public bool Spend(string resourceId, float amount) => Spend(DefaultOwnerId, resourceId, amount);
 }
 
 

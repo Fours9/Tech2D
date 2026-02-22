@@ -79,17 +79,15 @@ public class CellTypeStatsManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Получает стоимость движения для типа клетки (из CellTypeStats или fallback значения)
+    /// Получает стоимость движения для типа клетки (из CellTypeStats.movementCost или fallback)
     /// </summary>
     public int GetMovementCost(CellType cellType)
     {
         CellTypeStats stats = GetCellTypeStats(cellType);
-        if (stats != null)
-        {
-            return stats.movementCost;
-        }
+        if (stats != null && stats.movementCost > 0)
+            return Mathf.Max(1, stats.movementCost);
 
-        // Fallback значения (старая логика)
+        // Fallback значения
         switch (cellType)
         {
             case CellType.field:

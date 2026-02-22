@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 21f83d423c800e44087530a99b927fd6, type: 3}
   m_Name: Food
   m_EditorClassIdentifier: Assembly-CSharp::ResourceStats
-  id: 
+  id: food
   displayName: 
   description: 
+  type: 2
+  contributesToIncome: 1
   icon: {fileID: 0}
   sprite: {fileID: 0}
-  resourceEntries: []

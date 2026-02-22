@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4ff66ec201ac1e418211aae6303953f, type: 3}
   m_Name: Settler
   m_EditorClassIdentifier: Assembly-CSharp::UnitStats
-  id: 
+  id: settler
   displayName: 
   description: 
   icon: {fileID: 0}

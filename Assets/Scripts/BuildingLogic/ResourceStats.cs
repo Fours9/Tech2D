@@ -17,6 +17,10 @@ public class ResourceStats : ScriptableObject
     [Tooltip("Категория для применения модификаторов (Plant, RawMaterial)")]
     public ResourceStatType type = ResourceStatType.RawMaterial;
 
+    [Header("Игровой ресурс")]
+    [Tooltip("true = доход/траты идут в пул игрока; false = только стат клетки, не участвует в пуле")]
+    public bool contributesToIncome = true;
+
     [Header("Визуал")]
     public Sprite icon;            // Иконка для UI
     public Sprite sprite;          // Спрайт для отображения на клетке

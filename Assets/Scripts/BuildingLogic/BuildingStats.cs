@@ -15,32 +15,23 @@ public class BuildingStats : ScriptableObject
     [TextArea]
     public string description;     // Описание
 
-    [Header("Тип постройки")]
-    public BuildingType buildingType; // Enum тип для обратной совместимости
-
     [Header("Визуал")]
     public Sprite icon;            // Иконка постройки для UI
     public Sprite sprite;          // Спрайт постройки для отображения на клетке
 
-    [Header("Стоимость")]
-    public int costGold = 10;
-    public int costFood = 0;
-    public int costMaterials = 0;
-
-    [Header("Доходы (за ход)")]
-    public int incomeGold = 0;
-    public int incomeFood = 0;
-    public int incomeMaterials = 0;
+    [Header("Стоимость постройки")]
+    [Tooltip("Ресурсы для постройки: resourceRef + количество")]
+    public List<ResourceStatEntry> buildCost = new List<ResourceStatEntry>();
 
     [Header("Требования")]
     [Tooltip("Типы клеток, на которых можно строить эту постройку. Пустой список = можно строить везде.")]
     public List<CellType> allowedCellTypes = new List<CellType>();
 
     [Header("Движение")]
-    [Tooltip("Изменение стоимости перемещения по клетке с постройкой")]
+    [Tooltip("Изменение стоимости движения клетки (напр. дорога: -1). Итог = cellType.movementCost + movementCostDelta, мин. 1.")]
     public int movementCostDelta = 0;
 
-    [Header("Ресурсы (потребление/производство)")]
+    [Header("Ресурсы (доход/потребление за ход)")]
     [Tooltip("Ссылка на ResourceStats + значение: напр. Wood -5, Board +5")]
     public List<ResourceStatEntry> resourceEntries = new List<ResourceStatEntry>();
 

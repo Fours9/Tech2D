@@ -80,16 +80,6 @@ public class CityManager : MonoBehaviour
             return false;
         }
         
-        // Устанавливаем BuildingStats центра города
-        if (cityCenterBuildingStats != null)
-        {
-            targetCell.SetBuildingStats(cityCenterBuildingStats);
-        }
-        else
-        {
-            Debug.LogWarning("CityManager: BuildingStats центра города не назначен!");
-        }
-        
         // Создаем информацию о городе; владелец = владелец юнита
         CityInfo cityInfo = new CityInfo
         {
@@ -98,7 +88,8 @@ public class CityManager : MonoBehaviour
             name = $"Город {cities.Count + 1}",
             expansionRadius = 1,
             visionRadius = defaultCityVisionRadius,
-            ownerId = unit.GetOwnerId()
+            ownerId = unit.GetOwnerId(),
+            player = PlayerManager.Instance != null ? PlayerManager.Instance.GetPlayerByOwnerId(unit.GetOwnerId()) : null
         };
         
         // Добавляем центр города в список принадлежащих клеток
@@ -106,8 +97,19 @@ public class CityManager : MonoBehaviour
         
         cities[cityPosition] = cityInfo;
         
-        // Отмечаем центр города визуально
+        // Сначала отмечаем принадлежность (чтобы GetBuildingStats резолвил из City)
         MarkCellAsOwned(cityPosition, cityInfo);
+        
+        // Устанавливаем BuildingStats центра города
+        if (cityCenterBuildingStats != null)
+        {
+            string bid = cityCenterBuildingStats.id;
+            targetCell.SetBuildingId(bid);
+        }
+        else
+        {
+            Debug.LogWarning("CityManager: BuildingStats центра города не назначен!");
+        }
         
         // Сразу расширяем город на радиус 1 (центр + все соседние клетки)
         if (grid != null)
@@ -442,6 +444,27 @@ public class CityInfo
     public PlayerInfo player; // Игрок, которому принадлежит город (для UI, цвета)
     public int ownerId = 0; // Владелец города (игрок, варвары, независимые); при создании из settler = unit.ownerId
     public List<ResourceBonus> resourceBonuses = new List<ResourceBonus>(); // Бонусы уровня City (и Cell при опросе клеток)
+
+    // Переопределения статов (город может переопределять постройки/фичи/типы клеток)
+    private Dictionary<string, BuildingStats> buildingOverrides = new Dictionary<string, BuildingStats>();
+    private Dictionary<string, FeatureStats> featureOverrides = new Dictionary<string, FeatureStats>();
+    private Dictionary<string, CellTypeStats> cellTypeOverrides = new Dictionary<string, CellTypeStats>();
+
+    public BuildingStats GetBuilding(string buildingId)
+    {
+        if (buildingOverrides != null && buildingOverrides.TryGetValue(buildingId, out var o)) return o;
+        return player?.GetBuilding(buildingId);
+    }
+    public FeatureStats GetFeature(string featureId)
+    {
+        if (featureOverrides != null && featureOverrides.TryGetValue(featureId, out var o)) return o;
+        return player?.GetFeature(featureId);
+    }
+    public CellTypeStats GetCellTypeStats(string cellTypeId)
+    {
+        if (cellTypeOverrides != null && cellTypeOverrides.TryGetValue(cellTypeId, out var o)) return o;
+        return player?.GetCellTypeStats(cellTypeId);
+    }
 
     /// <summary>
     /// Опрашивает клетки города, применяет бонусы по уровням, возвращает агрегированные ресурсы и player-бонусы.

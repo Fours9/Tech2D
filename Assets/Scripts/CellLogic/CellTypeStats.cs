@@ -19,12 +19,17 @@ public class CellTypeStats : ScriptableObject
     public CellType cellType;      // Enum тип для обратной совместимости
 
     [Header("Движение")]
-    public int movementCost = 1;   // Стоимость перемещения по клетке
+    [Tooltip("Стоимость в очках движения за вход на клетку (минимум 1).")]
+    public int movementCost = 1;
     public bool isWalkable = true; // Проходима ли клетка для юнитов
 
     [Header("Визуал")]
     public Material material;      // Материал для этого типа клетки (опционально)
     public Color baseColor = Color.white; // Базовый цвет (используется, если material не задан)
+
+    [Header("Оверлей фичи")]
+    [Tooltip("Опционально. Спрайт фичи (деревья, горы) для отображения на клетке.")]
+    public FeatureStats featureOverlay;
 
     [Header("Модификаторы ресурсов")]
     [Tooltip("В каждой записи указать ИЛИ ссылку на ассет ресурса (resourceRef), ИЛИ тип (targetType). Модификатор в [-1, ∞).")]

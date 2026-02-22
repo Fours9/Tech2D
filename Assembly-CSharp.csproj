@@ -127,6 +127,7 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark04.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\ChatController.cs" />
     <Compile Include="Assets\Scripts\UI\BuildingPlacementButton.cs" />
+    <Compile Include="Assets\Scripts\PlayerLogic\PlayerManager.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\HexagonalGridHelper.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_DigitValidator.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_FrameRateCounter.cs" />
@@ -134,8 +135,8 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TextMeshSpawner.cs" />
     <Compile Include="Assets\Scripts\BuildingLogic\ResourceStats.cs" />
     <Compile Include="Assets\Scripts\CellLogic\CellTypeStats.cs" />
+    <Compile Include="Assets\Scripts\GameSetup.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\CameraController.cs" />
-    <Compile Include="Assets\Scripts\CellLogic\CellOverlay\CellOverlayManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark03.cs" />
     <Compile Include="Assets\Scripts\TurnLogic\ResourceManager.cs" />
     <Compile Include="Assets\Scripts\TurnLogic\Orders\BuildBuildingOrder.cs" />
@@ -160,6 +161,7 @@
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\RiverGenerator.cs" />
     <Compile Include="Assets\Scripts\CellLogic\GridLogic\PerlinNoise.cs" />
     <Compile Include="Assets\Scripts\CellLogic\ChunkTextureBaker.cs" />
+    <Compile Include="Assets\Scripts\FirstStatsManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />

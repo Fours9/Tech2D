@@ -13,7 +13,6 @@ public class BuildingInfo
     [Header("Прямые значения (используются, если buildingStats не задан)")]
     public string name; // Название постройки
     public Sprite sprite; // Спрайт постройки
-    public BuildingType buildingType; // Тип постройки
     public string description; // Описание постройки
     
     /// <summary>
@@ -37,13 +36,11 @@ public class BuildingInfo
     }
     
     /// <summary>
-    /// Получает тип постройки (из BuildingStats или из прямого поля)
+    /// Получает id постройки (из BuildingStats или null)
     /// </summary>
-    public BuildingType GetBuildingType()
+    public string GetBuildingId()
     {
-        if (buildingStats != null)
-            return buildingStats.buildingType;
-        return buildingType;
+        return buildingStats != null ? buildingStats.id : null;
     }
     
     /// <summary>
@@ -55,19 +52,6 @@ public class BuildingInfo
             return buildingStats.description;
         return description;
     }
-}
-
-/// <summary>
-/// Типы построек
-/// </summary>
-public enum BuildingType
-{
-    Farm,        // Ферма
-    Mine,        // Шахта
-    LumberMill,  // Лесопилка
-    Quarry,      // Каменоломня
-    Windmill,    // Ветряная мельница
-    Custom       // Пользовательская постройка
 }
 
 

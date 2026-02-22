@@ -11,7 +11,7 @@ public static class StatsCalculator
     /// Рассчитывает итоговые CellStats из трёх источников.
     /// Формула для ресурсов: (feature_value + cellType_default + building_delta) * (1 + totalModifier)
     /// totalModifier = сумма модификаторов из CellTypeStats, FeatureStats, BuildingStats по resourceRef.id
-    /// Формула для movementCost: cellType_base + buildingStats.movementCostDelta
+    /// Формула для movementCost: cellTypeStats.movementCost + buildingStats.movementCostDelta (мин. 1)
     /// </summary>
     public static CellNameSpace.CachedCellStats Calculate(CellTypeStats cellTypeStats, FeatureStats featureStats, BuildingStats buildingStats)
     {
@@ -26,14 +26,17 @@ public static class StatsCalculator
 
         result.isWalkable = cellTypeStats.isWalkable;
 
-        // Собираем все уникальные id ресурсов из трёх источников
+        // Стоимость движения: отдельное поле, не ресурс
+        result.movementCost = Mathf.Max(1, cellTypeStats.movementCost + (buildingStats != null ? buildingStats.movementCostDelta : 0));
+
+        // Собираем все уникальные id ресурсов из трёх источников (без movement)
         var allResourceIds = new HashSet<string>();
 
         if (cellTypeStats.defaultResources != null)
         {
             foreach (var e in cellTypeStats.defaultResources)
             {
-                if (e.resourceRef != null && !string.IsNullOrEmpty(e.resourceRef.id) && e.resourceRef.type != ResourceStatType.None)
+                if (e.resourceRef != null && !string.IsNullOrEmpty(e.resourceRef.id) && e.resourceRef.id != "movement")
                     allResourceIds.Add(e.resourceRef.id);
             }
         }
@@ -42,7 +45,7 @@ public static class StatsCalculator
         {
             foreach (var e in featureStats.resourceEntries)
             {
-                if (e.resourceRef != null && !string.IsNullOrEmpty(e.resourceRef.id) && e.resourceRef.type != ResourceStatType.None)
+                if (e.resourceRef != null && !string.IsNullOrEmpty(e.resourceRef.id) && e.resourceRef.id != "movement")
                     allResourceIds.Add(e.resourceRef.id);
             }
         }
@@ -51,7 +54,7 @@ public static class StatsCalculator
         {
             foreach (var e in buildingStats.resourceEntries)
             {
-                if (e.resourceRef != null && !string.IsNullOrEmpty(e.resourceRef.id) && e.resourceRef.type != ResourceStatType.None)
+                if (e.resourceRef != null && !string.IsNullOrEmpty(e.resourceRef.id) && e.resourceRef.id != "movement")
                     allResourceIds.Add(e.resourceRef.id);
             }
         }
@@ -76,11 +79,6 @@ public static class StatsCalculator
         AddBonusesFrom(result.bonuses, cellTypeStats?.GetResourceBonuses());
         AddBonusesFrom(result.bonuses, featureStats?.GetResourceBonuses());
         AddBonusesFrom(result.bonuses, buildingStats?.GetResourceBonuses());
-
-        // movementCost: cellType_base + buildingStats.movementCostDelta
-        int movementBase = cellTypeStats.movementCost;
-        int movementDelta = buildingStats != null ? buildingStats.movementCostDelta : 0;
-        result.movementCost = Mathf.Max(1, movementBase + movementDelta);
 
         return result;
     }

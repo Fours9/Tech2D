@@ -356,18 +356,21 @@ public class TurnManager : MonoBehaviour
 
             foreach (var kv in aggregated)
             {
-                if (ResourceManager.TryGetResourceType(kv.Key, out ResourceType type))
-                {
-                    int rounded = Mathf.RoundToInt(kv.Value);
-                    if (rounded != 0)
-                        resourceManager.Add(ownerId, type, rounded);
-                }
+                var rs = FirstStatsManager.Instance?.GetResourceStatsById(kv.Key);
+                if (rs == null || !rs.contributesToIncome) continue;
+
+                float rounded = Mathf.Round(kv.Value);
+                if (Mathf.Abs(rounded) > 0.0001f)
+                    resourceManager.Add(ownerId, kv.Key, rounded);
             }
         }
     }
 
     private PlayerInfo GetPlayerByOwnerId(int ownerId)
     {
+        if (PlayerManager.Instance != null)
+            return PlayerManager.Instance.GetPlayerByOwnerId(ownerId);
+        // Fallback: ищем по городам (если PlayerManager ещё не инициализирован)
         if (cityManager == null) return null;
         foreach (var kvp in cityManager.GetAllCities())
         {
