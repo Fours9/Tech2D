@@ -19,6 +19,10 @@ public class FeatureStats : ScriptableObject
     public Sprite sprite;          // Спрайт для отображения на клетке
 
     [Header("Ресурсы")]
-    [Tooltip("Что даёт фича: напр. wood +10, food -5")]
+    [Tooltip("Что даёт фича: ссылка на ResourceStats + значение, напр. Wood +10, Food -5")]
     public List<ResourceStatEntry> resourceEntries = new List<ResourceStatEntry>();
+
+    [Header("Модификаторы ресурсов")]
+    [Tooltip("Модификатор в [-1, ∞), напр. -0.15 для -15% к указанному ресурсу")]
+    public List<ResourceStatModifier> resourceModifiers = new List<ResourceStatModifier>();
 }

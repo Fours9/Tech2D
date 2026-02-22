@@ -36,9 +36,17 @@ public class BuildingStats : ScriptableObject
     [Tooltip("Типы клеток, на которых можно строить эту постройку. Пустой список = можно строить везде.")]
     public List<CellType> allowedCellTypes = new List<CellType>();
 
+    [Header("Движение")]
+    [Tooltip("Изменение стоимости перемещения по клетке с постройкой")]
+    public int movementCostDelta = 0;
+
     [Header("Ресурсы (потребление/производство)")]
-    [Tooltip("Потребление и производство: напр. -5 wood, +5 board")]
+    [Tooltip("Ссылка на ResourceStats + значение: напр. Wood -5, Board +5")]
     public List<ResourceStatEntry> resourceEntries = new List<ResourceStatEntry>();
+
+    [Header("Модификаторы ресурсов")]
+    [Tooltip("Модификатор в [-1, ∞) к указанному ресурсу")]
+    public List<ResourceStatModifier> resourceModifiers = new List<ResourceStatModifier>();
 }
 
 

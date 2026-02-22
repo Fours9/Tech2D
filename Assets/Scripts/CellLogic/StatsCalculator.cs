@@ -9,8 +9,9 @@ public static class StatsCalculator
 {
     /// <summary>
     /// Рассчитывает итоговые CellStats из трёх источников.
-    /// Формула для ресурсов: (feature_value + cellType_default) * (1 + cellType_modifier) + building_delta
-    /// Формула для movementCost: cellType_base + building_delta (аддитивно)
+    /// Формула для ресурсов: (feature_value + cellType_default + building_delta) * (1 + totalModifier)
+    /// totalModifier = сумма модификаторов из CellTypeStats, FeatureStats, BuildingStats по resourceRef.id
+    /// Формула для movementCost: cellType_base + buildingStats.movementCostDelta
     /// </summary>
     public static CellNameSpace.CellStats Calculate(CellTypeStats cellTypeStats, FeatureStats featureStats, BuildingStats buildingStats)
     {
@@ -25,25 +26,15 @@ public static class StatsCalculator
 
         result.isWalkable = cellTypeStats.isWalkable;
 
-        // Собираем модификаторы из CellTypeStats в словарь
-        var modifiersByType = new Dictionary<ResourceStatType, float>();
-        if (cellTypeStats.resourceModifiers != null)
-        {
-            foreach (var m in cellTypeStats.resourceModifiers)
-            {
-                modifiersByType[m.type] = m.modifier;
-            }
-        }
-
-        // Собираем все уникальные имена ресурсов из трёх источников
-        var allResourceNames = new HashSet<string>();
+        // Собираем все уникальные id ресурсов из трёх источников
+        var allResourceIds = new HashSet<string>();
 
         if (cellTypeStats.defaultResources != null)
         {
             foreach (var e in cellTypeStats.defaultResources)
             {
-                if (!string.IsNullOrEmpty(e.name) && e.type != ResourceStatType.None)
-                    allResourceNames.Add(e.name);
+                if (e.resourceRef != null && !string.IsNullOrEmpty(e.resourceRef.id) && e.resourceRef.type != ResourceStatType.None)
+                    allResourceIds.Add(e.resourceRef.id);
             }
         }
 
@@ -51,8 +42,8 @@ public static class StatsCalculator
         {
             foreach (var e in featureStats.resourceEntries)
             {
-                if (!string.IsNullOrEmpty(e.name) && e.type != ResourceStatType.None)
-                    allResourceNames.Add(e.name);
+                if (e.resourceRef != null && !string.IsNullOrEmpty(e.resourceRef.id) && e.resourceRef.type != ResourceStatType.None)
+                    allResourceIds.Add(e.resourceRef.id);
             }
         }
 
@@ -60,72 +51,71 @@ public static class StatsCalculator
         {
             foreach (var e in buildingStats.resourceEntries)
             {
-                if (!string.IsNullOrEmpty(e.name) && e.type != ResourceStatType.None)
-                    allResourceNames.Add(e.name);
+                if (e.resourceRef != null && !string.IsNullOrEmpty(e.resourceRef.id) && e.resourceRef.type != ResourceStatType.None)
+                    allResourceIds.Add(e.resourceRef.id);
             }
         }
 
-        // Рассчитываем каждый ресурс
-        foreach (var name in allResourceNames)
+        // Рассчитываем каждый ресурс: (feature + default) * (1 + modifier) + building_delta
+        foreach (var resourceId in allResourceIds)
         {
-            float featureValue = GetValueFromList(featureStats?.resourceEntries, name);
-            float cellTypeDefault = GetValueFromList(cellTypeStats.defaultResources, name);
-            float buildingDelta = GetValueFromList(buildingStats?.resourceEntries, name);
-            ResourceStatType resourceType = GetTypeFromLists(cellTypeStats.defaultResources, featureStats?.resourceEntries, buildingStats?.resourceEntries, name);
-            float modifier = modifiersByType.TryGetValue(resourceType, out var m) ? m : 0f;
+            float featureValue = GetValueFromList(featureStats?.resourceEntries, resourceId);
+            float cellTypeDefault = GetValueFromList(cellTypeStats.defaultResources, resourceId);
+            float buildingDelta = GetValueFromList(buildingStats?.resourceEntries, resourceId);
 
-            float value = (featureValue + cellTypeDefault) * (1f + modifier) + buildingDelta;
-            result.resources[name] = value;
+            float totalModifier = GetModifierForResource(cellTypeStats, featureStats, buildingStats, resourceId);
+            float baseValue = featureValue + cellTypeDefault;
+            float value = baseValue * (1f + totalModifier) + buildingDelta;
+            result.resources[resourceId] = value;
         }
 
-        // movementCost: type none, аддитивно
+        // movementCost: cellType_base + buildingStats.movementCostDelta
         int movementBase = cellTypeStats.movementCost;
-        float movementDelta = GetMovementDeltaFromBuilding(buildingStats);
-        result.movementCost = Mathf.Max(1, Mathf.RoundToInt(movementBase + movementDelta));
+        int movementDelta = buildingStats != null ? buildingStats.movementCostDelta : 0;
+        result.movementCost = Mathf.Max(1, movementBase + movementDelta);
 
         return result;
     }
 
-    private static float GetValueFromList(List<ResourceStatEntry> list, string name)
+    private static float GetValueFromList(List<ResourceStatEntry> list, string resourceId)
     {
         if (list == null) return 0f;
         float sum = 0f;
         foreach (var e in list)
         {
-            if (e.name == name)
+            if (e.resourceRef != null && e.resourceRef.id == resourceId)
                 sum += e.value;
         }
         return sum;
     }
 
-    private static ResourceStatType GetTypeFromLists(List<ResourceStatEntry> defaultList, List<ResourceStatEntry> featureList, List<ResourceStatEntry> buildingList, string name)
+    private static float GetModifierForResource(CellTypeStats cellTypeStats, FeatureStats featureStats, BuildingStats buildingStats, string resourceId)
     {
-        if (defaultList != null)
+        float total = 0f;
+        if (cellTypeStats?.resourceModifiers != null)
         {
-            foreach (var e in defaultList)
-                if (e.name == name) return e.type;
+            foreach (var m in cellTypeStats.resourceModifiers)
+            {
+                if (m.resourceRef != null && m.resourceRef.id == resourceId)
+                    total += m.modifier;
+            }
         }
-        if (featureList != null)
+        if (featureStats?.resourceModifiers != null)
         {
-            foreach (var e in featureList)
-                if (e.name == name) return e.type;
+            foreach (var m in featureStats.resourceModifiers)
+            {
+                if (m.resourceRef != null && m.resourceRef.id == resourceId)
+                    total += m.modifier;
+            }
         }
-        if (buildingList != null)
+        if (buildingStats?.resourceModifiers != null)
         {
-            foreach (var e in buildingList)
-                if (e.name == name) return e.type;
+            foreach (var m in buildingStats.resourceModifiers)
+            {
+                if (m.resourceRef != null && m.resourceRef.id == resourceId)
+                    total += m.modifier;
+            }
         }
-        return ResourceStatType.None;
-    }
-
-    private static float GetMovementDeltaFromBuilding(BuildingStats buildingStats)
-    {
-        if (buildingStats?.resourceEntries == null) return 0f;
-        foreach (var e in buildingStats.resourceEntries)
-        {
-            if (e.type == ResourceStatType.None && (e.name == "movement" || e.name == "movementCost"))
-                return e.value;
-        }
-        return 0f;
+        return total;
     }
 }

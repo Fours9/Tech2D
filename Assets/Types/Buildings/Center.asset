@@ -25,3 +25,8 @@ MonoBehaviour:
   incomeFood: 0
   incomeMaterials: 0
   allowedCellTypes: 
+  movementCostDelta: 0
+  resourceEntries:
+  - resourceRef: {fileID: 0}
+    value: 0
+  resourceModifiers: []

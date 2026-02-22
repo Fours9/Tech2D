@@ -340,9 +340,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CellNameSpace.CellOverlayManager
   featureMappings:
   - cellType: 3
-    featureStats: {fileID: 11400000, guid: 3b19da14748787846862c4e8493b11d9, type: 2}
+    featureStats: {fileID: 11400000, guid: 7b6b8cd1d5a503946861ca25b9dfd7b7, type: 2}
   - cellType: 5
-    featureStats: {fileID: 11400000, guid: 9546706d59091db4b9fba96a7e602fc7, type: 2}
+    featureStats: {fileID: 11400000, guid: a3127a0fc30d3f84fa02f3b2da6c59b5, type: 2}
   buildingMappings: []
 --- !u!114 &141372084
 MonoBehaviour:
