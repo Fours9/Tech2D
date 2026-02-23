@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-
+using FogOfWar;
 
 namespace CellNameSpace
 {
@@ -107,7 +107,7 @@ namespace CellNameSpace
         private HashSet<CellChunk> dirtyChunks = new HashSet<CellChunk>(); // Чанки, требующие пересборки
         private Coroutine rebuildChunksCoroutine = null; // Корутина для пересборки чанков
         [SerializeField] private int chunksPerFrame = 5; // Количество чанков для пересборки за кадр
-        [SerializeField] private int createChunksPerFrame = 2; // Количество чанков для создания за кадр
+        [SerializeField] private int createChunksPerFrame = 1; // Количество чанков для создания за кадр (щадящая генерация)
         
         // Система запекания текстур чанков
         private Coroutine bakeChunksCoroutine = null; // Корутина для асинхронного запекания чанков
@@ -421,6 +421,14 @@ namespace CellNameSpace
             // Очищаем предыдущие чанки (если есть)
             ClearChunks();
             
+            // Отключаем fogOfWarRenderer на всех клетках — включаются только перед завершением генерации
+            foreach (GameObject cell in cells)
+            {
+                CellInfo cellInfo = cell.GetComponent<CellInfo>();
+                if (cellInfo != null)
+                    cellInfo.SetFogOfWarRendererEnabled(false);
+            }
+            
             // Вычисляем разрешение текстуры на основе размера чанка
             const int PIXELS_PER_CELL = 128; // ключевая цифра
             int textureResolution = Mathf.NextPowerOfTwo(chunkSize * PIXELS_PER_CELL);
@@ -492,7 +500,7 @@ namespace CellNameSpace
                             propertyBlock.SetTexture("_MainTex", result.chunkTexture); // Для совместимости
                             chunkRenderer.SetPropertyBlock(propertyBlock);
                             
-                            chunkRenderer.enabled = true;
+                            chunkRenderer.enabled = false; // Включается только перед завершением генерации
                         }
                         else
                         {
@@ -531,6 +539,16 @@ namespace CellNameSpace
                 }
             }
             
+            // Ждём FogOfWarManager без таймаута
+            while (FogOfWarManager.Instance == null)
+                yield return null;
+            
+            // Гарантируем инициализацию тумана войны (fogState клеток)
+            FogOfWarManager.Instance.EnsureFogInitialized();
+            
+            // Создаём FogChunk для каждого чанка
+            yield return StartCoroutine(CreateFogChunksCoroutine());
+            
             // Отключаем основной MeshRenderer на всех клетках (рендеринг через чанки)
             foreach (GameObject cell in cells)
             {
@@ -539,6 +557,15 @@ namespace CellNameSpace
                 {
                     cellInfo.SetMainRendererState(false); // Отключаем рендеринг через чанк
                 }
+            }
+            
+            // Включаем рендеры — CellChunk и FogChunk
+            foreach (CellChunk chunk in chunks)
+            {
+                chunk.SetChunkRendererEnabled(true);
+                FogChunk fogChunk = chunk.GetFogChunk();
+                if (fogChunk != null)
+                    fogChunk.RefreshMode();
             }
             
             // Запускаем корутину периодической очистки памяти
@@ -554,6 +581,47 @@ namespace CellNameSpace
             ResumeGame();
         }
         
+        /// <summary>
+        /// Корутина для создания FogChunk для каждого CellChunk.
+        /// </summary>
+        private IEnumerator CreateFogChunksCoroutine()
+        {
+            int processed = 0;
+
+            foreach (CellChunk chunk in chunks)
+            {
+                if (chunk.GetFogChunk() != null)
+                    continue;
+
+                if (FogOfWarManager.Instance == null)
+                    continue;
+
+                GameObject fogObj = new GameObject("FogChunk");
+                fogObj.transform.SetParent(chunk.transform);
+                fogObj.transform.localPosition = Vector3.zero;
+
+                MeshFilter fogMeshFilter = fogObj.AddComponent<MeshFilter>();
+                MeshFilter chunkMeshFilter = chunk.GetChunkMeshFilter();
+                if (chunkMeshFilter != null && chunkMeshFilter.sharedMesh != null)
+                    fogMeshFilter.sharedMesh = chunkMeshFilter.sharedMesh;
+
+                MeshRenderer fogRenderer = fogObj.AddComponent<MeshRenderer>();
+                fogRenderer.sharedMaterial = FogOfWarManager.Instance.GetFogUnseenChunkMaterial();
+                fogRenderer.enabled = false; // Включается при RefreshMode перед завершением генерации
+
+                FogChunk fogChunk = fogObj.AddComponent<FogChunk>();
+                fogChunk.Initialize(chunk.GetCells(), chunk);
+                chunk.SetFogChunk(fogChunk);
+
+                processed++;
+                if (processed >= createChunksPerFrame)
+                {
+                    processed = 0;
+                    yield return new WaitForEndOfFrame();
+                }
+            }
+        }
+
         /// <summary>
         /// Корутина для периодической очистки памяти
         /// </summary>
@@ -629,6 +697,7 @@ namespace CellNameSpace
                 // ограничение по железу
                 textureResolution = Mathf.Clamp(textureResolution, 256, 2048);
                 chunk.RebuildMesh(textureResolution);
+                chunk.GetFogChunk()?.RefreshMesh();
                 processed++;
                 
                 // Каждые chunksPerFrame чанков делаем паузу на один кадр

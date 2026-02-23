@@ -349,6 +349,8 @@ MonoBehaviour:
   raggedEdgeTopRight: 1
   fogUnseenMaterial: {fileID: 2100000, guid: abb2da62ef9a6f5478f34f4574ca4ede, type: 2}
   fogExploredMaterial: {fileID: 2100000, guid: 1e49d6f8224044d429a2d8534a7ee258, type: 2}
+  fogUnseenChunkMaterial: {fileID: 2100000, guid: 5c21b3e65f242b445b1fb24b348cde44, type: 2}
+  fogExploredChunkMaterial: {fileID: 2100000, guid: 48cd799e19fd9fb429976cbcf59ffe5d, type: 2}
   grid: {fileID: 141372080}
   cityManager: {fileID: 16604955}
 --- !u!1 &186001891
@@ -1904,7 +1906,7 @@ GameObject:
   - component: {fileID: 1794283274}
   - component: {fileID: 1794283275}
   m_Layer: 0
-  m_Name: FirstStatsManager
+  m_Name: StatsManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

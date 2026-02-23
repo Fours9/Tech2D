@@ -67,6 +67,7 @@ Shader "Custom/FogOfWarNoise"
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
+            #define CLOUD_QUANTIZE 1000.0
             
             struct appdata
             {
@@ -300,7 +301,8 @@ Shader "Custom/FogOfWarNoise"
                 {
                     // Берём те же базовые координаты, что и для бумаги/рваных краёв,
                     // без tiling через frac, чтобы облака "лежали" на карте стабильно.
-                    float2 baseCloudCoord = (_OriginalPosition.xy + i.worldOffset) * _CloudsScale;
+                    float2 rawCoord = (_OriginalPosition.xy + i.worldOffset) * _CloudsScale;
+                    float2 baseCloudCoord = floor(rawCoord * CLOUD_QUANTIZE + 0.5) / CLOUD_QUANTIZE;
                     
                     // Два слоя шума с разным масштабом и смещением по времени
                     float t = _Time.y * _CloudsSpeed;

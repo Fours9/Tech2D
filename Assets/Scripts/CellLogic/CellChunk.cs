@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using CellNameSpace;
+using FogOfWar;
 
 /// <summary>
 /// Компонент чанка клеток. Управляет объединенным мешем и состоянием рендеринга клеток в чанке.
@@ -13,6 +14,7 @@ public class CellChunk : MonoBehaviour
     private MeshRenderer chunkRenderer; // MeshRenderer чанка (объединенный меш)
     private MeshFilter chunkMeshFilter; // MeshFilter чанка (для пересборки меша)
     private bool isIndividualRenderingEnabled = false; // Состояние: включен ли индивидуальный рендеринг клеток
+    private FogChunk fogChunk; // FogChunk для тумана войны
     private bool isDirty = false; // Флаг: нужно ли пересобрать меш чанка (при изменении типа клетки)
     private Texture2D chunkTexture; // Текстура чанка (статичная, создается один раз)
     
@@ -58,6 +60,14 @@ public class CellChunk : MonoBehaviour
     }
     
     /// <summary>
+    /// Получить MeshFilter чанка (для FogChunk — shared mesh).
+    /// </summary>
+    public MeshFilter GetChunkMeshFilter()
+    {
+        return chunkMeshFilter;
+    }
+    
+    /// <summary>
     /// Включает индивидуальный рендеринг клеток, выключает рендеринг чанка
     /// Используется для CellHoverElevator, когда нужно изменить transform.position клеток
     /// </summary>
@@ -80,6 +90,8 @@ public class CellChunk : MonoBehaviour
                 cellInfo.SetMainRendererState(true); // Включаем индивидуальный рендеринг
             }
         }
+
+        fogChunk?.EnableIndividualRendering();
     }
     
     /// <summary>
@@ -105,6 +117,8 @@ public class CellChunk : MonoBehaviour
         // Включаем рендеринг чанка
         if (chunkRenderer != null)
             chunkRenderer.enabled = true;
+
+        fogChunk?.EnableChunkRendering();
     }
     
     /// <summary>
@@ -123,6 +137,31 @@ public class CellChunk : MonoBehaviour
         isDirty = true;
     }
     
+    /// <summary>
+    /// Устанавливает ссылку на FogChunk.
+    /// </summary>
+    public void SetFogChunk(FogChunk fog)
+    {
+        fogChunk = fog;
+    }
+
+    /// <summary>
+    /// Получает FogChunk (дочерний объект чанка).
+    /// </summary>
+    public FogChunk GetFogChunk()
+    {
+        return fogChunk;
+    }
+
+    /// <summary>
+    /// Включает/выключает рендерер чанка напрямую. Используется при инициализации генерации.
+    /// </summary>
+    public void SetChunkRendererEnabled(bool enabled)
+    {
+        if (chunkRenderer != null)
+            chunkRenderer.enabled = enabled;
+    }
+
     /// <summary>
     /// Проверяет, требуется ли пересборка меша чанка
     /// </summary>

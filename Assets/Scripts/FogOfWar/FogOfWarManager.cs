@@ -47,6 +47,10 @@ public class FogOfWarManager : MonoBehaviour
     [SerializeField] private Material fogUnseenMaterial;
     [Tooltip("Материал для разведанных, но невидимых клеток (светлее, с более заметным glow)")]
     [SerializeField] private Material fogExploredMaterial;
+    [Tooltip("Материал для FogChunk (Hidden). Shader: Custom/FogOfWarChunk. Создать из fogUnseenMaterial с шейдером FogOfWarChunk.")]
+    [SerializeField] private Material fogUnseenChunkMaterial;
+    [Tooltip("Материал для FogChunk (Explored). Shader: Custom/FogOfWarChunk. Создать из fogExploredMaterial с шейдером FogOfWarChunk.")]
+    [SerializeField] private Material fogExploredChunkMaterial;
     
     [Header("Ссылки")]
     [SerializeField] private CellNameSpace.Grid grid; // Сетка (найдется автоматически, если не указана)
@@ -56,6 +60,7 @@ public class FogOfWarManager : MonoBehaviour
     private HashSet<CellInfo> exploredCells = new HashSet<CellInfo>(); // Клетки, которые были исследованы
     private HashSet<UnitInfo> registeredUnits = new HashSet<UnitInfo>(); // Зарегистрированные юниты для оптимизации
     private HashSet<Vector2Int> prevVisibleCellCoords = new HashSet<Vector2Int>(); // Предыдущее состояние видимости для дельты
+    private bool _fogInitialized = false;
     
     private void Awake()
     {
@@ -92,15 +97,53 @@ public class FogOfWarManager : MonoBehaviour
         InitializeHexRadius();
         
         // Инициализируем туман войны или делаем все клетки видимыми
+        EnsureFogInitialized();
+
+        // Синхронизируем параметры Clouds из материалов клеток в материалы чанков
+        SyncChunkMaterialsFromCellMaterials();
+    }
+
+    /// <summary>
+    /// Копирует параметры Clouds (_CloudsEnabled, _CloudsScale, _CloudsIntensity, _CloudsSpeed)
+    /// из материалов клеток (FogOfWarNoise) в материалы чанков (FogOfWarChunk).
+    /// </summary>
+    private void SyncChunkMaterialsFromCellMaterials()
+    {
+        if (fogUnseenChunkMaterial != null && fogUnseenMaterial != null)
+        {
+            if (fogUnseenMaterial.HasProperty("_CloudsEnabled")) fogUnseenChunkMaterial.SetFloat("_CloudsEnabled", fogUnseenMaterial.GetFloat("_CloudsEnabled"));
+            if (fogUnseenMaterial.HasProperty("_CloudsScale")) fogUnseenChunkMaterial.SetFloat("_CloudsScale", fogUnseenMaterial.GetFloat("_CloudsScale"));
+            if (fogUnseenMaterial.HasProperty("_CloudsIntensity")) fogUnseenChunkMaterial.SetFloat("_CloudsIntensity", fogUnseenMaterial.GetFloat("_CloudsIntensity"));
+            if (fogUnseenMaterial.HasProperty("_CloudsSpeed")) fogUnseenChunkMaterial.SetFloat("_CloudsSpeed", fogUnseenMaterial.GetFloat("_CloudsSpeed"));
+        }
+        if (fogExploredChunkMaterial != null && fogExploredMaterial != null)
+        {
+            if (fogExploredMaterial.HasProperty("_CloudsEnabled")) fogExploredChunkMaterial.SetFloat("_CloudsEnabled", fogExploredMaterial.GetFloat("_CloudsEnabled"));
+            if (fogExploredMaterial.HasProperty("_CloudsScale")) fogExploredChunkMaterial.SetFloat("_CloudsScale", fogExploredMaterial.GetFloat("_CloudsScale"));
+            if (fogExploredMaterial.HasProperty("_CloudsIntensity")) fogExploredChunkMaterial.SetFloat("_CloudsIntensity", fogExploredMaterial.GetFloat("_CloudsIntensity"));
+            if (fogExploredMaterial.HasProperty("_CloudsSpeed")) fogExploredChunkMaterial.SetFloat("_CloudsSpeed", fogExploredMaterial.GetFloat("_CloudsSpeed"));
+        }
+    }
+
+    /// <summary>
+    /// Гарантирует инициализацию тумана войны. Вызывается из Start и из Grid при создании FogChunk.
+    /// </summary>
+    public void EnsureFogInitialized()
+    {
+        if (_fogInitialized)
+            return;
+        if (grid == null)
+            return;
+
         if (fogOfWarEnabled)
         {
             InitializeFogOfWar();
         }
         else
         {
-            // Если туман войны отключен при старте, делаем все клетки видимыми
             MakeAllCellsVisible();
         }
+        _fogInitialized = true;
     }
     
     /// <summary>
@@ -390,6 +433,21 @@ public class FogOfWarManager : MonoBehaviour
         {
             cell.RefreshFogOfWarRaggedEdges();
         }
+
+        // Обновляем FogChunk для затронутых чанков
+        HashSet<CellChunk> affectedChunks = new HashSet<CellChunk>();
+        foreach (CellInfo cell in cellsToRefresh)
+        {
+            CellChunk chunk = cell.GetChunk();
+            if (chunk != null)
+                affectedChunks.Add(chunk);
+        }
+        foreach (CellChunk chunk in affectedChunks)
+        {
+            FogChunk fogChunk = chunk.GetFogChunk();
+            if (fogChunk != null)
+                fogChunk.RefreshMode();
+        }
         
         // Обновляем текущий список видимых клеток
         visibleCells = new HashSet<CellInfo>(newVisibleCellsList);
@@ -625,7 +683,23 @@ public class FogOfWarManager : MonoBehaviour
     {
         return fogExploredMaterial;
     }
-    
+
+    /// <summary>
+    /// Получает материал для FogChunk (Hidden). Если не задан — fallback на fogUnseenMaterial.
+    /// </summary>
+    public Material GetFogUnseenChunkMaterial()
+    {
+        return fogUnseenChunkMaterial != null ? fogUnseenChunkMaterial : fogUnseenMaterial;
+    }
+
+    /// <summary>
+    /// Получает материал для FogChunk (Explored). Если не задан — fallback на fogExploredMaterial.
+    /// </summary>
+    public Material GetFogExploredChunkMaterial()
+    {
+        return fogExploredChunkMaterial != null ? fogExploredChunkMaterial : fogExploredMaterial;
+    }
+
     /// <summary>
     /// Проверяет, включены ли анимации переходов для указанного материала
     /// </summary>

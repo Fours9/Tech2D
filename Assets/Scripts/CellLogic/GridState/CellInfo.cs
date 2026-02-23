@@ -319,7 +319,7 @@ namespace CellNameSpace
         /// <summary>
         /// Крайняя клетка — Hidden с хотя бы одним соседом Visible или Explored.
         /// </summary>
-        private bool IsFogBoundaryCell()
+        public bool IsFogBoundaryCell()
         {
             if (fogState != FogOfWarState.Hidden)
                 return false;
@@ -339,6 +339,33 @@ namespace CellNameSpace
             return false;
         }
         
+        /// <summary>
+        /// Устанавливает состояние рендерера тумана войны: используется ли чанк для рендеринга тумана.
+        /// useChunk=true — fogOfWarRenderer выключен (туман рисует FogChunk).
+        /// useChunk=false — fogOfWarRenderer включён для Hidden/Explored, выключен для Visible.
+        /// </summary>
+        public void SetFogRendererState(bool useChunk)
+        {
+            if (fogOfWarRenderer == null)
+                return;
+            if (useChunk)
+            {
+                fogOfWarRenderer.enabled = false;
+            }
+            else
+            {
+                fogOfWarRenderer.enabled = (fogState == FogOfWarState.Hidden || fogState == FogOfWarState.Explored);
+            }
+        }
+        
+        /// <summary>
+        /// Напрямую устанавливает fogOfWarRenderer.enabled. Используется при генерации карты.
+        /// </summary>
+        public void SetFogOfWarRendererEnabled(bool enabled)
+        {
+            if (fogOfWarRenderer != null)
+                fogOfWarRenderer.enabled = enabled;
+        }
         
         /// <summary>
         /// Устанавливает менеджеры для оптимизации (избегает поиска через FindFirstObjectByType)
