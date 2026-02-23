@@ -18,18 +18,12 @@ public class FogChunk : MonoBehaviour
 
     /// <summary>
     /// Инициализирует FogChunk — shared mesh из CellChunk, материалы из FogOfWarManager.
+    /// Использует список CellInfo из чанка напрямую, чтобы гарантировать идентичность набора клеток.
     /// </summary>
-    public void Initialize(List<GameObject> cellsInChunk, CellChunk chunk)
+    public void Initialize(List<CellInfo> cellInfosList, CellChunk chunk)
     {
         cellChunk = chunk;
-        cellInfos = new List<CellInfo>();
-
-        foreach (GameObject cell in cellsInChunk)
-        {
-            CellInfo info = cell.GetComponent<CellInfo>();
-            if (info != null)
-                cellInfos.Add(info);
-        }
+        cellInfos = cellInfosList != null ? new List<CellInfo>(cellInfosList) : new List<CellInfo>();
 
         meshFilter = GetComponent<MeshFilter>();
         fogRenderer = GetComponent<MeshRenderer>();
@@ -62,14 +56,16 @@ public class FogChunk : MonoBehaviour
     }
 
     /// <summary>
-    /// Включает рендеринг через чанк, выключает fogOfWarRenderer по клеткам.
-    /// Вызывает RefreshMode для определения режима.
+    /// Пытается включить рендеринг через чанк. Вызывает RefreshMode для определения режима.
+    /// RefreshMode может оставить индивидуальный режим, если есть boundary/visible/transition.
     /// </summary>
     public void EnableChunkRendering()
     {
         if (!isIndividualRenderingEnabled)
+        {
+            RefreshMode(); // Всё равно пересчитать — чанк мог получить boundary-клетки
             return;
-
+        }
         isIndividualRenderingEnabled = false;
         RefreshMode();
     }
@@ -84,6 +80,7 @@ public class FogChunk : MonoBehaviour
 
         bool hasVisible = false;
         bool hasBoundary = false;
+        bool hasActiveTransition = false;
         bool allHidden = true;
         bool allExplored = true;
 
@@ -93,11 +90,13 @@ public class FogChunk : MonoBehaviour
             FogOfWarState state = c.GetFogOfWarState();
             if (state == FogOfWarState.Visible) hasVisible = true;
             if (c.IsFogBoundaryCell()) hasBoundary = true;
+            if (c.HasActiveFogTransition()) hasActiveTransition = true;
             if (state != FogOfWarState.Hidden) allHidden = false;
             if (state != FogOfWarState.Explored) allExplored = false;
         }
 
-        bool useIndividual = hasVisible || hasBoundary || (!allHidden && !allExplored);
+        bool useIndividual = hasVisible || hasBoundary || hasActiveTransition || (!allHidden && !allExplored);
+        isIndividualRenderingEnabled = useIndividual;
 
         if (useIndividual)
         {

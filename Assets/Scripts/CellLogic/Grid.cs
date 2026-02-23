@@ -610,7 +610,7 @@ namespace CellNameSpace
                 fogRenderer.enabled = false; // Включается при RefreshMode перед завершением генерации
 
                 FogChunk fogChunk = fogObj.AddComponent<FogChunk>();
-                fogChunk.Initialize(chunk.GetCells(), chunk);
+                fogChunk.Initialize(chunk.GetCellInfos(), chunk);
                 chunk.SetFogChunk(fogChunk);
 
                 processed++;

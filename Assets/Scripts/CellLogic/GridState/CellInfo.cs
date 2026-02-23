@@ -317,11 +317,12 @@ namespace CellNameSpace
         }
 
         /// <summary>
-        /// Крайняя клетка — Hidden с хотя бы одним соседом Visible или Explored.
+        /// Крайняя клетка: Hidden с хотя бы одним соседом Visible или Explored;
+        /// или Explored с хотя бы одним соседом Visible или Hidden.
         /// </summary>
         public bool IsFogBoundaryCell()
         {
-            if (fogState != FogOfWarState.Hidden)
+            if (fogState == FogOfWarState.Visible)
                 return false;
             if (FogOfWarManager.Instance == null)
                 return false;
@@ -333,7 +334,13 @@ namespace CellNameSpace
             foreach (var pos in HexagonalGridHelper.GetNeighbors(gridX, gridY, w, h))
             {
                 var n = grid.GetCellInfoAt(pos.x, pos.y);
-                if (n != null && (n.GetFogOfWarState() == FogOfWarState.Visible || n.GetFogOfWarState() == FogOfWarState.Explored))
+                if (n == null) continue;
+                FogOfWarState neighborState = n.GetFogOfWarState();
+                if (fogState == FogOfWarState.Hidden &&
+                    (neighborState == FogOfWarState.Visible || neighborState == FogOfWarState.Explored))
+                    return true;
+                if (fogState == FogOfWarState.Explored &&
+                    (neighborState == FogOfWarState.Visible || neighborState == FogOfWarState.Hidden))
                     return true;
             }
             return false;
@@ -365,6 +372,15 @@ namespace CellNameSpace
         {
             if (fogOfWarRenderer != null)
                 fogOfWarRenderer.enabled = enabled;
+        }
+
+        /// <summary>
+        /// Возвращает true, если в клетке идёт анимация перехода тумана войны.
+        /// FogChunk использует это, чтобы не переключаться на chunk-рендеринг до завершения анимации.
+        /// </summary>
+        public bool HasActiveFogTransition()
+        {
+            return transitionCoroutine != null;
         }
         
         /// <summary>
@@ -1420,6 +1436,8 @@ namespace CellNameSpace
 
                 UpdateMainRendererActualState();
             }
+
+            // Режим FogChunk обновляется в FogOfWarManager один раз на затронутый чанк после этого прохода
         }
 
         /// <summary>
@@ -2094,6 +2112,41 @@ namespace CellNameSpace
             // После завершения анимации обновляем рваные края для всех соседей
             // Это важно, так как изменение состояния этой клетки влияет на отображение краев у соседей
             RefreshNeighborsFogOfWarRaggedEdges();
+
+            // Позволяем FogChunk переключиться на chunk-рендеринг, если чанк больше не требует индивидуального
+            CellChunk chunk = GetChunk();
+            if (chunk != null)
+            {
+                FogChunk fogChunk = chunk.GetFogChunk();
+                if (fogChunk != null)
+                    fogChunk.RefreshMode();
+            }
+
+            // Резерв: явно обновляем FogChunk у всех соседей (в т.ч. Visible), чтобы гарантировать корректный режим
+            if (FogOfWarManager.Instance != null)
+            {
+                CellNameSpace.Grid grid = FogOfWarManager.Instance.GetGrid();
+                if (grid != null)
+                {
+                    int w = grid.GetGridWidth();
+                    int h = grid.GetGridHeight();
+                    var neighbors = HexagonalGridHelper.GetNeighbors(gridX, gridY, w, h);
+                    foreach (var pos in neighbors)
+                    {
+                        CellInfo neighbor = grid.GetCellInfoAt(pos.x, pos.y);
+                        if (neighbor != null)
+                        {
+                            CellChunk neighborChunk = neighbor.GetChunk();
+                            if (neighborChunk != null)
+                            {
+                                FogChunk neighborFogChunk = neighborChunk.GetFogChunk();
+                                if (neighborFogChunk != null)
+                                    neighborFogChunk.RefreshMode();
+                            }
+                        }
+                    }
+                }
+            }
         }
         
         /// <summary>
