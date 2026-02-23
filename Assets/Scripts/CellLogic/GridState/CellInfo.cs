@@ -283,9 +283,8 @@ namespace CellNameSpace
         }
         
         /// <summary>
-        /// Обновляет фактическое состояние MeshRenderer с учетом желаемого состояния и FogOfWar
-        /// MeshRenderer включается только если И желаемое состояние true, И клетка не Hidden
-        /// ИСКЛЮЧЕНИЕ: до завершения генерации карты MeshRenderer всегда включен, если mainRendererShouldBeEnabled == true (игнорируем FogOfWar)
+        /// Обновляет фактическое состояние MeshRenderer с учетом желаемого состояния и FogOfWar.
+        /// MeshRenderer включается, если: Visible/Explored; Hidden — только если крайняя (есть сосед Visible/Explored).
         /// </summary>
         private void UpdateMainRendererActualState()
         {
@@ -295,29 +294,49 @@ namespace CellNameSpace
                 if (cachedMainMeshRenderer == null)
                     return;
             }
-            
-            // Кешируем Grid для проверки IsGenerationComplete (вызываем FindFirstObjectByType только один раз)
+
             if (cachedGrid == null)
-            {
                 cachedGrid = FindFirstObjectByType<CellNameSpace.Grid>();
-            }
-            
+
             bool isGenerationComplete = cachedGrid != null && cachedGrid.IsGenerationComplete;
-            
             bool shouldBeEnabled;
-            
-            // До завершения генерации карты MeshRenderer всегда включен, если mainRendererShouldBeEnabled == true (игнорируем FogOfWar)
+
             if (!isGenerationComplete)
             {
                 shouldBeEnabled = mainRendererShouldBeEnabled;
             }
             else
             {
-                // После завершения генерации учитываем и желаемое состояние, и FogOfWar
-                shouldBeEnabled = mainRendererShouldBeEnabled && (fogState != FogOfWarState.Hidden);
+                if (fogState != FogOfWarState.Hidden)
+                    shouldBeEnabled = mainRendererShouldBeEnabled;
+                else
+                    shouldBeEnabled = mainRendererShouldBeEnabled && IsFogBoundaryCell();
             }
-            
+
             cachedMainMeshRenderer.enabled = shouldBeEnabled;
+        }
+
+        /// <summary>
+        /// Крайняя клетка — Hidden с хотя бы одним соседом Visible или Explored.
+        /// </summary>
+        private bool IsFogBoundaryCell()
+        {
+            if (fogState != FogOfWarState.Hidden)
+                return false;
+            if (FogOfWarManager.Instance == null)
+                return false;
+            var grid = FogOfWarManager.Instance.GetGrid();
+            if (grid == null)
+                return false;
+            int w = grid.GetGridWidth();
+            int h = grid.GetGridHeight();
+            foreach (var pos in HexagonalGridHelper.GetNeighbors(gridX, gridY, w, h))
+            {
+                var n = grid.GetCellInfoAt(pos.x, pos.y);
+                if (n != null && (n.GetFogOfWarState() == FogOfWarState.Visible || n.GetFogOfWarState() == FogOfWarState.Explored))
+                    return true;
+            }
+            return false;
         }
         
         
@@ -1368,12 +1387,14 @@ namespace CellNameSpace
                 
                 // Принудительно пересчитываем края с forceRecalculate = true
                 UpdateRaggedEdgesPerCell(fogOfWarPropertyBlock, false, true);
-                
+
                 fogOfWarRenderer.SetPropertyBlock(fogOfWarPropertyBlock);
                 fogStateChanged = false; // Сбрасываем флаг после обновления
+
+                UpdateMainRendererActualState();
             }
         }
-        
+
         /// <summary>
         /// Проверяет, изменилось ли состояние FOW с последнего обновления краев
         /// </summary>
