@@ -85,8 +85,6 @@ public static class ChunkTextureBaker
             }
         }
 
-        Debug.Log($"ChunkTextureBaker: Starting bake, tempRT={textureResolution}x{textureResolution}, cells={cells.Count}, renderData={renderData.Count}, chunkBounds={chunkBounds}, squareSize={squareSize}");
-
         // Камера
         Vector3 center = chunkBounds.center;
         float cameraDistance = Mathf.Max(chunkBounds.size.z * 2f, 10f);
@@ -184,10 +182,6 @@ public static class ChunkTextureBaker
         // ВАЖНО: чтобы при UV чуть <0 или >1 не было повторов/полос
         tex.wrapMode = TextureWrapMode.Clamp;
         tex.filterMode = FilterMode.Point;
-
-        // Тест пикселя для проверки альфа-канала
-        var c = tex.GetPixel(textureResolution / 2, textureResolution / 2);
-        Debug.Log($"BAKE SAMPLE PIXEL: {c}"); // особенно смотри на alpha
 
         // Cleanup
         foreach (var o in tempRenderObjects)

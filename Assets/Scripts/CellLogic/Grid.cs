@@ -92,7 +92,7 @@ namespace CellNameSpace
         [SerializeField] private int desertSeed = 0; // Сид для генерации пустынь (0 = случайный)
         
         [Header("Оптимизация")]
-        [SerializeField] private int cellsPerFrame = 50; // Количество клеток для обработки за кадр (для корутин)
+        [SerializeField] private int cellsPerFrame = 30; // Количество клеток для обработки за кадр (меньше = ниже пиковая нагрузка, дольше генерация)
         [SerializeField] private bool useCoroutines = true; // Использовать ли корутины для распределения работы
         [SerializeField] private bool pauseGameDuringGeneration = true; // Ставить игру на паузу во время генерации карты
         
@@ -108,6 +108,10 @@ namespace CellNameSpace
         private Coroutine rebuildChunksCoroutine = null; // Корутина для пересборки чанков
         [SerializeField] private int chunksPerFrame = 5; // Количество чанков для пересборки за кадр
         [SerializeField] private int createChunksPerFrame = 1; // Количество чанков для создания за кадр (щадящая генерация)
+        [Tooltip("Доп. кадров ожидания после каждого созданного чанка (0 = только конец кадра). Больше = плавнее FPS, дольше генерация. Рекомендуется 3–4 при просадках FPS.")]
+        [SerializeField] private int framesBetweenChunkCreations = 3;
+        [Tooltip("Сколько клеток/чанков обрабатывать за кадр в финальной фазе (включение рендеров). 0 = всё за один кадр.")]
+        [SerializeField] private int finalPhaseBatchSize = 200;
         
         // Система запекания текстур чанков
         private Coroutine bakeChunksCoroutine = null; // Корутина для асинхронного запекания чанков
@@ -421,12 +425,15 @@ namespace CellNameSpace
             // Очищаем предыдущие чанки (если есть)
             ClearChunks();
             
-            // Отключаем fogOfWarRenderer на всех клетках — включаются только перед завершением генерации
+            // Отключаем рендеры клеток на время создания карты (текстуры чанков печем из данных, не из сцены)
             foreach (GameObject cell in cells)
             {
                 CellInfo cellInfo = cell.GetComponent<CellInfo>();
                 if (cellInfo != null)
+                {
                     cellInfo.SetFogOfWarRendererEnabled(false);
+                    cellInfo.SetMainRendererState(false);
+                }
             }
             
             // Вычисляем разрешение текстуры на основе размера чанка
@@ -475,8 +482,6 @@ namespace CellNameSpace
                     
                     // Объединяем меши клеток чанка и создаем текстуру
                     CellMeshCombiner.CombineResult result = CellMeshCombiner.CombineCellMeshesWithTexture(cellsInChunk, textureResolution);
-                    
-                    Debug.Log($"Chunk build: tex null? {result.chunkTexture == null}, mesh null? {result.mesh == null}, matTemplate null? {chunkMaterialTemplate == null}");
                     
                     if (result.mesh != null && result.chunkTexture != null)
                     {
@@ -533,8 +538,9 @@ namespace CellNameSpace
                     if (processed >= createChunksPerFrame)
                     {
                         processed = 0;
-                        // Используем WaitForEndOfFrame для работы при timeScale = 0
                         yield return new WaitForEndOfFrame();
+                        for (int i = 0; i < framesBetweenChunkCreations; i++)
+                            yield return null;
                     }
                 }
             }
@@ -549,23 +555,34 @@ namespace CellNameSpace
             // Создаём FogChunk для каждого чанка
             yield return StartCoroutine(CreateFogChunksCoroutine());
             
-            // Отключаем основной MeshRenderer на всех клетках (рендеринг через чанки)
-            foreach (GameObject cell in cells)
+            // Отключаем основной MeshRenderer на всех клетках и включаем рендеры чанков — батчами, чтобы не грузить один кадр
+            int batchSize = finalPhaseBatchSize > 0 ? finalPhaseBatchSize : int.MaxValue;
+            for (int i = 0; i < cells.Count; i += batchSize)
             {
-                CellInfo cellInfo = cell.GetComponent<CellInfo>();
-                if (cellInfo != null)
+                int end = Mathf.Min(i + batchSize, cells.Count);
+                for (int j = i; j < end; j++)
                 {
-                    cellInfo.SetMainRendererState(false); // Отключаем рендеринг через чанк
+                    CellInfo cellInfo = cells[j].GetComponent<CellInfo>();
+                    if (cellInfo != null)
+                        cellInfo.SetMainRendererState(false);
                 }
+                if (finalPhaseBatchSize > 0 && end < cells.Count)
+                    yield return null;
             }
             
-            // Включаем рендеры — CellChunk и FogChunk
-            foreach (CellChunk chunk in chunks)
+            for (int i = 0; i < chunks.Count; i += batchSize)
             {
-                chunk.SetChunkRendererEnabled(true);
-                FogChunk fogChunk = chunk.GetFogChunk();
-                if (fogChunk != null)
-                    fogChunk.RefreshMode();
+                int end = Mathf.Min(i + batchSize, chunks.Count);
+                for (int j = i; j < end; j++)
+                {
+                    CellChunk chunk = chunks[j];
+                    chunk.SetChunkRendererEnabled(true);
+                    FogChunk fogChunk = chunk.GetFogChunk();
+                    if (fogChunk != null)
+                        fogChunk.RefreshMode();
+                }
+                if (finalPhaseBatchSize > 0 && end < chunks.Count)
+                    yield return null;
             }
             
             // Запускаем корутину периодической очистки памяти
@@ -618,6 +635,8 @@ namespace CellNameSpace
                 {
                     processed = 0;
                     yield return new WaitForEndOfFrame();
+                    for (int i = 0; i < framesBetweenChunkCreations; i++)
+                        yield return null;
                 }
             }
         }
