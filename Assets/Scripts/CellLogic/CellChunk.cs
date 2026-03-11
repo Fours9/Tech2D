@@ -17,6 +17,8 @@ public class CellChunk : MonoBehaviour
     private FogChunk fogChunk; // FogChunk для тумана войны
     private bool isDirty = false; // Флаг: нужно ли пересобрать меш чанка (при изменении типа клетки)
     private Texture2D chunkTexture; // Текстура чанка (статичная, создается один раз)
+    private bool isVisible = false; // Флаг: зона вокруг курсора считает чанк видимым (нужен индивидуальный рендеринг)
+    private int hoverCount = 0; // Счётчик клеток в ховер-анимации внутри этого чанка
     
     /// <summary>
     /// Инициализирует чанк - добавляет клетки (как GameObject, так и CellInfo) и получает ссылку на MeshRenderer
@@ -119,6 +121,57 @@ public class CellChunk : MonoBehaviour
             chunkRenderer.enabled = true;
 
         fogChunk?.EnableChunkRendering();
+    }
+
+    /// <summary>
+    /// Устанавливает флаг видимости от системы ховера и обновляет режим рендеринга.
+    /// </summary>
+    public void SetHoverVisibility(bool visible)
+    {
+        isVisible = visible;
+        UpdateVisibilityState();
+    }
+
+    /// <summary>
+    /// Уведомляет чанк о начале ховер-анимации для клетки (увеличивает счётчик).
+    /// </summary>
+    public void OnCellHoverStart()
+    {
+        hoverCount++;
+        if (hoverCount < 0)
+            hoverCount = 0;
+        UpdateVisibilityState();
+    }
+
+    /// <summary>
+    /// Уведомляет чанк о завершении ховер-анимации для клетки (уменьшает счётчик).
+    /// </summary>
+    public void OnCellHoverEnd()
+    {
+        if (hoverCount > 0)
+            hoverCount--;
+        else
+            hoverCount = 0;
+        UpdateVisibilityState();
+    }
+
+    /// <summary>
+    /// Обновляет фактический режим рендеринга чанка на основе флагов видимости и счётчика ховера.
+    /// </summary>
+    private void UpdateVisibilityState()
+    {
+        bool hasHover = hoverCount > 0;
+
+        if (isVisible || hasHover)
+        {
+            if (!isIndividualRenderingEnabled)
+                EnableIndividualRendering();
+        }
+        else
+        {
+            if (isIndividualRenderingEnabled)
+                EnableChunkRendering();
+        }
     }
     
     /// <summary>

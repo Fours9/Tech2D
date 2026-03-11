@@ -312,13 +312,8 @@ public class CellHoverElevator : MonoBehaviour
                     {
                         // Добавляем чанк в набор активных чанков (HashSet автоматически обрабатывает дубликаты)
                         newActiveChunks.Add(cellChunk);
-                        
-                        // Выключаем чанк: включаем индивидуальный рендеринг для всех клеток этого чанка и выключаем рендеринг чанка
-                        // Проверяем, не включен ли уже (оптимизация - не вызываем лишний раз)
-                        if (!cellChunk.IsIndividualRenderingEnabled())
-                        {
-                            cellChunk.EnableIndividualRendering();
-                        }
+                        // Сообщаем чанку, что он находится в зоне ховера курсора
+                        cellChunk.SetHoverVisibility(true);
                     }
                 }
                 
@@ -333,8 +328,16 @@ public class CellHoverElevator : MonoBehaviour
                     // Вычисляем высоту: максимальный подъем для центра, плавно уменьшается до нуля на краю
                     float cellElevationHeight = elevationHeight * factor;
                     
-                    // Добавляем клетку в список приподнятых
-                    elevatedCells.Add(cell);
+                    // Добавляем клетку в список приподнятых (если она ещё не была там)
+                    bool isNewElevated = elevatedCells.Add(cell);
+                    if (isNewElevated)
+                    {
+                        CellChunk chunk = cell.GetChunk();
+                        if (chunk != null)
+                        {
+                            chunk.OnCellHoverStart();
+                        }
+                    }
                     
                     // Вычисляем целевую позицию (приподнятую с учетом расстояния)
                     // ВСЕГДА от изначальной позиции, а не от текущей
@@ -350,10 +353,11 @@ public class CellHoverElevator : MonoBehaviour
         {
             if (!newActiveChunks.Contains(oldChunk))
             {
-                // Возвращаем рендеринг чанка: выключаем индивидуальный рендеринг всех клеток чанка, включаем рендеринг чанка
                 if (oldChunk != null)
                 {
-                    oldChunk.EnableChunkRendering();
+                    // Курсор ушёл из зоны этого чанка — помечаем его как невидимый для системы ховера.
+                    // Фактическое переключение режима рендера произойдёт в самом чанке с учётом hoverCount.
+                    oldChunk.SetHoverVisibility(false);
                 }
             }
         }
@@ -431,9 +435,18 @@ public class CellHoverElevator : MonoBehaviour
             }
         }
         
-        // Удаляем клетки из словарей
+        // Удаляем клетки из словарей и уведомляем чанки о завершении ховер-анимации
         foreach (CellInfo cell in cellsToRemove)
         {
+            if (cell != null)
+            {
+                CellChunk chunk = cell.GetChunk();
+                if (chunk != null)
+                {
+                    chunk.OnCellHoverEnd();
+                }
+            }
+
             elevatedCells.Remove(cell);
             targetPositions.Remove(cell);
         }
