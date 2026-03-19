@@ -48,7 +48,7 @@ Material:
     m_Ints:
     - _HighlightSegment: -1
     m_Floats:
-    - _CellDensity: 150
+    - _CellDensity: 70
     - _EnableExternalAlpha: 0
     - _FacetEdgeDarkening: 0.35
     - _FacetEdgeWidth: 0.01
@@ -56,12 +56,13 @@ Material:
     - _InnerRadius: 1
     - _OuterRadius: 1
     - _PaletteCount: 8
-    - _Progress: 50
+    - _Progress: 0.5
     - _RandomSeed: 1
     - _SegmentCount: 14
     - _StartAngleDeg: 90
     - _TriangleShapeVariation: 0.55
     - _TriangleSizeVariation: 0.65
+    - _UnfilledDarken: 0.1
     - _UseObjectSpacePattern: 1
     - _UseRadialMask: 0
     - _VertexJitter: 1
