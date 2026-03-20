@@ -146,14 +146,6 @@ Shader "Custom/TriangleCircleFill"
                 return angleDeg;
             }
 
-            float AngleDelta(float aDeg, float refDeg)
-            {
-                float d = aDeg - refDeg;
-                if (d > 180.0) d -= 360.0;
-                if (d < -180.0) d += 360.0;
-                return d;
-            }
-
             bool PointInTriangle(float2 p, float2 a, float2 b, float2 c, out float3 bary)
             {
                 float2 v0 = b - a;
@@ -187,10 +179,8 @@ Shader "Custom/TriangleCircleFill"
             half4 frag(Varyings IN) : SV_Target
             {
                 float2 meshPos = IN.positionOS;
-                float meshLen = max(length(meshPos), 1e-5);
-                float2 polarPos = meshPos / meshLen;
-
-                float radius = length(polarPos);
+                float radius = length(meshPos);
+                float2 polarPos = meshPos / max(radius, 1e-5);
 
                 float outerR = saturate(_OuterRadius);
                 float innerR = saturate(_InnerRadius);
@@ -347,11 +337,10 @@ Shader "Custom/TriangleCircleFill"
                             ? max(length(meshPos), 1e-4)
                             : max(length(facetCoords - 0.5), 0.02);
                         float cellWorld = 1.0 / density;
-                        float angularSlopDeg = degrees(atan(cellWorld / ringR)) * 1.25;
+                        float angularSlopDeg = degrees(atan(cellWorld / ringR)) * 0.75;
                         angularSlopDeg = max(angularSlopDeg, progressEps);
                         float fillBound = progressDeg + progressEps + angularSlopDeg;
-                        fillBound = max(fillBound, 0.0);
-                        fillBound = min(fillBound, 360.0);
+                        fillBound = clamp(fillBound, 0.0, 360.0);
 
                         float2 posA = bestVa * invDensity;
                         float2 posB = bestVb * invDensity;
@@ -359,17 +348,30 @@ Shader "Custom/TriangleCircleFill"
                         float a0 = GetAngleDegForPos(posA);
                         float a1 = GetAngleDegForPos(posB);
                         float a2 = GetAngleDegForPos(posC);
-                        float d0 = AngleDelta(a0, 0.0);
-                        float d1 = AngleDelta(a1, 0.0);
-                        float d2 = AngleDelta(a2, 0.0);
-                        bool inside0 = (d0 >= -progressEps && d0 <= fillBound);
-                        bool inside1 = (d1 >= -progressEps && d1 <= fillBound);
-                        bool inside2 = (d2 >= -progressEps && d2 <= fillBound);
-                        float minD = min(d0, min(d1, d2));
-                        float maxD = max(d0, max(d1, d2));
-                        bool wrapCase = (maxD - minD > 180.0);
-                        bool wrapValid = wrapCase && (maxD <= fillBound) && (minD >= -progressEps);
-                        triFullyFilled = (inside0 && inside1 && inside2) || wrapValid;
+                        float minA = min(a0, min(a1, a2));
+                        float maxA = max(a0, max(a1, a2));
+                        bool crossesSeam = (maxA - minA > 180.0);
+
+                        float u0 = a0;
+                        float u1 = a1;
+                        float u2 = a2;
+                        if (crossesSeam)
+                        {
+                            if (u0 < 180.0) u0 += 360.0;
+                            if (u1 < 180.0) u1 += 360.0;
+                            if (u2 < 180.0) u2 += 360.0;
+                        }
+                        float triMax = max(u0, max(u1, u2));
+                        float triMin = min(u0, min(u1, u2));
+
+                        if (fillBound >= 360.0 - progressEps)
+                        {
+                            triFullyFilled = true;
+                        }
+                        else
+                        {
+                            triFullyFilled = (triMax <= fillBound) || (triMin <= fillBound);
+                        }
                     }
 
                     float edgeMetric = min(bary.x, min(bary.y, bary.z));
@@ -405,12 +407,17 @@ Shader "Custom/TriangleCircleFill"
                         float progressDeg = progress * 360.0;
                         float ringR = max(length(meshPos), 1e-4);
                         float cellWorld = 1.0 / max(1.0, _CellDensity);
-                        float angularSlopDeg = degrees(atan(cellWorld / ringR)) * 1.25;
+                        float angularSlopDeg = degrees(atan(cellWorld / ringR)) * 0.75;
                         angularSlopDeg = max(angularSlopDeg, progressEps);
-                        float fillBound = progressDeg + progressEps + angularSlopDeg;
-                        fillBound = max(fillBound, 0.0);
-                        fillBound = min(fillBound, 360.0);
-                        triFullyFilled = (angleDeg <= fillBound);
+                        float fillBound = clamp(progressDeg + progressEps + angularSlopDeg, 0.0, 360.0);
+                        if (fillBound >= 360.0 - progressEps)
+                        {
+                            triFullyFilled = true;
+                        }
+                        else
+                        {
+                            triFullyFilled = (angleDeg <= fillBound);
+                        }
                     }
                     if (!triFullyFilled)
                     {
