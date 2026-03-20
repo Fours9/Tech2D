@@ -48,7 +48,7 @@ Material:
     m_Ints:
     - _HighlightSegment: -1
     m_Floats:
-    - _CellDensity: 70
+    - _CellDensity: 90
     - _EnableExternalAlpha: 0
     - _FacetEdgeDarkening: 0.35
     - _FacetEdgeWidth: 0.03
@@ -62,7 +62,7 @@ Material:
     - _StartAngleDeg: 91
     - _TriangleShapeVariation: 0.55
     - _TriangleSizeVariation: 0.65
-    - _UnfilledDarken: 0
+    - _UnfilledDarken: 0.1
     - _UseObjectSpacePattern: 1
     - _UseRadialMask: 0
     - _VertexJitter: 1
