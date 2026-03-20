@@ -3,6 +3,12 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Редакторские сценарии для TriangleCircleFillGraphic (маски, анимация, стабильный Progress).
+/// Проверка multi-size: после Setup продублировать элемент, задать разные sizeDelta (например 100 / 200 / 320),
+/// остановить анимацию и выставить на материале <c>_Progress</c> = 0.25 / 0.5 / 0.75 — доля дуги должна совпадать
+/// (ступенчато по треугольникам, без сдвига порога между размерами).
+/// </summary>
 public static class TriangleCircleFillGraphicQASetup
 {
     private const string RootName = "QA_TriangleCircleFillGraphicRoot";
@@ -83,6 +89,18 @@ public static class TriangleCircleFillGraphicQASetup
 
         Selection.activeGameObject = root;
         Debug.Log("TriangleCircleFillGraphic QA setup created.");
+    }
+
+    [MenuItem("QA/UI/TriangleCircleFillGraphic — Multi-size Progress checklist")]
+    public static void LogMultiSizeProgressChecklist()
+    {
+        Debug.Log(
+            "[TriangleCircleFill] Multi-size quantized Progress:\n" +
+            "1) QA/UI/TriangleCircleFillGraphic Setup\n" +
+            "2) Дублируйте Graphic 2 раза; задайте sizeDelta примерно 120 × 120, 200 × 200, 320 × 320 (одинаковый pivot/anchor).\n" +
+            "3) Отключите Animation или зафиксируйте кадр; на общем материале выставьте _Progress = 0.25, затем 0.5, затем 0.75.\n" +
+            "4) Ожидание: визуальная доля заполнения дуги совпадает на всех трёх (квантование по целым фасеткам допустимо).\n" +
+            "Шейдер использует _FillPivot/_FillInvScale из TriangleCircleFillGraphic для нормализации fill space.");
     }
 }
 #endif

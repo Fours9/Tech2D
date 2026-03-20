@@ -40,6 +40,10 @@ public class TriangleCircleFillGraphic : MaskableGraphic
     private float _lastPatternScale;
     private bool _hasLastPatternScale;
 
+    private Vector4 _lastFillPivot;
+    private Vector4 _lastFillInvScale;
+    private bool _hasLastFillSpace;
+
     public Mesh SourceMesh
     {
         get => sourceMesh;
@@ -201,6 +205,7 @@ public class TriangleCircleFillGraphic : MaskableGraphic
         if (dst == null)
             return;
 
+        SyncFillSpaceParams(dst);
         SyncObjectSpacePatternScale(dst);
         SyncProgress(dst);
         _lastTargetMaterial = dst;
@@ -239,6 +244,67 @@ public class TriangleCircleFillGraphic : MaskableGraphic
 
         _lastSourceProgress = srcValue;
         _hasLastSourceProgress = true;
+    }
+
+    /// <summary>
+    /// Maps fragment positions from Graphic local space into mesh (fill) space so Progress / polar angles
+    /// are size-invariant. Must match <see cref="EnsureCache"/> scale and pivot.
+    /// </summary>
+    private void SyncFillSpaceParams(Material dst)
+    {
+        const string pivotProp = "_FillPivot";
+        const string invProp = "_FillInvScale";
+        if (!dst.HasProperty(pivotProp) || !dst.HasProperty(invProp))
+            return;
+
+        if (sourceMesh == null)
+            return;
+
+        var rect = GetPixelAdjustedRect();
+        if (rect.width <= 0f || rect.height <= 0f)
+            return;
+
+        var srcBounds = sourceMesh.bounds;
+        float meshW = Mathf.Max(1e-6f, srcBounds.size.x);
+        float meshH = Mathf.Max(1e-6f, srcBounds.size.y);
+        float rectW = Mathf.Max(0.0001f, rect.width);
+        float rectH = Mathf.Max(0.0001f, rect.height);
+
+        float scaleX;
+        float scaleY;
+        if (preserveAspect)
+        {
+            float s = Mathf.Min(rectW / meshW, rectH / meshH);
+            scaleX = s;
+            scaleY = s;
+        }
+        else
+        {
+            scaleX = rectW / meshW;
+            scaleY = rectH / meshH;
+        }
+
+        var pivot = new Vector4(rect.center.x, rect.center.y, 0f, 0f);
+        var invScale = new Vector4(
+            1f / Mathf.Max(1e-6f, scaleX),
+            1f / Mathf.Max(1e-6f, scaleY),
+            0f,
+            0f);
+
+        bool targetChanged = dst != _lastTargetMaterial;
+        bool changed = targetChanged
+                       || !_hasLastFillSpace
+                       || (pivot - _lastFillPivot).sqrMagnitude > 1e-10f
+                       || (invScale - _lastFillInvScale).sqrMagnitude > 1e-10f;
+
+        if (!changed)
+            return;
+
+        dst.SetVector(pivotProp, pivot);
+        dst.SetVector(invProp, invScale);
+        _lastFillPivot = pivot;
+        _lastFillInvScale = invScale;
+        _hasLastFillSpace = true;
     }
 
     private void SyncObjectSpacePatternScale(Material dst)

@@ -19,7 +19,6 @@ Shader "Custom/TriangleCircleFill"
 
         _CellDensity ("LowPoly Cell Density", Float) = 14
         [Toggle] _UseObjectSpacePattern ("Use Object Space Pattern", Float) = 1
-        _ObjectSpacePatternScale ("Object Space Pattern Scale", Float) = 1
         [Range(0, 0.45)] _VertexJitter ("Vertex Jitter", Float) = 0.22
         [Range(0.001, 0.3)] _FacetEdgeWidth ("Facet Edge Width", Float) = 0.045
         _FacetEdgeColor ("Facet Edge Color", Color) = (0, 0, 0, 1)
@@ -28,21 +27,6 @@ Shader "Custom/TriangleCircleFill"
         [Toggle] _UseRadialMask ("Use Radial Mask", Float) = 0
         [Range(0, 1)] _InnerRadius ("Inner Radius", Float) = 0
         [Range(0, 1)] _OuterRadius ("Outer Radius", Float) = 1
-
-        // uGUI mask/clip (MaskableGraphic/RectMask2D)
-        _StencilComp ("Stencil Comparison", Float) = 8
-        _Stencil ("Stencil ID", Float) = 0
-        _StencilOp ("Stencil Operation", Float) = 0
-        _StencilWriteMask ("Stencil Write Mask", Float) = 255
-        _StencilReadMask ("Stencil Read Mask", Float) = 255
-        _ColorMask ("Color Mask", Float) = 15
-
-        _ClipRect ("Clip Rect", vector) = (-32767, -32767, 32767, 32767)
-        [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("Use Alpha Clip", Float) = 0
-
-        // UI fill normalization (set by TriangleCircleFillGraphic): map Graphic local space to mesh space
-        _FillPivot ("Fill Pivot XY", Vector) = (0, 0, 0, 0)
-        _FillInvScale ("Fill Inv Scale XY", Vector) = (1, 1, 0, 0)
     }
 
     SubShader
@@ -54,21 +38,9 @@ Shader "Custom/TriangleCircleFill"
             "RenderPipeline" = "UniversalPipeline"
         }
 
-        Stencil
-        {
-            Ref [_Stencil]
-            Comp [_StencilComp]
-            Pass [_StencilOp]
-            ReadMask [_StencilReadMask]
-            WriteMask [_StencilWriteMask]
-        }
-
+        Blend SrcAlpha OneMinusSrcAlpha
         ZWrite Off
         Cull Off
-        Lighting Off
-        ZTest [unity_GUIZTestMode]
-        Blend SrcAlpha OneMinusSrcAlpha
-        ColorMask [_ColorMask]
 
         Pass
         {
@@ -77,9 +49,6 @@ Shader "Custom/TriangleCircleFill"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-
-            #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
-            #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -114,7 +83,6 @@ Shader "Custom/TriangleCircleFill"
                 float _FillClockwise;
                 float _CellDensity;
                 float _UseObjectSpacePattern;
-                float _ObjectSpacePatternScale;
                 float _VertexJitter;
                 float _FacetEdgeWidth;
                 float4 _FacetEdgeColor;
@@ -122,9 +90,6 @@ Shader "Custom/TriangleCircleFill"
                 float _UseRadialMask;
                 float _InnerRadius;
                 float _OuterRadius;
-                float4 _ClipRect;
-                float4 _FillPivot;
-                float4 _FillInvScale;
             CBUFFER_END
 
             // Deterministic integer hash for stable per-segment color picking.
@@ -213,12 +178,7 @@ Shader "Custom/TriangleCircleFill"
 
             half4 frag(Varyings IN) : SV_Target
             {
-                // Size-invariant fill space: mesh-local position (same as pre-UI scale) when Graphic sets pivot + invScale.
-                float2 fillPivot = _FillPivot.xy;
-                float2 fillInv = max(_FillInvScale.xy, 1e-6);
-                float2 fillPos = (IN.positionOS.xy - fillPivot) * fillInv;
-
-                float2 meshPos = fillPos;
+                float2 meshPos = IN.positionOS;
                 float radius = length(meshPos);
                 float2 polarPos = meshPos / max(radius, 1e-5);
 
@@ -226,24 +186,9 @@ Shader "Custom/TriangleCircleFill"
                 float innerR = saturate(_InnerRadius);
                 innerR = min(innerR, outerR);
 
-                half4 colorOut = half4(0, 0, 0, 0);
-
                 if (_UseRadialMask > 0.5 && (radius < innerR || radius > outerR))
                 {
-                    colorOut = half4(0, 0, 0, 0);
-
-                    #ifdef UNITY_UI_CLIP_RECT
-                        float4 clampedRect = clamp(_ClipRect, -2e10, 2e10);
-                        float2 pos = IN.positionOS;
-                        float2 inside = step(clampedRect.xy, pos) * step(pos, clampedRect.zw);
-                        colorOut.a *= inside.x * inside.y;
-                    #endif
-
-                    #ifdef UNITY_UI_ALPHACLIP
-                        clip(colorOut.a - 0.001);
-                    #endif
-
-                    return colorOut;
+                    return half4(0, 0, 0, 0);
                 }
 
                 float angleDeg = degrees(atan2(polarPos.y, polarPos.x));
@@ -262,7 +207,7 @@ Shader "Custom/TriangleCircleFill"
                 float segmentSize = 360.0 / (float)segmentCount;
                 int segmentIndex = min(segmentCount - 1, (int)floor(angleDeg / segmentSize));
 
-                colorOut = _ColorEmpty;
+                half4 colorOut = _ColorEmpty;
                 int paletteCount = max(1, (int)round(_PaletteCount));
                 bool triFullyFilled = false;
 
@@ -270,9 +215,7 @@ Shader "Custom/TriangleCircleFill"
                 {
                     float density = max(1.0, _CellDensity);
                     float invDensity = 1.0 / density;
-                    // Pattern in fill/mesh space only (progress/radius use fillPos above).
-                    float2 patternPos = fillPos * _ObjectSpacePatternScale;
-                    float2 facetCoords = (_UseObjectSpacePattern > 0.5) ? patternPos : IN.uv;
+                    float2 facetCoords = (_UseObjectSpacePattern > 0.5) ? IN.positionOS : IN.uv;
                     float2 p = facetCoords * density;
 
                     float2 g = float2(p.x - p.y * 0.57735026919, p.y * 1.15470053838);
@@ -389,20 +332,46 @@ Shader "Custom/TriangleCircleFill"
                     }
                     else
                     {
-                        // Quantized-by-triangle fill: evaluate progress by triangle center angle
-                        // (for object-space pattern), so each facet lights up as a whole.
                         float progressDeg = progress * 360.0;
-                        float fillBound = clamp(progressDeg + progressEps, 0.0, 360.0);
-                        float testAngleDeg = angleDeg;
-                        if (_UseObjectSpacePattern > 0.5)
+                        float ringR = (_UseObjectSpacePattern > 0.5)
+                            ? max(length(meshPos), 1e-4)
+                            : max(length(facetCoords - 0.5), 0.02);
+                        float cellWorld = 1.0 / density;
+                        float angularSlopDeg = degrees(atan(cellWorld / ringR)) * 0.75;
+                        angularSlopDeg = max(angularSlopDeg, progressEps);
+                        float fillBound = progressDeg + progressEps + angularSlopDeg;
+                        fillBound = clamp(fillBound, 0.0, 360.0);
+
+                        float2 posA = bestVa * invDensity;
+                        float2 posB = bestVb * invDensity;
+                        float2 posC = bestVc * invDensity;
+                        float a0 = GetAngleDegForPos(posA);
+                        float a1 = GetAngleDegForPos(posB);
+                        float a2 = GetAngleDegForPos(posC);
+                        float minA = min(a0, min(a1, a2));
+                        float maxA = max(a0, max(a1, a2));
+                        bool crossesSeam = (maxA - minA > 180.0);
+
+                        float u0 = a0;
+                        float u1 = a1;
+                        float u2 = a2;
+                        if (crossesSeam)
                         {
-                            // Triangle center in fill space (same space as fillPos); quantized fill is size-stable.
-                            float2 triCenterPattern = (bestVa + bestVb + bestVc) / 3.0 * invDensity;
-                            float scaleSafe = max(_ObjectSpacePatternScale, 1e-6);
-                            float2 triCenterFill = triCenterPattern / scaleSafe;
-                            testAngleDeg = GetAngleDegForPos(triCenterFill);
+                            if (u0 < 180.0) u0 += 360.0;
+                            if (u1 < 180.0) u1 += 360.0;
+                            if (u2 < 180.0) u2 += 360.0;
                         }
-                        triFullyFilled = (fillBound >= 360.0 - progressEps) || (testAngleDeg <= fillBound);
+                        float triMax = max(u0, max(u1, u2));
+                        float triMin = min(u0, min(u1, u2));
+
+                        if (fillBound >= 360.0 - progressEps)
+                        {
+                            triFullyFilled = true;
+                        }
+                        else
+                        {
+                            triFullyFilled = (triMax <= fillBound) || (triMin <= fillBound);
+                        }
                     }
 
                     float edgeMetric = min(bary.x, min(bary.y, bary.z));
@@ -436,8 +405,19 @@ Shader "Custom/TriangleCircleFill"
                     else
                     {
                         float progressDeg = progress * 360.0;
-                        float fillBound = clamp(progressDeg + progressEps, 0.0, 360.0);
-                        triFullyFilled = (fillBound >= 360.0 - progressEps) || (angleDeg <= fillBound);
+                        float ringR = max(length(meshPos), 1e-4);
+                        float cellWorld = 1.0 / max(1.0, _CellDensity);
+                        float angularSlopDeg = degrees(atan(cellWorld / ringR)) * 0.75;
+                        angularSlopDeg = max(angularSlopDeg, progressEps);
+                        float fillBound = clamp(progressDeg + progressEps + angularSlopDeg, 0.0, 360.0);
+                        if (fillBound >= 360.0 - progressEps)
+                        {
+                            triFullyFilled = true;
+                        }
+                        else
+                        {
+                            triFullyFilled = (angleDeg <= fillBound);
+                        }
                     }
                     if (!triFullyFilled)
                     {
@@ -449,17 +429,6 @@ Shader "Custom/TriangleCircleFill"
                 {
                     colorOut = _ColorHighlight;
                 }
-
-                #ifdef UNITY_UI_CLIP_RECT
-                    float4 clampedRect = clamp(_ClipRect, -2e10, 2e10);
-                    float2 pos = IN.positionOS;
-                    float2 inside = step(clampedRect.xy, pos) * step(pos, clampedRect.zw);
-                    colorOut.a *= inside.x * inside.y;
-                #endif
-
-                #ifdef UNITY_UI_ALPHACLIP
-                    clip(colorOut.a - 0.001);
-                #endif
 
                 return colorOut;
             }
